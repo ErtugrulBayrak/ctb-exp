@@ -107,5 +107,4 @@ AI_SELL_CONFIDENCE_THRESHOLD=70
 - **Backtesting**: Historical strategy validation
 
 ## 📝 License
-
 MIT License - Use at your own risk.
