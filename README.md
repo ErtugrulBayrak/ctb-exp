@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # NewsToMe - AI-Powered Crypto Trading Bot
 
 Hybrid algorithmic trading bot that combines AI analysis, technical indicators, on-chain data, and sentiment analysis for cryptocurrency trading decisions.
@@ -109,3 +110,15 @@ AI_SELL_CONFIDENCE_THRESHOLD=70
 ## 📝 License
 
 MIT License - Use at your own risk.
+=======
+TO DO
+
+- içerik çekemediği siteleri not etsin ileride onlara uygun senaryolar oluşturucaz
+- reddit api optimizasyon uyarısı
+- redditte nerelere ne sıklıkla bakmalı?
+
+- kullanılan kaynaklar
+*newsapi
+*reddit - r/CryptoCurrency
+*binance- RSI
+>>>>>>> ce895a6d9a2d3d3e061709047092248791ffc4b4
