@@ -1,0 +1,6 @@
+[2025-12-11 03:10:22] INFO: Logger initialized successfully
+[2025-12-11 03:10:22] WARNING: This is a warning message
+[2025-12-11 03:10:22] ERROR: This is an error message
+[2025-12-11 03:10:22] INFO: Helper function test
+[2025-12-11 03:10:22] INFO: 📈 BUY BTC | Price: $92500.0000 | Qty: 0.001000
+[2025-12-11 03:10:22] INFO: 📉 SELL ETH | Price: $3500.0000 | Qty: 0.500000 | PnL: $+25.50 | Take Profit
