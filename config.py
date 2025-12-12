@@ -28,6 +28,11 @@ ALLOW_DANGEROUS_ACTIONS       - Tehlikeli işlemlere izin ver (varsayılan: "0")
 AI_TECH_CONFIDENCE_THRESHOLD  - Teknik tarama güven eşiği (varsayılan: 75)
 AI_NEWS_CONFIDENCE_THRESHOLD  - Haber tarama güven eşiği (varsayılan: 80)
 AI_SELL_CONFIDENCE_THRESHOLD  - Satış kararı güven eşiği (varsayılan: 70)
+USE_NEWS_LLM                  - Haber analizi için LLM kullan (varsayılan: "1")
+MAX_DAILY_LOSS_PCT            - Günlük maksimum kayıp yüzdesi (varsayılan: 3.0)
+MAX_OPEN_POSITIONS            - Aynı anda maksimum açık pozisyon (varsayılan: 3)
+MAX_CONSECUTIVE_LOSSES        - Ardışık maksimum zarar sayısı (varsayılan: 4)
+COOLDOWN_MINUTES              - Ardışık zarar sonrası bekleme süresi (dakika) (varsayılan: 120)
 BASLANGIC_BAKIYE              - Başlangıç bakiyesi USDT (varsayılan: 1000.0)
 MIN_HACIM_USDT                - Minimum 24h hacim (varsayılan: 10000000)
 MIN_ADX                       - Güçlü trend ADX eşiği (varsayılan: 25)
@@ -51,9 +56,10 @@ except ImportError:
     pass  # dotenv yüklü değil, sadece os.environ kullanılacak
 
 
-def _get_env_bool(key: str, default: str = "0") -> bool:
+def _get_env_bool(key: str, default: str | bool = "0") -> bool:
     """Ortam değişkenini boolean'a çevir. '1', 'true', 'yes' = True"""
-    value = os.getenv(key, default).lower()
+    default_str = str(default).lower() if not isinstance(default, str) else default.lower()
+    value = str(os.getenv(key, default_str)).lower()
     return value in ("1", "true", "yes", "on")
 
 
@@ -101,12 +107,40 @@ class Settings:
     AI_TECH_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_TECH_CONFIDENCE_THRESHOLD", 75)
     AI_NEWS_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_NEWS_CONFIDENCE_THRESHOLD", 80)
     AI_SELL_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_SELL_CONFIDENCE_THRESHOLD", 70)
+    # If False, the bot will NOT send any LLM requests for news analysis.
+    USE_NEWS_LLM: bool = _get_env_bool("USE_NEWS_LLM", True)
+    
+    # Strategy LLM Controls
+    # USE_STRATEGY_LLM: If False, strategy decisions are purely rule-based (no Gemini calls)
+    USE_STRATEGY_LLM: bool = _get_env_bool("USE_STRATEGY_LLM", True)
+    # STRATEGY_LLM_MODE: "only_on_signal" = call LLM only if RULES says BUY/SELL
+    #                    "always" = call LLM for every symbol each loop (expensive)
+    STRATEGY_LLM_MODE: str = os.getenv("STRATEGY_LLM_MODE", "only_on_signal").strip().lower()
+    # STRATEGY_LLM_MIN_RULES_CONF: Only call LLM if rules confidence >= this threshold
+    STRATEGY_LLM_MIN_RULES_CONF: int = _get_env_int("STRATEGY_LLM_MIN_RULES_CONF", 65)
+    
+    # News LLM Controls
+    # NEWS_LLM_MODE: "off" = never call news LLM
+    #                "global_summary" = call once per TTL to produce a global news summary
+    NEWS_LLM_MODE: str = os.getenv("NEWS_LLM_MODE", "global_summary").strip().lower()
+    NEWS_LLM_GLOBAL_TTL_SEC: int = _get_env_int("NEWS_LLM_GLOBAL_TTL_SEC", 900)  # 15 min
+    
+    # Global risk controls
+    MAX_DAILY_LOSS_PCT: float = _get_env_float("MAX_DAILY_LOSS_PCT", 6.0)
+    MAX_OPEN_POSITIONS: int = _get_env_int("MAX_OPEN_POSITIONS", 6)
+    MAX_CONSECUTIVE_LOSSES: int = _get_env_int("MAX_CONSECUTIVE_LOSSES", 5)
+    COOLDOWN_MINUTES: int = _get_env_int("COOLDOWN_MINUTES", 60)
+    
+    # ADX Thresholds (Semi-aggressive defaults)
+    MIN_ADX_ENTRY: float = _get_env_float("MIN_ADX_ENTRY", 22.0)
+    MIN_ADX_ENTRY_SOFT: float = _get_env_float("MIN_ADX_ENTRY_SOFT", 18.0)
+    SOFTEN_ADX_WHEN_CONF_GE: int = _get_env_int("SOFTEN_ADX_WHEN_CONF_GE", 75)
     
     # ═══════════════════════════════════════════════════════════════════════════
     # TRADING AYARLARI
     # ═══════════════════════════════════════════════════════════════════════════
     BASLANGIC_BAKIYE: float = _get_env_float("BASLANGIC_BAKIYE", 1000.0)
-    MIN_HACIM_USDT: int = _get_env_int("MIN_HACIM_USDT", 10_000_000)
+    MIN_VOLUME_USD: int = _get_env_int("MIN_VOLUME_USD", 200_000)
     MIN_ADX: int = _get_env_int("MIN_ADX", 25)
     
     # ═══════════════════════════════════════════════════════════════════════════
@@ -164,6 +198,11 @@ OPTIONAL_ENV_VARS = [
     "AI_TECH_CONFIDENCE_THRESHOLD",
     "AI_NEWS_CONFIDENCE_THRESHOLD",
     "AI_SELL_CONFIDENCE_THRESHOLD",
+    "USE_NEWS_LLM",
+    "MAX_DAILY_LOSS_PCT",
+    "MAX_OPEN_POSITIONS",
+    "MAX_CONSECUTIVE_LOSSES",
+    "COOLDOWN_MINUTES",
     "BASLANGIC_BAKIYE",
     "MIN_HACIM_USDT",
     "MIN_ADX",
@@ -205,7 +244,7 @@ def print_settings_summary():
     
     print("\n💰 TRADING AYARLARI:")
     print(f"   BASLANGIC_BAKIYE:     ${SETTINGS.BASLANGIC_BAKIYE:,.2f}")
-    print(f"   MIN_HACIM_USDT:       ${SETTINGS.MIN_HACIM_USDT:,}")
+    print(f"   MIN_VOLUME_USD:       ${SETTINGS.MIN_VOLUME_USD:,}")
     print(f"   MIN_ADX:              {SETTINGS.MIN_ADX}")
     
     print("\n📱 TELEGRAM BİLDİRİMLERİ:")

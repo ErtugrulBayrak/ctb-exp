@@ -64,11 +64,14 @@ def trading_signal(row):
 ```
 """
 
+
 import pandas as pd
+import asyncio
 from dataclasses import dataclass, field
 from typing import Callable, List, Dict, Any, Optional, Tuple
 from datetime import datetime
-
+from risk_manager import RiskManager  # Import RiskManager
+from market_data_engine import MarketDataEngine
 
 @dataclass
 class Trade:
@@ -139,6 +142,96 @@ class Backtester:
         self.losing_trades = 0
         self.cumulative_pnl = 0.0
     
+    
+    async def run_backtest(self, strategy_engine, risk_manager=None) -> None:
+        """
+        StrategyEngine kullanarak backtest çalıştır (Async).
+        
+        Args:
+            strategy_engine: StrategyEngine instance
+            risk_manager: RiskManager instance (Optional)
+        """
+        print(f"🚀 Backtest Başlıyor... ({len(self.candles)} mum)")
+        
+        # Instantiate Risk Manager if not provided
+        risk_manager = risk_manager or RiskManager()
+        
+        for idx, row in self.candles.iterrows():
+            # Support basic position state
+            entry_price = self.position_avg_price if self.position > 0 else 0
+            
+            # Prepare offline extra data
+            offline_extra = {
+                "has_open_position": self.position > 0,
+                "entry_price": entry_price,
+                "sentiment": {
+                     "overall_sentiment": row.get('sentiment', "NEUTRAL"),
+                     "fear_greed": {"value": row.get('fng', 50)}
+                },
+                "onchain": {
+                     "signal": row.get('onchain_signal', "NEUTRAL")
+                }
+            }
+            
+            # Instantiate MarketDataEngine in OFFLINE mode for this row
+            mde = MarketDataEngine(
+                offline_mode=True,
+                offline_row=row.to_dict(),
+                offline_extra=offline_extra
+            )
+            
+            # Build unified snapshot
+            market_snapshot = mde.build_snapshot("BACKTEST_PF")
+            
+            # 1. Base Strategy Signal
+            base_decision = await strategy_engine.evaluate_opportunity(market_snapshot)
+            
+            # 2. Risk Management
+            final_decision = base_decision
+            portfolio = {"balance": self.balance}
+            
+            if base_decision.get("action") == "BUY":
+                final_decision = risk_manager.evaluate_entry_risk(
+                    snapshot=market_snapshot,
+                    base_decision=base_decision,
+                    portfolio=portfolio
+                )
+            elif base_decision.get("action") == "SELL":
+                # Construct mock position dict for RiskManager
+                pos_details = {
+                    "symbol": "BACKTEST_PF",
+                    "entry_price": entry_price,
+                    "quantity": self.position,
+                    "stop_loss": 0, # Not tracking strictly in this loop 
+                    "take_profit": 0
+                }
+                final_decision = risk_manager.evaluate_exit_risk(
+                     snapshot=market_snapshot,
+                     position=pos_details,
+                     base_decision=base_decision
+                )
+
+            # 3. Execution Logic
+            if not final_decision.get("allowed", False):
+                continue
+                
+            action = final_decision.get("action")
+            quantity = final_decision.get("quantity", 0)
+            
+            if action == "BUY":
+                cost = quantity * price
+                if cost > 0 and self.balance >= cost * 0.99: # 0.99 buffer
+                    # Convert absolute quantity to fraction for existing _execute_buy
+                    fraction = min(cost / self.balance, 1.0) if self.balance > 0 else 0
+                    if fraction > 0:
+                         self._execute_buy(price, fraction, timestamp)
+                         
+            elif action == "SELL":
+                if self.position > 0:
+                    qty_to_sell = quantity if quantity > 0 else self.position
+                    fraction = min(qty_to_sell / self.position, 1.0)
+                    self._execute_sell(price, fraction, timestamp)
+
     def _get_price(self, row: pd.Series) -> float:
         """Row'dan fiyat al (close, price veya Close)."""
         for col in ['close', 'Close', 'price', 'Price']:
@@ -363,61 +456,120 @@ if __name__ == "__main__":
         new_price = max(prices[-1] + change, 10)  # Min $10
         prices.append(new_price)
     
+
+    # ... (Sentetik veri oluşturma kodunun geri kalanı) ...
     # RSI simülasyonu (basit: fiyat değişimine göre)
     rsi_values = []
+    adx_values = []
+    trends = []
+    
     for i in range(n_candles):
         if i == 0:
             rsi_values.append(50)
+            adx_values.append(25)
+            trends.append("NEUTRAL")
         else:
             change = prices[i] - prices[i-1]
             prev_rsi = rsi_values[-1]
-            # Fiyat artarsa RSI artar, düşerse azalır
+            
+            # RSI
             new_rsi = prev_rsi + change * 2
-            new_rsi = max(10, min(90, new_rsi))  # 10-90 arası
+            new_rsi = max(10, min(90, new_rsi))
             rsi_values.append(new_rsi)
+            
+            # ADX (Rastgele)
+            adx_values.append(np.random.randint(15, 45))
+            
+            # Trend
+            if prices[i] > prices[i-1]:
+                trends.append("BULLISH")
+            else:
+                trends.append("BEARISH")
     
     # DataFrame oluştur
     candles = pd.DataFrame({
         'timestamp': pd.date_range('2024-01-01', periods=n_candles, freq='4h'),
         'close': prices,
-        'rsi': rsi_values
+        'rsi': rsi_values,
+        'adx': adx_values,
+        'trend': trends
     })
     
     print(f"\n📈 Sentetik veri: {n_candles} mum")
     print(f"   Başlangıç fiyat: ${prices[0]:.2f}")
     print(f"   Bitiş fiyat: ${prices[-1]:.2f}")
-    print(f"   Min/Max: ${min(prices):.2f} / ${max(prices):.2f}")
     
-    # Backtester oluştur
+    # ────────────────────────────────────────────────────────
+    # 1. BASİT STRATEJİ TESTİ
+    # ────────────────────────────────────────────────────────
+    print("\n" + "=" * 40)
+    print("TEST 1: Basit Fonksiyonel Strateji")
+    print("=" * 40)
+    
     bt = Backtester(candles, starting_balance=1000.0)
     
-    # Basit RSI stratejisi
     def rsi_strategy(row):
         rsi = row.get('rsi', 50)
-        
         if rsi < 35:
-            return ("BUY", 0.3)  # RSI düşükse %30 al
+            return ("BUY", 0.3)
         elif rsi > 65:
-            return ("SELL", 1.0)  # RSI yüksekse hepsini sat
+            return ("SELL", 1.0)
         return (None, 0)
     
-    # Backtest çalıştır
-    print("\n🚀 RSI stratejisi çalıştırılıyor...")
     bt.run_simple_strategy(rsi_strategy)
-    
-    # Sonuçları göster
     bt.print_summary()
     
-    # İlk 5 trade'i göster
-    trades = bt.get_trades()
-    if trades:
-        print("📝 İlk 5 Trade:")
-        print("-" * 50)
-        for t in trades[:5]:
-            side_emoji = "🟢" if t['side'] == "BUY" else "🔴"
-            pnl_str = f" PnL: ${t['pnl']:.2f}" if t['pnl'] != 0 else ""
-            print(f"   {side_emoji} {t['side']} {t['quantity']:.4f} @ ${t['price']:.2f}{pnl_str}")
-        if len(trades) > 5:
-            print(f"   ... ve {len(trades) - 5} işlem daha")
+    # ────────────────────────────────────────────────────────
+    # 2. STRATEGY ENGINE ENTEGRASYON TESTİ
+    # ────────────────────────────────────────────────────────
+    print("\n" + "=" * 40)
+    print("TEST 2: Strategy Engine (Deterministic)")
+    print("=" * 40)
+    
+    async def run_async_demo():
+        try:
+            from strategy_engine import StrategyEngine
+            # RiskManager zaten import edildi (top-level)
+            
+            # Deterministic modda engine oluştur
+            # Not: StrategyEngine'e guardrail parametrelerini geçmeye gerek yok artik (RiskManager'da)
+            engine = StrategyEngine(
+                deterministic=True, 
+                enable_llm=False
+            )
+            
+            # Risk Manager oluştur (Demo için gevşek kurallar)
+            rm = RiskManager(config={
+                "min_volume": 0,
+                "min_adx": 0,
+                "risk_per_trade": 0.05
+            })
+            
+            # Backtester'ı sıfırla/yeniden oluştur
+            bt_engine = Backtester(candles, starting_balance=1000.0)
+            
+            # Async backtest çalıştır (custom risk manager ile)
+            await bt_engine.run_backtest(engine, risk_manager=rm)
+            
+            # Sonuçları göster
+            bt_engine.print_summary()
+            
+            trades = bt_engine.get_trades()
+            if trades:
+                print("📝 Engine Trades (İlk 5):")
+                print("-" * 50)
+                for t in trades[:5]:
+                     side_emoji = "🟢" if t['side'] == "BUY" else "🔴"
+                     pnl_str = f" PnL: ${t['pnl']:.2f}" if t['pnl'] != 0 else ""
+                     print(f"   {side_emoji} {t['side']} {t['quantity']:.4f} @ ${t['price']:.2f}{pnl_str}")
+
+        except ImportError:
+            print("⚠️ StrategyEngine import edilemedi (dosya eksik olabilir)")
+        except Exception as e:
+            print(f"⚠️ Hata: {e}")
+            import traceback
+            traceback.print_exc()
+
+    asyncio.run(run_async_demo())
     
     print("\n✅ Demo tamamlandı!")

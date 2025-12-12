@@ -238,6 +238,99 @@ class ExchangeRouter:
         with self._price_lock:
             return dict(self._price_cache)
     
+    def get_cached_price(self, symbol: str) -> Optional[float]:
+        """
+        Sync cached price getter (never awaited).
+        
+        Returns cached price if valid, None if stale or missing.
+        Use this for sync code paths.
+        
+        Args:
+            symbol: Sembol (örn: BTCUSDT)
+        
+        Returns:
+            Cached price float or None
+        """
+        return self.get_price(symbol)
+    
+    async def get_price_async(
+        self,
+        symbol: str,
+        fallback_rest: bool = True,
+        timeout_s: float = 3.0
+    ) -> Optional[float]:
+        """
+        Async price getter with optional REST fallback.
+        
+        Use this in async contexts (coroutines) to safely get price.
+        
+        1. First tries cached price (sync, instant)
+        2. If fallback_rest=True and cache miss, calls REST API in thread
+        
+        Args:
+            symbol: Sembol (örn: BTCUSDT)
+            fallback_rest: Try REST API if cache miss (default: True)
+            timeout_s: Timeout for REST call
+        
+        Returns:
+            Price float or None
+        """
+        symbol = symbol.upper()
+        
+        # 1) Try cached price first (sync)
+        cached = self.get_cached_price(symbol)
+        if isinstance(cached, (int, float)) and cached > 0:
+            return float(cached)
+        
+        if not fallback_rest:
+            return None
+        
+        # 2) Fallback to REST API (run sync client call in thread)
+        if not self._client:
+            return None
+        
+        try:
+            loop = asyncio.get_running_loop()
+            ticker = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: self._client.get_symbol_ticker(symbol=symbol)
+                ),
+                timeout=timeout_s
+            )
+            price = float(ticker.get('price', 0))
+            
+            if price > 0:
+                # Update cache
+                self._update_price_cache(symbol, price)
+                return price
+            return None
+            
+        except asyncio.TimeoutError:
+            logger.warning(f"[ExchangeRouter] get_price_async timeout for {symbol}")
+            return None
+        except Exception as e:
+            logger.warning(f"[ExchangeRouter] get_price_async REST failed for {symbol}: {e}")
+            return None
+    
+    async def fetch_24h_ticker(self, symbol: str) -> Dict[str, Any]:
+        """
+        Returns Binance 24h ticker stats for the symbol.
+        Used for accurate USD volume: quoteVolume.
+        """
+        if not self._client:
+            return {}
+            
+        try:
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None, 
+                lambda: self._client.get_ticker(symbol=symbol.upper())
+            )
+        except Exception as e:
+            logger.error(f"[ExchangeRouter] 24h ticker fetch failed for {symbol}: {e}")
+            return {}
+
     def add_price_callback(self, callback: Callable[[str, float], None]) -> None:
         """Fiyat güncellemesi callback'i ekle."""
         self._price_callbacks.append(callback)
