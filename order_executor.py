@@ -56,6 +56,7 @@ executed_price, fee = executor.simulate_slippage_and_fees(
 
 import asyncio
 import logging
+import random
 import time
 import uuid
 from datetime import datetime
@@ -395,11 +396,13 @@ class OrderExecutor:
                 
                 # Geçici hatalar - retry yap
                 if attempt < self.max_retries:
-                    # Exponential backoff: 1s, 2s, 4s...
-                    wait_time = 2 ** (attempt - 1)
+                    # Exponential backoff with jitter: base * 2^attempt + random(0, 0.5*base)
+                    base_wait = 2 ** (attempt - 1)
+                    jitter = random.uniform(0, base_wait * 0.5)
+                    wait_time = base_wait + jitter
                     logger.warning(
                         f"⚠️ API hatası (kod: {e.code}): {e.message}. "
-                        f"{wait_time}s sonra tekrar denenecek..."
+                        f"{wait_time:.1f}s sonra tekrar denenecek..."
                     )
                     await asyncio.sleep(wait_time)
                 else:
@@ -414,8 +417,10 @@ class OrderExecutor:
                 logger.error(f"❌ Beklenmeyen hata: {type(e).__name__}: {e}")
                 
                 if attempt < self.max_retries:
-                    wait_time = 2 ** (attempt - 1)
-                    logger.warning(f"⚠️ {wait_time}s sonra tekrar denenecek...")
+                    base_wait = 2 ** (attempt - 1)
+                    jitter = random.uniform(0, base_wait * 0.5)
+                    wait_time = base_wait + jitter
+                    logger.warning(f"⚠️ {wait_time:.1f}s sonra tekrar denenecek...")
                     await asyncio.sleep(wait_time)
                 else:
                     raise
@@ -469,6 +474,123 @@ class OrderExecutor:
         except BinanceAPIException as e:
             logger.error(f"❌ İptal hatası: {e.message}")
             raise
+
+    async def create_limit_order_with_timeout(
+        self,
+        symbol: str,
+        side: str,
+        quantity: float,
+        price: float,
+        timeout_seconds: float = 30.0,
+        cancel_on_timeout: bool = True,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        LIMIT emir oluştur ve belirli süre içinde dolmazsa iptal et.
+        
+        Args:
+            symbol: İşlem sembolü (örn: BTCUSDT)
+            side: İşlem yönü - "BUY" veya "SELL"
+            quantity: İşlem miktarı
+            price: Limit fiyatı
+            timeout_seconds: Emir dolması için bekleme süresi (varsayılan: 30s)
+            cancel_on_timeout: Timeout'ta otomatik iptal (varsayılan: True)
+            **kwargs: Ek Binance API parametreleri
+        
+        Returns:
+            {
+                "order": Binance order response,
+                "status": "FILLED" | "CANCELED" | "TIMEOUT",
+                "filled_qty": float,
+                "canceled": bool
+            }
+        
+        Example:
+            >>> result = await executor.create_limit_order_with_timeout(
+            ...     symbol="BTCUSDT",
+            ...     side="BUY",
+            ...     quantity=0.001,
+            ...     price=95000.0,
+            ...     timeout_seconds=60
+            ... )
+            >>> if result["status"] == "FILLED":
+            ...     print("Order filled!")
+        """
+        result = {
+            "order": None,
+            "status": "PENDING",
+            "filled_qty": 0.0,
+            "canceled": False
+        }
+        
+        # 1. LIMIT emri oluştur
+        try:
+            order = await self.create_order(
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                order_type="LIMIT",
+                price=price,
+                timeInForce=kwargs.get("timeInForce", "GTC"),
+                **kwargs
+            )
+            result["order"] = order
+            order_id = order.get("orderId")
+            
+            # DRY RUN modunda hemen FILLED döner
+            if self.dry_run or order.get("_simulated"):
+                result["status"] = "FILLED"
+                result["filled_qty"] = quantity
+                return result
+            
+        except Exception as e:
+            logger.error(f"❌ LIMIT emir oluşturulamadı: {e}")
+            result["status"] = "FAILED"
+            return result
+        
+        # 2. Emir durumunu bekle (polling)
+        poll_interval = min(2.0, timeout_seconds / 10)
+        elapsed = 0.0
+        
+        while elapsed < timeout_seconds:
+            await asyncio.sleep(poll_interval)
+            elapsed += poll_interval
+            
+            try:
+                # Emir durumunu sorgula
+                order_status = self.client.get_order(symbol=symbol, orderId=order_id)
+                status = order_status.get("status")
+                filled_qty = float(order_status.get("executedQty", 0))
+                
+                result["filled_qty"] = filled_qty
+                
+                if status == "FILLED":
+                    result["status"] = "FILLED"
+                    logger.info(f"✅ LIMIT emir doldu: {symbol} OrderId={order_id}")
+                    return result
+                    
+                elif status in ("CANCELED", "REJECTED", "EXPIRED"):
+                    result["status"] = status
+                    logger.warning(f"⚠️ LIMIT emir durumu: {status}")
+                    return result
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ Emir durumu sorgulanamadı: {e}")
+        
+        # 3. Timeout - iptal et
+        result["status"] = "TIMEOUT"
+        logger.warning(f"⏱️ LIMIT emir timeout ({timeout_seconds}s): {symbol} OrderId={order_id}")
+        
+        if cancel_on_timeout:
+            try:
+                await self.cancel_order(symbol=symbol, order_id=order_id)
+                result["canceled"] = True
+                result["status"] = "CANCELED"
+                logger.info(f"🚫 LIMIT emir iptal edildi: {symbol} OrderId={order_id}")
+            except Exception as e:
+                logger.error(f"❌ İptal başarısız: {e}")
+        
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

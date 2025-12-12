@@ -421,11 +421,11 @@ def check_binance_public(timeout: int = 8) -> CheckResult:
         details["local_time_ms"] = local_time_ms
         details["drift_seconds"] = round(drift_seconds, 3)
         
-        if drift_seconds > 2:
+        if drift_seconds > 1:
             return CheckResult(
                 name="CHECK_BINANCE_PUBLIC",
                 status="WARN",
-                message=f"Time drift {drift_seconds:.1f}s (>2s threshold)",
+                message=f"Time drift {drift_seconds:.1f}s (>1s threshold)",
                 details=details
             )
         else:

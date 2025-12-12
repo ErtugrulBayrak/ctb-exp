@@ -389,7 +389,17 @@ async def ana_dongu():
         log("ExchangeRouter başlatıldı", "OK")
         
         # Initialize MarketDataEngine
-        market_data_engine = MarketDataEngine(router)
+        market_data_engine = MarketDataEngine(
+            exchange_router=router,
+            etherscan_api_key=ETHERSCAN_API_KEY,
+            reddit_credentials={
+                "client_id": REDDIT_CLIENT_ID,
+                "client_secret": REDDIT_CLIENT_SECRET,
+                "user_agent": REDDIT_USER_AGENT,
+                "username": REDDIT_USERNAME,
+                "password": REDDIT_PASSWORD
+            }
+        )
         log("MarketDataEngine başlatıldı", "OK")
         
         # Initialize StrategyEngine

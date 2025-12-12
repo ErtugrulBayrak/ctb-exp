@@ -78,9 +78,17 @@ class RiskManager:
             return result
             
         atr = technical.get("atr", 0)
-        sl_tp = self._calculate_sl_tp(price, atr)
+        
+        # Get bias from base_decision metadata (from LLM)
+        metadata = base_decision.get("metadata", {})
+        sl_bias = metadata.get("sl_bias", "neutral")
+        tp_bias = metadata.get("tp_bias", "neutral")
+        
+        sl_tp = self._calculate_sl_tp(price, atr, sl_bias=sl_bias, tp_bias=tp_bias)
         result["stop_loss"] = sl_tp["stop_loss"]
         result["take_profit"] = sl_tp["take_profit"]
+        result["metadata"]["sl_bias"] = sl_bias
+        result["metadata"]["tp_bias"] = tp_bias
         
         # 4. Calculate Quantity
         balance = portfolio.get("balance", 0)
@@ -192,19 +200,53 @@ class RiskManager:
              
         return {"passed": True, "reason": "OK"}
 
-    def _calculate_sl_tp(self, price: float, atr: float) -> Dict[str, float]:
-        """ATR tabanlı SL/TP (StrategyEngine'den taşındı)."""
+    def _calculate_sl_tp(
+        self,
+        price: float,
+        atr: float,
+        sl_bias: str = "neutral",
+        tp_bias: str = "neutral"
+    ) -> Dict[str, float]:
+        """
+        ATR tabanlı SL/TP hesapla.
+        
+        Args:
+            price: Giriş fiyatı
+            atr: Average True Range değeri
+            sl_bias: "tighter" | "looser" | "neutral" - SL mesafesini ayarlar
+            tp_bias: "tighter" | "looser" | "neutral" - TP mesafesini ayarlar
+        
+        Bias Etkileri:
+            - tighter: Mesafeyi %25 azaltır (daha sıkı)
+            - looser: Mesafeyi %25 artırır (daha geniş)
+            - neutral: Varsayılan değer (değişiklik yok)
+        """
+        # Bias multipliers
+        bias_map = {
+            "tighter": 0.75,  # %25 daha sıkı
+            "looser": 1.25,   # %25 daha geniş
+            "neutral": 1.0
+        }
+        
+        sl_mult = bias_map.get(sl_bias, 1.0)
+        tp_mult = bias_map.get(tp_bias, 1.0)
+        
         if not atr or atr <= 0:
-            # Fallback: %3 SL, %5 TP
+            # Fallback: %3 SL, %5 TP (bias uygulanır)
+            base_sl_pct = 0.03 * sl_mult
+            base_tp_pct = 0.05 * tp_mult
             return {
-                "stop_loss": price * 0.97,
-                "take_profit": price * 1.05
+                "stop_loss": round(price * (1 - base_sl_pct), 2),
+                "take_profit": round(price * (1 + base_tp_pct), 2)
             }
         
-        # 2x ATR SL, 3x ATR TP
+        # ATR-based: 2x ATR SL, 3x ATR TP (bias uygulanır)
+        sl_distance = 2 * atr * sl_mult
+        tp_distance = 3 * atr * tp_mult
+        
         return {
-            "stop_loss": round(price - (2 * atr), 2),
-            "take_profit": round(price + (3 * atr), 2)
+            "stop_loss": round(price - sl_distance, 2),
+            "take_profit": round(price + tp_distance, 2)
         }
 
     def _calculate_quantity(self, balance: float, price: float, stop_loss: float) -> float:

@@ -125,6 +125,10 @@ class MarketDataEngine:
     SENTIMENT_TTL = 90.0
     ONCHAIN_TTL = 120.0
     RSS_TTL = 90.0
+    # Desteklenen mum periyotları
+    VALID_INTERVALS = {"1m", "5m", "15m", "1h", "4h", "1d"}
+    DEFAULT_INTERVAL = "15m"
+    
     CACHE_TTL = {
         "fng": 3600,      # 1 hour
         "reddit": 900,    # 15 min
@@ -450,10 +454,26 @@ Output ONLY valid JSON with this structure:
         
         return self._router.get_price_or_fetch(symbol)
 
-    async def _fetch_candles(self, symbol: str) -> Optional[pd.DataFrame]:
+    async def _fetch_candles(self, symbol: str, interval: str = None) -> Optional[pd.DataFrame]:
         """
-        Binance'den 15m mum verisi çek (Async).
+        Binance'den mum verisi çek (Async).
+        
+        Args:
+            symbol: Coin sembolü (örn: BTCUSDT, BTC)
+            interval: Mum periyodu (1m, 5m, 15m, 1h, 4h, 1d). Default: DEFAULT_INTERVAL
+        
+        Returns:
+            OHLCV DataFrame veya None
         """
+        # Default interval
+        if interval is None:
+            interval = self.DEFAULT_INTERVAL
+        
+        # Validate interval
+        if interval not in self.VALID_INTERVALS:
+            logger.warning(f"[MarketDataEngine] Geçersiz interval: {interval}. Varsayılan kullanılıyor: {self.DEFAULT_INTERVAL}")
+            interval = self.DEFAULT_INTERVAL
+        
         if not self._router:
             logger.warning("[MarketDataEngine] Router yok, candle çekilemedi")
             return None
@@ -473,7 +493,7 @@ Output ONLY valid JSON with this structure:
                 None,
                 lambda: client.get_klines(
                     symbol=symbol,
-                    interval="15m",
+                    interval=interval,
                     limit=200
                 )
             )
@@ -495,7 +515,7 @@ Output ONLY valid JSON with this structure:
             return df
             
         except Exception as e:
-            logger.warning(f"[MarketDataEngine] Candle fetch error ({symbol}): {e}")
+            logger.warning(f"[MarketDataEngine] Candle fetch error ({symbol}, {interval}): {e}")
             return None
 
     async def get_24h_volume_usd(self, symbol: str) -> float:
@@ -528,7 +548,8 @@ Output ONLY valid JSON with this structure:
         self,
         symbol: str,
         df: Optional[pd.DataFrame] = None,
-        force_refresh: bool = False
+        force_refresh: bool = False,
+        interval: str = None
     ) -> Dict[str, Any]:
         """
         Teknik gösterge snapshot'ı hesapla.
@@ -540,10 +561,15 @@ Output ONLY valid JSON with this structure:
             symbol: Coin sembolü (BTC, ETH)
             df: OHLCV DataFrame (columns: open, high, low, close, volume)
             force_refresh: Cache'i atla
+            interval: Mum periyodu (1m, 5m, 15m, 1h, 4h, 1d). Default: DEFAULT_INTERVAL
         
         Returns:
             Normalized technical indicators dict
         """
+        # Default interval
+        if interval is None:
+            interval = self.DEFAULT_INTERVAL
+        
         # OFFLINE MODE
         if self.offline_mode:
             price = self.get_current_price(symbol)
@@ -562,17 +588,20 @@ Output ONLY valid JSON with this structure:
 
         symbol = symbol.upper().replace("USDT", "")
         
+        # Cache key includes interval (e.g., BTC_15m)
+        cache_key = f"{symbol}_{interval}"
+        
         # Check cache
         if not force_refresh:
             with self._cache_lock:
-                if symbol in self._technical_cache:
-                    cached = self._technical_cache[symbol].get()
+                if cache_key in self._technical_cache:
+                    cached = self._technical_cache[cache_key].get()
                     if cached is not None:
                         return cached
         
         if df is None:
-             logger.info(f"[MarketDataEngine] Fetching candles for {symbol}...")
-             df = await self._fetch_candles(symbol)
+             logger.info(f"[MarketDataEngine] Fetching candles for {symbol} ({interval})...")
+             df = await self._fetch_candles(symbol, interval=interval)
              
              if df is None or df.empty:
                  logger.warning("[MarketDataEngine] Technical analizi için DataFrame eksik ve çekilemedi")
@@ -580,12 +609,13 @@ Output ONLY valid JSON with this structure:
 
         # Compute indicators
         result = self._compute_technical_indicators(symbol, df)
+        result["interval"] = interval  # Add interval to result
         
         # Update cache
         with self._cache_lock:
-            if symbol not in self._technical_cache:
-                self._technical_cache[symbol] = CachedData(ttl_seconds=self.TECHNICAL_TTL)
-            self._technical_cache[symbol].set(result)
+            if cache_key not in self._technical_cache:
+                self._technical_cache[cache_key] = CachedData(ttl_seconds=self.TECHNICAL_TTL)
+            self._technical_cache[cache_key].set(result)
         
         return result
     
