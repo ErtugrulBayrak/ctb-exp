@@ -265,6 +265,9 @@ class StrategyEngine:
                     decision["action"] = "BUY"
                     decision["confidence"] = llm_conf
                     decision["reason"] = f"LLM: {llm_reason}"
+                    # Pass bias to RiskManager
+                    decision["metadata"]["sl_bias"] = sl_bias
+                    decision["metadata"]["tp_bias"] = tp_bias
                 elif llm_action != "BUY":
                     decision["action"] = "HOLD"
                     decision["reason"] = f"LLM Rejected: {llm_reason}"
@@ -893,7 +896,8 @@ Evaluation:
                         current_prompt,
                         generation_config=genai.types.GenerationConfig(
                             temperature=0.05,  # Very low for consistent JSON
-                            max_output_tokens=400
+                            max_output_tokens=400,
+                            response_mime_type="application/json"  # Force JSON output
                         )
                     )
                 response = await loop.run_in_executor(None, sync_generate)
@@ -969,7 +973,8 @@ Examples:
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.1,
-                        max_output_tokens=200
+                        max_output_tokens=200,
+                        response_mime_type="application/json"  # Force JSON output
                     )
                 )
             response = await loop.run_in_executor(None, sync_generate)

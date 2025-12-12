@@ -64,6 +64,19 @@ class LoopController:
         self.loop_duration = getattr(SETTINGS, "LOOP_SECONDS", 900)
         self.cooldown_until = 0.0
         
+        # Alarm tracking
+        self._alarm_thresholds = {
+            "consecutive_parse_fail": 15,   # Only alert after 15+ consecutive failures (was 5)
+            "consecutive_adx_block": 20,    # Only alert after 20+ ADX blocks (was 10)
+            "consecutive_data_fail": 5      # Only alert after 5+ data fetch failures (was 3)
+        }
+        self._alarm_counters = {
+            "parse_fail": 0,
+            "adx_block": 0,
+            "data_fail": 0
+        }
+        self._last_metrics = {}
+        
         # Log startup settings
         self.log_startup_risk_settings()
 
@@ -76,6 +89,70 @@ class LoopController:
         logger.info(f"Max Loss Streak: {SETTINGS.MAX_CONSECUTIVE_LOSSES}")
         logger.info(f"Cooldown Minutes: {SETTINGS.COOLDOWN_MINUTES}")
         logger.info("════════════════════════════════════════")
+
+    async def _check_alarms(self, strategy_metrics: Dict, news_metrics: Dict):
+        """
+        Check for alarm conditions and send Telegram alerts if thresholds exceeded.
+        
+        Monitors:
+        - Consecutive parse failures (>5)
+        - Consecutive ADX blocks (>10)
+        - Consecutive data fetch failures (>3)
+        """
+        alerts = []
+        
+        # 1. Parse fail tracking
+        current_parse_fail = strategy_metrics.get("parse_fail", 0)
+        last_parse_fail = self._last_metrics.get("parse_fail", 0)
+        
+        if current_parse_fail > last_parse_fail:
+            self._alarm_counters["parse_fail"] += (current_parse_fail - last_parse_fail)
+        else:
+            self._alarm_counters["parse_fail"] = 0  # Reset on success
+        
+        if self._alarm_counters["parse_fail"] >= self._alarm_thresholds["consecutive_parse_fail"]:
+            alerts.append(f"⚠️ Parse Fail Alarm: {self._alarm_counters['parse_fail']} consecutive failures")
+            self._alarm_counters["parse_fail"] = 0  # Reset after alert
+        
+        # 2. News/Data fail tracking
+        current_news_fail = news_metrics.get("news_failures", 0)
+        last_news_fail = self._last_metrics.get("news_failures", 0)
+        
+        if current_news_fail > last_news_fail:
+            self._alarm_counters["data_fail"] += 1
+        else:
+            self._alarm_counters["data_fail"] = 0
+        
+        if self._alarm_counters["data_fail"] >= self._alarm_thresholds["consecutive_data_fail"]:
+            alerts.append(f"⚠️ Data Fetch Alarm: {self._alarm_counters['data_fail']} consecutive failures")
+            self._alarm_counters["data_fail"] = 0
+        
+        # Update last metrics for next cycle
+        self._last_metrics = {
+            "parse_fail": current_parse_fail,
+            "news_failures": current_news_fail
+        }
+        
+        # Send alerts via Telegram
+        if alerts and self.telegram_fn:
+            bot_token = self.telegram_config.get("bot_token", "")
+            chat_id = self.telegram_config.get("chat_id", "")
+            
+            if bot_token and chat_id:
+                alert_msg = (
+                    "🚨 <b>SYSTEM ALERT</b> 🚨\n\n" +
+                    "\n".join(alerts) +
+                    f"\n\n<i>Time: {time.strftime('%H:%M:%S')}</i>"
+                )
+                try:
+                    await self.telegram_fn(bot_token, chat_id, alert_msg)
+                    logger.warning(f"[ALARM] Telegram alert sent: {alerts}")
+                except Exception as e:
+                    logger.error(f"[ALARM] Failed to send Telegram alert: {e}")
+        
+        # Log alerts locally regardless
+        for alert in alerts:
+            logger.warning(f"[ALARM] {alert}")
 
     async def run(self):
         """Main infinite loop."""
@@ -104,6 +181,9 @@ class LoopController:
                     )
                 except Exception:
                     pass
+
+                # Check for alarm conditions
+                await self._check_alarms(sm, nm)
 
                 logger.info(f"💤 Sleeping for {sleep_time:.1f}s...")
                 await asyncio.sleep(sleep_time)
