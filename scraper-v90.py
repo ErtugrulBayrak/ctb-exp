@@ -2,16 +2,35 @@ import os
 import sys
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# HEADLESS / SERVICE MODE DETECTION
+# ═══════════════════════════════════════════════════════════════════════════════
+# Windows servis veya terminal-less ortamlarda güvenli çalışma
+def _is_terminal_available():
+    """Check if stdout/stderr are connected to a real terminal."""
+    try:
+        # Try to check if stdout is a TTY
+        if hasattr(sys.stdout, 'isatty'):
+            return sys.stdout.isatty()
+        # Fallback: try to write to stdout
+        sys.stdout.write('')
+        sys.stdout.flush()
+        return True
+    except (AttributeError, OSError, PermissionError):
+        return False
+
+_HAS_TERMINAL = _is_terminal_available()
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # WINDOWS TERMINAL UTF-8 ENCODING AYARI
 # ═══════════════════════════════════════════════════════════════════════════════
 # Sunucularda emoji ve Türkçe karakterlerin düzgün görünmesi için
-if sys.platform == 'win32':
-    os.system('chcp 65001 >nul 2>&1')  # Windows code page'i UTF-8 yap
+if sys.platform == 'win32' and _HAS_TERMINAL:
     try:
+        os.system('chcp 65001 >nul 2>&1')  # Windows code page'i UTF-8 yap
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
         sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except AttributeError:
-        pass  # Python < 3.7 için
+    except (AttributeError, OSError, PermissionError):
+        pass  # Terminal unavailable or Python < 3.7
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GRPC/ALTS UYARILARINI TAMAMEN BASTIR (C++ seviyesinde)
@@ -26,8 +45,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['ABSL_MIN_LOG_LEVEL'] = '3'
 
 # stderr'i geçici olarak /dev/null'a yönlendir (gRPC yüklenirken)
+# Sadece terminal varsa yapılır
 _original_stderr = sys.stderr
-sys.stderr = open(os.devnull, 'w')
+try:
+    sys.stderr = open(os.devnull, 'w')
+except (OSError, PermissionError):
+    pass  # Headless mode - stderr redirect not possible
 
 # Şimdi gRPC kullanan kütüphaneleri import et
 import warnings
@@ -50,17 +73,21 @@ import requests
 from datetime import datetime, timedelta, timezone
 
 # stderr'i geri yükle (gRPC yüklendi, artık güvenli)
-sys.stderr = _original_stderr
+try:
+    sys.stderr = _original_stderr
+except (OSError, PermissionError):
+    pass  # Headless mode
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TERMINAL LOG SİSTEMİ - Tüm çıktıları hem terminale hem dosyaya yaz
 # ═══════════════════════════════════════════════════════════════════════════════
 class TeeLogger:
-    """Hem terminale hem dosyaya yazan logger"""
+    """Hem terminale hem dosyaya yazan logger (headless-safe)"""
     def __init__(self, log_dir="logs"):
         self.terminal = sys.stdout
         self.log_dir = log_dir
+        self._terminal_works = _HAS_TERMINAL
         
         # logs klasörünü oluştur
         if not os.path.exists(log_dir):
@@ -71,27 +98,55 @@ class TeeLogger:
         self.log_file = os.path.join(log_dir, f"terminal_log_{timestamp}.txt")
         self.file = open(self.log_file, 'w', encoding='utf-8')
         
-        print(f"📝 Terminal log dosyası: {self.log_file}")
+        # Only print if terminal is available
+        if self._terminal_works:
+            try:
+                print(f"📝 Terminal log dosyası: {self.log_file}")
+            except (OSError, PermissionError):
+                self._terminal_works = False
     
     def write(self, message):
-        self.terminal.write(message)
-        self.terminal.flush()
-        self.file.write(message)
-        self.file.flush()
+        # Write to file always
+        try:
+            self.file.write(message)
+            self.file.flush()
+        except Exception:
+            pass
+        
+        # Write to terminal only if available
+        if self._terminal_works:
+            try:
+                self.terminal.write(message)
+                self.terminal.flush()
+            except (OSError, PermissionError):
+                self._terminal_works = False
     
     def flush(self):
-        self.terminal.flush()
-        self.file.flush()
+        try:
+            self.file.flush()
+        except Exception:
+            pass
+        if self._terminal_works:
+            try:
+                self.terminal.flush()
+            except (OSError, PermissionError):
+                self._terminal_works = False
     
     def close(self):
-        self.file.close()
+        try:
+            self.file.close()
+        except Exception:
+            pass
 
 # Terminal log'u aktifleştir
 ENABLE_TERMINAL_LOG = True  # False yaparak kapatılabilir
 
 if ENABLE_TERMINAL_LOG:
-    tee_logger = TeeLogger()
-    sys.stdout = tee_logger
+    try:
+        tee_logger = TeeLogger()
+        sys.stdout = tee_logger
+    except (OSError, PermissionError):
+        pass  # Headless mode - TeeLogger cannot be initialized
 
 
 # API Anahtarları (config.py'dan import edilir)
