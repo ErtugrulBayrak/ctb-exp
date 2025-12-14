@@ -901,7 +901,7 @@ Reply ONLY JSON (NO markdown, NO text before/after):
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.1,
-                        max_output_tokens=500
+                        max_output_tokens=1000
                     )
                 )
             
@@ -1162,7 +1162,7 @@ SADECE JSON yanıt ver:
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.3,
-                        max_output_tokens=200
+                        max_output_tokens=1000
                     )
                 )
             
@@ -1252,7 +1252,7 @@ Sentiment: {sentiment}
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.2,
-                        max_output_tokens=400
+                        max_output_tokens=1000
                     )
                 )
             response = await loop.run_in_executor(None, sync_generate)
@@ -1310,8 +1310,7 @@ Evaluation:
                         current_prompt,
                         generation_config=genai.types.GenerationConfig(
                             temperature=0.05,  # Very low for consistent JSON
-                            max_output_tokens=400,
-                            response_mime_type="application/json"  # Force JSON output
+                            max_output_tokens=1000
                         )
                     )
                 response = await loop.run_in_executor(None, sync_generate)
