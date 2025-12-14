@@ -221,11 +221,12 @@ class LoopController:
             sentiment_snap = self.market_data_engine.get_sentiment_snapshot()
             onchain_snap = self.market_data_engine.get_onchain_snapshot()
             
-            fng = sentiment_snap.get("fear_greed", {})
-            logger.info(f"🌡️ Global Sentiment: F&G={fng.get('value')} ({fng.get('classification')})")
+            fng = sentiment_snap.get("fear_greed") or {}
+            logger.info(f"🌡️ Global Sentiment: F&G={fng.get('value', 'N/A')} ({fng.get('classification', 'Unavailable')})")
             
-            whale_signal = onchain_snap.get("signal", "NEUTRAL")
-            logger.info(f"🐋 Global On-Chain: {whale_signal} (${onchain_snap.get('total_inflow_usd', 0):,.0f})")
+            whale_signal = onchain_snap.get("signal", "NEUTRAL") if onchain_snap else "NEUTRAL"
+            inflow_usd = onchain_snap.get("total_inflow_usd", 0) if onchain_snap else 0
+            logger.info(f"🐋 Global On-Chain: {whale_signal} (${inflow_usd:,.0f})")
             
         except Exception as e:
             logger.error(f"⚠️ Failed to fetch global data: {e}")

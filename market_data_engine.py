@@ -819,49 +819,67 @@ Output ONLY valid JSON with this structure:
         return result
     
     def _fetch_fear_and_greed(self) -> Optional[Dict[str, Any]]:
-        """Fear & Greed Index çek."""
+        """Fear & Greed Index çek (retry destekli)."""
         # Check dedicated cache
         cached = self._fng_cache.get()
         if cached is not None:
             return cached
         
-        try:
-            response = requests.get(
-                "https://api.alternative.me/fng/",
-                timeout=5
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            if data.get("data"):
-                fng_data = data["data"][0]
-                result = {
-                    "value": int(fng_data.get("value", 0)),
-                    "classification": fng_data.get("value_classification", "Unknown"),
-                    "timestamp": fng_data.get("timestamp", ""),
-                    "source": "alternative.me"
-                }
+        # Retry configuration
+        max_retries = 3
+        timeouts = [10, 15, 20]  # Progressive timeouts (increased for slow connections)
+        
+        for attempt in range(max_retries):
+            try:
+                timeout = timeouts[min(attempt, len(timeouts) - 1)]
+                response = requests.get(
+                    "https://api.alternative.me/fng/",
+                    timeout=timeout
+                )
+                response.raise_for_status()
+                data = response.json()
                 
-                # Add emoji
-                val = result["value"]
-                if val <= 25:
-                    result["emoji"] = "😱"
-                elif val <= 45:
-                    result["emoji"] = "😟"
-                elif val <= 55:
-                    result["emoji"] = "😐"
-                elif val <= 75:
-                    result["emoji"] = "😊"
+                if data.get("data"):
+                    fng_data = data["data"][0]
+                    result = {
+                        "value": int(fng_data.get("value", 0)),
+                        "classification": fng_data.get("value_classification", "Unknown"),
+                        "timestamp": fng_data.get("timestamp", ""),
+                        "source": "alternative.me"
+                    }
+                    
+                    # Add emoji
+                    val = result["value"]
+                    if val <= 25:
+                        result["emoji"] = "😱"
+                    elif val <= 45:
+                        result["emoji"] = "😟"
+                    elif val <= 55:
+                        result["emoji"] = "😐"
+                    elif val <= 75:
+                        result["emoji"] = "😊"
+                    else:
+                        result["emoji"] = "🤑"
+                    
+                    if attempt > 0:
+                        logger.info(f"[MarketDataEngine] Fear & Greed alındı (retry {attempt + 1}/{max_retries})")
+                    
+                    self._fng_cache.set(result)
+                    return result
+                
+            except requests.exceptions.Timeout:
+                if attempt < max_retries - 1:
+                    logger.warning(f"[MarketDataEngine] Fear & Greed API timeout, retry {attempt + 2}/{max_retries}...")
+                    time.sleep(1)  # Wait before retry
                 else:
-                    result["emoji"] = "🤑"
-                
-                self._fng_cache.set(result)
-                return result
-            
-        except requests.exceptions.Timeout:
-            logger.warning("[MarketDataEngine] Fear & Greed API timeout")
-        except Exception as e:
-            logger.error(f"[MarketDataEngine] Fear & Greed hatası: {e}")
+                    logger.warning("[MarketDataEngine] Fear & Greed API timeout (tüm denemeler başarısız)")
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning(f"[MarketDataEngine] Fear & Greed hatası: {e}, retry {attempt + 2}/{max_retries}...")
+                    time.sleep(1)
+                else:
+                    logger.error(f"[MarketDataEngine] Fear & Greed hatası (tüm denemeler): {e}")
+                    break
         
         return cached
     
