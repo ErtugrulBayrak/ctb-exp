@@ -238,6 +238,24 @@ class LoopController:
         except Exception as e:
             logger.warning(f"⚠️ Failed to fetch global news summary: {e}")
 
+        # 4c. Fetch Reddit LLM Summary (TTL cached)
+        reddit_summary = None
+        try:
+            reddit_summary = self.market_data_engine.get_crypto_reddit_summary(self.watchlist)
+            if reddit_summary:
+                logger.info(f"📢 Reddit Summary: {reddit_summary.get('general_impact', 'N/A')}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to fetch Reddit summary: {e}")
+
+        # 4d. Run News Analysis Pipeline (Per-Article LLM Analysis)
+        new_articles_count = 0
+        try:
+            new_articles_count = self.market_data_engine.run_news_analysis_pipeline()
+            if new_articles_count > 0:
+                logger.info(f"📰 Analyzed {new_articles_count} new articles")
+        except Exception as e:
+            logger.warning(f"⚠️ News analysis pipeline error: {e}")
+
         # 5. Parallel Snapshot Collection
         logger.info(f"📥 Collecting snapshots for {len(self.watchlist)} symbols...")
         tasks = []
@@ -257,8 +275,24 @@ class LoopController:
             if not snapshot:
                 continue
 
-            # Inject global news summary into snapshot
+            # Inject global news summary into snapshot (deprecated, kept for compatibility)
             snapshot["news_summary"] = global_news_summary or {}
+            
+            # Inject Reddit summary for coin-specific insights
+            snapshot["reddit_summary"] = reddit_summary or {}
+            
+            # Inject coin-specific news for this symbol
+            coin_news = self.market_data_engine.get_coin_specific_news(symbol)
+            snapshot["coin_news"] = coin_news
+            
+            # Format coin news for LLM prompt consumption
+            if coin_news:
+                news_lines = [f"[Impact:{n.get('impact_score', 0)}] {n.get('summary', 'No summary')}" for n in coin_news[:3]]
+                snapshot["coin_news_str"] = "Relevant News:\n" + "\n".join(news_lines)
+            else:
+                snapshot["coin_news_str"] = ""
+
+
 
             # Check for Sell logic (always allowed)
             await self.process_sell_logic(symbol, snapshot)

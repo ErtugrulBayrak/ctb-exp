@@ -178,6 +178,15 @@ class MarketDataEngine:
         self._news_llm_global_cache: Optional[Dict[str, Any]] = None
         self._news_llm_global_cache_ts: float = 0.0
         
+        # Reddit LLM Summary Cache (15-min TTL)
+        self._reddit_llm_cache: Optional[Dict[str, Any]] = None
+        self._reddit_llm_cache_ts: float = 0.0
+        
+        # Per-Article Analysis Cache (URL -> analyzed result, 24h TTL)
+        self._analyzed_news_cache: Dict[str, Dict[str, Any]] = {}
+        self._analyzed_news_cache_ts: Dict[str, float] = {}  # URL -> timestamp
+        self._article_analysis_ttl = 86400  # 24 hours
+        
         # Lock for cache dict operations
         self._cache_lock = Lock()
         
@@ -187,6 +196,14 @@ class MarketDataEngine:
             "news_failures": 0,
             "news_fallbacks": 0,
             "news_latency_ema_ms": 0.0,
+            # Reddit LLM metrics
+            "reddit_calls": 0,
+            "reddit_failures": 0,
+            "reddit_latency_ema_ms": 0.0,
+            # Per-Article Analysis metrics
+            "article_calls": 0,
+            "article_failures": 0,
+            "article_latency_ema_ms": 0.0,
         }
     
     def get_llm_metrics(self) -> Dict[str, Any]:
@@ -313,6 +330,131 @@ Output ONLY valid JSON with this structure:
             self.llm_metrics["news_failures"] += 1
             self.llm_metrics["news_fallbacks"] += 1
             logger.warning(f"[MarketDataEngine] Global news summary error: {e}")
+            return None
+
+    def get_crypto_reddit_summary(self, watchlist: List[str]) -> Optional[Dict[str, Any]]:
+        """
+        Get a cached LLM-analyzed Reddit summary with coin-specific impacts.
+        
+        Args:
+            watchlist: List of coin symbols (e.g., ["BTCUSDT", "ETHUSDT"])
+        
+        Returns:
+            Dict with general_impact and coin_specific_impacts, or None on failure
+            
+        Output Schema:
+            {
+              "general_impact": "Overall Reddit market mood description",
+              "coin_specific_impacts": {
+                "BTC": "Impact for BTC...",
+                "ETH": "Impact for ETH...",
+                ...
+              }
+            }
+        """
+        # TTL for Reddit LLM cache (default 15 min)
+        reddit_llm_ttl = getattr(SETTINGS, 'REDDIT_LLM_TTL_SEC', 900)
+        
+        # Check cache freshness
+        now = time.time()
+        if self._reddit_llm_cache is not None:
+            age = now - self._reddit_llm_cache_ts
+            if age < reddit_llm_ttl:
+                return self._reddit_llm_cache
+        
+        # Fetch raw Reddit posts
+        reddit_data = self._fetch_reddit_raw()
+        if not reddit_data or not reddit_data.get("posts"):
+            return None
+        
+        posts = reddit_data["posts"]
+        if not posts:
+            return None
+        
+        # Build post titles for prompt
+        post_titles = "\n".join([
+            f"- [{p.get('subreddit', 'unknown')}] {p.get('title', 'No title')} (score: {p.get('score', 0)})"
+            for p in posts[:25]  # Limit to 25 posts for token efficiency
+        ])
+        
+        # Normalize watchlist: BTCUSDT -> BTC
+        normalized_coins = []
+        for symbol in watchlist:
+            coin = symbol.upper().replace("USDT", "").replace("USD", "")
+            if coin not in normalized_coins:
+                normalized_coins.append(coin)
+        
+        coins_str = ", ".join(normalized_coins)
+        
+        # Build prompt
+        prompt = f"""Analyze these recent Reddit crypto post titles for market sentiment:
+
+{post_titles}
+
+Coins to analyze: {coins_str}
+
+Output ONLY valid JSON with this exact structure:
+{{
+  "general_impact": "A short sentence describing the overall market mood on Reddit.",
+  "coin_specific_impacts": {{
+{chr(10).join([f'    "{coin}": "Short impact sentence for {coin}",' for coin in normalized_coins[:-1]])}
+    "{normalized_coins[-1]}": "Short impact sentence for {normalized_coins[-1]}"
+  }}
+}}
+
+IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion found" for that coin.
+"""
+        
+        try:
+            import google.generativeai as genai
+            
+            gemini_key = SETTINGS.GEMINI_API_KEY
+            if not gemini_key:
+                return None
+            
+            genai.configure(api_key=gemini_key)
+            safety_settings = [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ]
+            model = genai.GenerativeModel('models/gemini-2.5-flash', safety_settings=safety_settings)
+            
+            # Metrics: Start Timer
+            self.llm_metrics["reddit_calls"] += 1
+            start_time = time.perf_counter()
+            
+            response = model.generate_content(prompt)
+            
+            # Metrics: End Timer
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            self._update_latency_ema("reddit_latency_ema_ms", elapsed_ms)
+            
+            if not response.parts:
+                self.llm_metrics["reddit_failures"] += 1
+                return None
+            
+            # Parse response using llm_utils
+            result, parse_error = safe_json_loads(response.text.strip())
+            
+            if result:
+                # Validate required keys
+                if "general_impact" in result and "coin_specific_impacts" in result:
+                    self._reddit_llm_cache = result
+                    self._reddit_llm_cache_ts = now
+                    logger.info(f"[REDDIT SUMMARY] {result.get('general_impact', 'N/A')[:60]}")
+                    return result
+            
+            # Parse failed
+            if parse_error:
+                logger.warning(f"[REDDIT LLM PARSE FAIL] {parse_error}")
+            self.llm_metrics["reddit_failures"] += 1
+            return None
+            
+        except Exception as e:
+            self.llm_metrics["reddit_failures"] += 1
+            logger.warning(f"[MarketDataEngine] Reddit LLM summary error: {e}")
             return None
 
     def _extract_json_object(self, text: str) -> Optional[str]:
@@ -993,10 +1135,212 @@ Output ONLY valid JSON with this structure:
         except Exception as e:
             logger.error(f"[MarketDataEngine] RSS hatası: {e}")
             return cached or {"articles": [], "article_count": 0, "reason": str(e)}
-    
+
+    def analyze_single_article(self, article_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Analyze a single article with LLM to extract coin impacts.
+        
+        Args:
+            article_data: Dict with keys: title, content, link, source
+        
+        Returns:
+            Analysis result or None on failure:
+            {
+              "related_coins": ["BTC", "ETH"],
+              "sentiment": "POSITIVE|NEGATIVE|NEUTRAL",
+              "impact_score": 1-10,
+              "summary": "One sentence summary"
+            }
+        """
+        url = article_data.get("link", "")
+        if not url:
+            return None
+        
+        # Check if already analyzed (URL-based cache)
+        now = time.time()
+        if url in self._analyzed_news_cache:
+            cache_time = self._analyzed_news_cache_ts.get(url, 0)
+            if now - cache_time < self._article_analysis_ttl:
+                return self._analyzed_news_cache[url]
+        
+        title = article_data.get("title", "")
+        content = article_data.get("content", "")
+        
+        if not title:
+            return None
+        
+        # Use title if no content, truncate content to 2000 chars
+        text_for_analysis = content[:2000] if content else title
+        
+        prompt = f"""Analyze this crypto news article for market impact:
+
+Title: {title}
+Content: {text_for_analysis}
+
+Output ONLY valid JSON with this exact structure:
+{{
+  "related_coins": ["BTC", "ETH"],
+  "sentiment": "POSITIVE",
+  "impact_score": 5,
+  "summary": "Brief one-sentence summary"
+}}
+
+Rules:
+- related_coins: List crypto symbols mentioned (BTC, ETH, SOL, etc). Use "MARKET" if it's general/macro news.
+- sentiment: POSITIVE, NEGATIVE, or NEUTRAL
+- impact_score: 1-10 (1=minor news, 10=massive market-moving event)
+- summary: One sentence, max 80 characters
+"""
+        
+        try:
+            import google.generativeai as genai
+            
+            gemini_key = SETTINGS.GEMINI_API_KEY
+            if not gemini_key:
+                return None
+            
+            genai.configure(api_key=gemini_key)
+            safety_settings = [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ]
+            model = genai.GenerativeModel('models/gemini-2.5-flash', safety_settings=safety_settings)
+            
+            # Metrics
+            self.llm_metrics["article_calls"] += 1
+            start_time = time.perf_counter()
+            
+            response = model.generate_content(prompt)
+            
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            self._update_latency_ema("article_latency_ema_ms", elapsed_ms)
+            
+            if not response.parts:
+                self.llm_metrics["article_failures"] += 1
+                return None
+            
+            result, parse_error = safe_json_loads(response.text.strip())
+            
+            if result:
+                required = ["related_coins", "sentiment", "impact_score", "summary"]
+                if all(k in result for k in required):
+                    # Add metadata
+                    result["url"] = url
+                    result["title"] = title
+                    result["source"] = article_data.get("source", "Unknown")
+                    result["analyzed_at"] = now
+                    
+                    # Cache it
+                    self._analyzed_news_cache[url] = result
+                    self._analyzed_news_cache_ts[url] = now
+                    return result
+            
+            if parse_error:
+                logger.warning(f"[ARTICLE PARSE FAIL] {parse_error}")
+            self.llm_metrics["article_failures"] += 1
+            return None
+            
+        except Exception as e:
+            self.llm_metrics["article_failures"] += 1
+            logger.warning(f"[MarketDataEngine] Article analysis error: {e}")
+            return None
+
+    def run_news_analysis_pipeline(self) -> int:
+        """
+        Fetch and analyze recent news articles.
+        
+        Returns:
+            Count of newly analyzed articles
+        """
+        # 1. Fetch RSS articles
+        rss_data = self._fetch_rss_raw()
+        if not rss_data or not rss_data.get("articles"):
+            return 0
+        
+        articles = rss_data["articles"][:10]  # Limit to 10 per cycle
+        new_count = 0
+        
+        # 2. For each article, try to get content and analyze
+        for article in articles:
+            url = article.get("link", "")
+            if not url:
+                continue
+            
+            # Skip if already analyzed
+            if url in self._analyzed_news_cache:
+                cache_time = self._analyzed_news_cache_ts.get(url, 0)
+                if time.time() - cache_time < self._article_analysis_ttl:
+                    continue
+            
+            try:
+                # Try to fetch full content
+                content = self._get_article_content(url)
+                
+                # Build article data for analysis
+                article_data = {
+                    "title": article.get("title", ""),
+                    "content": content or "",  # Will fallback to title if empty
+                    "link": url,
+                    "source": article.get("source", "Unknown")
+                }
+                
+                # Analyze
+                result = self.analyze_single_article(article_data)
+                if result:
+                    new_count += 1
+                    
+            except Exception as e:
+                logger.warning(f"[MarketDataEngine] Article pipeline error for {url[:50]}: {e}")
+                continue
+        
+        # 3. Cleanup old cache entries (older than TTL)
+        self._cleanup_old_article_cache()
+        
+        return new_count
+
+    def _cleanup_old_article_cache(self) -> None:
+        """Remove expired entries from article cache."""
+        now = time.time()
+        expired_urls = [
+            url for url, ts in self._analyzed_news_cache_ts.items()
+            if now - ts > self._article_analysis_ttl
+        ]
+        for url in expired_urls:
+            self._analyzed_news_cache.pop(url, None)
+            self._analyzed_news_cache_ts.pop(url, None)
+
+    def get_coin_specific_news(self, symbol: str) -> List[Dict[str, Any]]:
+        """
+        Get analyzed news relevant to a specific coin.
+        
+        Args:
+            symbol: Coin symbol (e.g., "BTCUSDT" or "BTC")
+        
+        Returns:
+            List of relevant news sorted by impact_score descending
+        """
+        # Normalize: BTCUSDT -> BTC
+        coin = symbol.upper().replace("USDT", "").replace("USD", "")
+        
+        relevant = []
+        for url, analysis in self._analyzed_news_cache.items():
+            related_coins = analysis.get("related_coins", [])
+            # Match if coin is mentioned OR if it's market-wide news
+            if coin in related_coins or "MARKET" in related_coins:
+                relevant.append(analysis)
+        
+        # Sort by impact_score descending
+        relevant.sort(key=lambda x: x.get("impact_score", 0), reverse=True)
+        
+        # Return top 5
+        return relevant[:5]
+
     # ─────────────────────────────────────────────────────────────────────────
     # ON-CHAIN DATA
     # ─────────────────────────────────────────────────────────────────────────
+
     def get_onchain_snapshot(
         self,
         symbol: str = "ETH",
