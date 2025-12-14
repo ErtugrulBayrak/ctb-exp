@@ -107,31 +107,31 @@ class Settings:
     AI_TECH_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_TECH_CONFIDENCE_THRESHOLD", 75)
     AI_NEWS_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_NEWS_CONFIDENCE_THRESHOLD", 80)
     AI_SELL_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_SELL_CONFIDENCE_THRESHOLD", 70)
-    # If False, the bot will NOT send any LLM requests for news analysis.
+    # False ise, bot haber analizi için LLM çağrısı yapmaz
     USE_NEWS_LLM: bool = _get_env_bool("USE_NEWS_LLM", True)
     
-    # Strategy LLM Controls
-    # USE_STRATEGY_LLM: If False, strategy decisions are purely rule-based (no Gemini calls)
+    # Strateji LLM Kontrolleri
+    # USE_STRATEGY_LLM: False ise, strateji kararları sadece kurallara dayalıdır (Gemini çağrısı yok)
     USE_STRATEGY_LLM: bool = _get_env_bool("USE_STRATEGY_LLM", True)
-    # STRATEGY_LLM_MODE: "only_on_signal" = call LLM only if RULES says BUY/SELL
-    #                    "always" = call LLM for every symbol each loop (expensive)
+    # STRATEGY_LLM_MODE: "only_on_signal" = RULES BUY/SELL derse LLM çağır
+    #                    "always" = her döngüde her sembol için LLM çağır (pahalı)
     STRATEGY_LLM_MODE: str = os.getenv("STRATEGY_LLM_MODE", "only_on_signal").strip().lower()
-    # STRATEGY_LLM_MIN_RULES_CONF: Only call LLM if rules confidence >= this threshold
+    # STRATEGY_LLM_MIN_RULES_CONF: Kurallar güveni bu eşiğin üzerindeyse LLM çağır
     STRATEGY_LLM_MIN_RULES_CONF: int = _get_env_int("STRATEGY_LLM_MIN_RULES_CONF", 65)
     
-    # News LLM Controls
-    # NEWS_LLM_MODE: "off" = never call news LLM
-    #                "global_summary" = call once per TTL to produce a global news summary
+    # Haber LLM Kontrolleri
+    # NEWS_LLM_MODE: "off" = haber LLM'i asla çağırma
+    #                "global_summary" = TTL başına bir kez genel haber özeti oluştur
     NEWS_LLM_MODE: str = os.getenv("NEWS_LLM_MODE", "global_summary").strip().lower()
-    NEWS_LLM_GLOBAL_TTL_SEC: int = _get_env_int("NEWS_LLM_GLOBAL_TTL_SEC", 900)  # 15 min
+    NEWS_LLM_GLOBAL_TTL_SEC: int = _get_env_int("NEWS_LLM_GLOBAL_TTL_SEC", 900)  # 15 dakika
     
-    # Global risk controls
+    # Global Risk Kontrolleri
     MAX_DAILY_LOSS_PCT: float = _get_env_float("MAX_DAILY_LOSS_PCT", 6.0)
     MAX_OPEN_POSITIONS: int = _get_env_int("MAX_OPEN_POSITIONS", 6)
     MAX_CONSECUTIVE_LOSSES: int = _get_env_int("MAX_CONSECUTIVE_LOSSES", 5)
     COOLDOWN_MINUTES: int = _get_env_int("COOLDOWN_MINUTES", 60)
     
-    # ADX Thresholds (Semi-aggressive defaults)
+    # ADX Eşikleri (Yarı-agresif varsayılanlar)
     MIN_ADX_ENTRY: float = _get_env_float("MIN_ADX_ENTRY", 22.0)
     MIN_ADX_ENTRY_SOFT: float = _get_env_float("MIN_ADX_ENTRY_SOFT", 18.0)
     SOFTEN_ADX_WHEN_CONF_GE: int = _get_env_int("SOFTEN_ADX_WHEN_CONF_GE", 75)
