@@ -71,11 +71,14 @@ DEFAULT_SELL_CONFIDENCE = 70   # Minimum SELL confidence
 DEFAULT_BUY_CONFIDENCE = 65    # Minimum BUY confidence
 DEFAULT_RISK_PER_TRADE = 0.02  # Bakiyenin %2'si
 
-# Weight distribution
-WEIGHT_TECHNICAL = 0.40
-WEIGHT_ONCHAIN = 0.30
-WEIGHT_NEWS = 0.20
-WEIGHT_REDDIT = 0.10
+# 35% Math / 65% AI Weighted Model
+WEIGHT_MATH = 0.35
+WEIGHT_AI = 0.65
+
+# Math Layer Sub-Weights (sum to 1.0)
+MATH_WEIGHT_TECHNICAL = 0.70
+MATH_WEIGHT_ONCHAIN = 0.15
+MATH_WEIGHT_FNG = 0.15
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -188,11 +191,9 @@ class StrategyEngine:
         balance: float = 10000.0
     ) -> Dict[str, Any]:
         """
-        BUY fırsatını değerlendir (Base Signal Only).
+        BUY opportunity evaluation using 35% Math / 65% AI weighted model.
         
-        RiskManager tarafından zenginleştirilecek (Quantity, SL/TP).
-        
-        Outputs Base Schema:
+        Output Schema:
             {
                 "action": "BUY" | "HOLD",
                 "confidence": float (0-100),
@@ -202,81 +203,146 @@ class StrategyEngine:
         """
         self._decisions_made += 1
         
-        # 1. Rule-Based Decision
-        decision = self._build_rule_based_buy_decision(market_snapshot)
-        decision["metadata"]["source"] = "RULES"
+        # Extract data from snapshot
+        symbol = market_snapshot.get("symbol", "UNKNOWN")
+        technical = market_snapshot.get("technical", {})
+        onchain = market_snapshot.get("onchain", {})
+        sentiment = market_snapshot.get("sentiment", {})
+        fear_greed = sentiment.get("fear_greed", {})
         
-        # 2. LLM Refinement (Based on SETTINGS)
-        should_call_llm = False
+        price = market_snapshot.get("price") or technical.get("price", 0)
         
-        if self._enable_llm and not self._deterministic and SETTINGS.USE_STRATEGY_LLM:
-            action = decision.get("action")
-            conf = decision.get("confidence", 0)
-            
-            if SETTINGS.STRATEGY_LLM_MODE == "always":
-                should_call_llm = True
-            elif SETTINGS.STRATEGY_LLM_MODE == "only_on_signal":
-                # Call LLM only if RULES produced BUY/SELL with sufficient confidence
-                if action in ("BUY", "SELL") and conf >= SETTINGS.STRATEGY_LLM_MIN_RULES_CONF:
-                    should_call_llm = True
+        # Initialize result
+        result = {
+            "action": "HOLD",
+            "confidence": 0.0,
+            "entry_price": price,
+            "reason": "",
+            "metadata": {
+                "math_score": 0,
+                "llm_score": 0,
+                "final_score": 0.0,
+                "llm_used": False,
+                "llm_decision": None,
+                "source": "HYBRID",
+                "timestamp": datetime.now().isoformat()
+            }
+        }
         
-        if should_call_llm:
-            symbol = market_snapshot.get("symbol", "UNKNOWN")
-            price = decision.get("entry_price")
-            technical = market_snapshot.get("technical", {})
-            onchain = market_snapshot.get("onchain", {})
-            sentiment = market_snapshot.get("sentiment", {})
-            news_summary = market_snapshot.get("news") or market_snapshot.get("news_analysis") or {}
+        if not price:
+            result["reason"] = "No price data"
+            return result
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 1: Calculate Math Score (35% weight)
+        # ═══════════════════════════════════════════════════════════════════
+        math_score = self._calculate_math_score(
+            technical=technical,
+            onchain=onchain,
+            fear_greed=fear_greed,
+            context="BUY"
+        )
+        result["metadata"]["math_score"] = math_score
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 2: Call LLM for AI Decision (65% weight)
+        # ═══════════════════════════════════════════════════════════════════
+        llm_score = 0
+        llm_decision = None
+        llm_reason = ""
+        
+        if self._enable_llm and GEMINI_AVAILABLE and not self._deterministic:
+            # Extract coin-specific insights
+            coin_news = market_snapshot.get("coin_news", [])
+            coin_news_str = market_snapshot.get("coin_news_str", "")
             
-            # Metrics: Start Timer
-            self.llm_metrics["strategy_calls"] += 1
-            start_time = time.perf_counter()
+            # Reddit insight (from reddit_summary if available)
+            reddit_summary = market_snapshot.get("reddit_summary", {})
+            reddit_insight = ""
+            if reddit_summary:
+                coin_impacts = reddit_summary.get("coin_specific_impacts", {})
+                # Normalize symbol for lookup
+                base_symbol = symbol.upper().replace("USDT", "").replace("USD", "")
+                reddit_insight = coin_impacts.get(base_symbol, reddit_summary.get("general_impact", ""))
             
-            llm_result = await self._llm_decision_pipeline(
+            # Prepare news insight string
+            news_insight = coin_news_str if coin_news_str else ""
+            if not news_insight and coin_news:
+                news_lines = [f"[Impact:{n.get('impact_score', 0)}] {n.get('summary', '')}" for n in coin_news[:3]]
+                news_insight = "\n".join(news_lines)
+            
+            # Build prompt
+            tech_summary = technical.get("summary", f"Trend: {technical.get('trend', 'N/A')}, RSI: {technical.get('rsi', 'N/A')}, ADX: {technical.get('adx', 'N/A')}")
+            onchain_signal = onchain.get("signal", "NEUTRAL")
+            fng_value = fear_greed.get("value", 50) if fear_greed else 50
+            
+            prompt = self._construct_detailed_llm_prompt(
                 symbol=symbol,
                 price=price,
-                technical=technical,
-                onchain=onchain,
-                sentiment=sentiment,
-                news_summary=news_summary,
+                technical_summary=tech_summary,
+                onchain_signal=onchain_signal,
+                fng_value=fng_value,
+                reddit_insight=reddit_insight,
+                news_insight=news_insight,
                 context="BUY"
             )
             
-            # Metrics: End Timer
-            elapsed_ms = (time.perf_counter() - start_time) * 1000
-            self._update_latency_ema("strategy_latency_ema_ms", elapsed_ms)
+            # Call LLM
+            llm_result = await self._call_decision_llm(prompt)
             
             if llm_result:
                 self._llm_calls += 1
-                decision["metadata"]["llm_used"] = True
-                decision["metadata"]["source"] = "LLM"
+                result["metadata"]["llm_used"] = True
+                result["metadata"]["llm_decision"] = llm_result.get("decision")
                 
-                llm_action = llm_result.get("decision", "HOLD")
-                llm_conf = llm_result.get("confidence", 0)
+                llm_decision = llm_result.get("decision", "HOLD")
                 llm_reason = llm_result.get("reason", "")[:60]
-                sl_bias = llm_result.get("sl_bias", "neutral")
-                tp_bias = llm_result.get("tp_bias", "neutral")
                 
-                # Log the parsed LLM decision
-                symbol = market_snapshot.get("symbol", "UNKNOWN")
-                logger.info(f"[LLM DECISION] {symbol}: decision={llm_action} conf={llm_conf} sl={sl_bias} tp={tp_bias} reason={llm_reason}")
+                # If LLM says BUY, use its confidence; otherwise 0 for BUY context
+                if llm_decision == "BUY":
+                    llm_score = llm_result.get("confidence", 0)
+                else:
+                    llm_score = 0  # HOLD or SELL gives 0 in BUY context
                 
-                if llm_action == "BUY" and llm_conf >= self._buy_threshold:
-                    decision["action"] = "BUY"
-                    decision["confidence"] = llm_conf
-                    decision["reason"] = f"LLM: {llm_reason}"
-                    # Pass bias to RiskManager
-                    decision["metadata"]["sl_bias"] = sl_bias
-                    decision["metadata"]["tp_bias"] = tp_bias
-                elif llm_action != "BUY":
-                    decision["action"] = "HOLD"
-                    decision["reason"] = f"LLM Rejected: {llm_reason}"
+                logger.info(f"[LLM BUY] {symbol}: decision={llm_decision} conf={llm_result.get('confidence', 0)} reason={llm_reason}")
             else:
-                # LLM failed, count as failure/fallback
+                # LLM failed
                 self.llm_metrics["strategy_failures"] += 1
                 self.llm_metrics["strategy_fallbacks"] += 1
+                logger.warning(f"[LLM FAIL] {symbol}: Math-only fallback")
         
-        return decision
+        result["metadata"]["llm_score"] = llm_score
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 3: Calculate Final Weighted Score
+        # ═══════════════════════════════════════════════════════════════════
+        if result["metadata"]["llm_used"]:
+            # Full hybrid: math * 0.35 + llm * 0.65
+            final_score = (math_score * WEIGHT_MATH) + (llm_score * WEIGHT_AI)
+        else:
+            # LLM unavailable: penalized math-only score
+            final_score = math_score * WEIGHT_MATH  # Only 35% of potential
+            llm_reason = "LLM unavailable"
+        
+        result["metadata"]["final_score"] = round(final_score, 1)
+        result["confidence"] = result["metadata"]["final_score"]
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 4: Make Decision
+        # ═══════════════════════════════════════════════════════════════════
+        if final_score >= self._buy_threshold:
+            result["action"] = "BUY"
+            result["reason"] = f"Score {final_score:.0f} (Math:{math_score}, LLM:{llm_score})"
+            if llm_reason:
+                result["reason"] = f"{llm_reason} [Score:{final_score:.0f}]"
+        else:
+            result["action"] = "HOLD"
+            result["reason"] = f"Score {final_score:.0f} < {self._buy_threshold} threshold"
+        
+        logger.info(f"[DECISION] {symbol}: {result['action']} (Math={math_score}*0.35 + LLM={llm_score}*0.65 = {final_score:.1f})")
+        
+        return result
+
 
     def _build_rule_based_buy_decision(
         self,
@@ -335,87 +401,183 @@ class StrategyEngine:
         market_snapshot: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        SELL fırsatını değerlendir (Base Signal Only).
+        SELL opportunity evaluation using 35% Math / 65% AI weighted model.
         
-        RiskManager tarafından nihai çıkış kararı verilecek.
+        Output Schema:
+            {
+                "action": "SELL" | "HOLD",
+                "confidence": float (0-100),
+                "reason": str,
+                "metadata": dict
+            }
         """
         self._decisions_made += 1
         
-        # 1. Rule-Based Decision
-        decision = self._build_rule_based_sell_decision(position, market_snapshot)
-        decision["metadata"]["source"] = "RULES"
+        # Extract data
+        symbol = position.get("symbol", market_snapshot.get("symbol", "UNKNOWN"))
+        technical = market_snapshot.get("technical", {})
+        onchain = market_snapshot.get("onchain", {})
+        sentiment = market_snapshot.get("sentiment", {})
+        fear_greed = sentiment.get("fear_greed", {})
         
-        # 2. LLM Refinement (Based on SETTINGS)
-        should_call_llm = False
+        current_price = market_snapshot.get("price") or technical.get("price", 0)
+        entry_price = position.get("entry_price", 0)
         
-        if self._enable_llm and not self._deterministic and SETTINGS.USE_STRATEGY_LLM:
-            action = decision.get("action")
-            conf = decision.get("confidence", 0)
-            
-            if SETTINGS.STRATEGY_LLM_MODE == "always":
-                should_call_llm = True
-            elif SETTINGS.STRATEGY_LLM_MODE == "only_on_signal":
-                # Call LLM only if RULES produced BUY/SELL with sufficient confidence
-                if action in ("BUY", "SELL") and conf >= SETTINGS.STRATEGY_LLM_MIN_RULES_CONF:
-                    should_call_llm = True
+        # Calculate PnL
+        pnl_pct = 0.0
+        if entry_price and current_price:
+            pnl_pct = ((current_price - entry_price) / entry_price) * 100
         
-        if should_call_llm:
-            symbol = position.get("symbol", market_snapshot.get("symbol", "UNKNOWN"))
-            current_price = decision.get("entry_price")
-            technical = market_snapshot.get("technical", {})
-            onchain = market_snapshot.get("onchain", {})
-            sentiment = market_snapshot.get("sentiment", {})
-            pnl_pct = decision["metadata"].get("pnl_pct", 0)
-            news_summary = market_snapshot.get("news") or market_snapshot.get("news_analysis") or {}
+        # Initialize result
+        result = {
+            "action": "HOLD",
+            "confidence": 0.0,
+            "entry_price": current_price,
+            "reason": "",
+            "metadata": {
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_type": "HOLD",
+                "math_score": 0,
+                "llm_score": 0,
+                "final_score": 0.0,
+                "llm_used": False,
+                "llm_decision": None,
+                "source": "HYBRID",
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        if not current_price:
+            result["reason"] = "No price data"
+            return result
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # HARD TRIGGERS: SL/TP checks (bypass weighted logic)
+        # ═══════════════════════════════════════════════════════════════════
+        pos_sl = position.get("stop_loss")
+        pos_tp = position.get("take_profit")
+        
+        if pos_sl and current_price <= pos_sl:
+            result["action"] = "SELL"
+            result["confidence"] = 100.0
+            result["reason"] = f"Stop Loss Hit (${pos_sl:.2f})"
+            result["metadata"]["exit_type"] = "SL"
+            return result
+        
+        if pos_tp and current_price >= pos_tp:
+            result["action"] = "SELL"
+            result["confidence"] = 100.0
+            result["reason"] = f"Take Profit Hit (${pos_tp:.2f})"
+            result["metadata"]["exit_type"] = "TP"
+            return result
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 1: Calculate Math Score (35% weight)
+        # ═══════════════════════════════════════════════════════════════════
+        math_score = self._calculate_math_score(
+            technical=technical,
+            onchain=onchain,
+            fear_greed=fear_greed,
+            context="SELL"
+        )
+        result["metadata"]["math_score"] = math_score
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 2: Call LLM for AI Decision (65% weight)
+        # ═══════════════════════════════════════════════════════════════════
+        llm_score = 0
+        llm_decision = None
+        llm_reason = ""
+        
+        if self._enable_llm and GEMINI_AVAILABLE and not self._deterministic:
+            # Extract coin-specific insights
+            coin_news = market_snapshot.get("coin_news", [])
+            coin_news_str = market_snapshot.get("coin_news_str", "")
             
-            # Metrics: Start Timer
-            self.llm_metrics["strategy_calls"] += 1
-            start_time = time.perf_counter()
+            # Reddit insight
+            reddit_summary = market_snapshot.get("reddit_summary", {})
+            reddit_insight = ""
+            if reddit_summary:
+                coin_impacts = reddit_summary.get("coin_specific_impacts", {})
+                base_symbol = symbol.upper().replace("USDT", "").replace("USD", "")
+                reddit_insight = coin_impacts.get(base_symbol, reddit_summary.get("general_impact", ""))
             
-            llm_result = await self._llm_decision_pipeline(
+            # News insight
+            news_insight = coin_news_str if coin_news_str else ""
+            if not news_insight and coin_news:
+                news_lines = [f"[Impact:{n.get('impact_score', 0)}] {n.get('summary', '')}" for n in coin_news[:3]]
+                news_insight = "\n".join(news_lines)
+            
+            # Add position context to prompt
+            position_context = f"\n**POSITION:** Entry ${entry_price:.2f}, Current PnL: {pnl_pct:+.2f}%"
+            
+            tech_summary = technical.get("summary", f"Trend: {technical.get('trend', 'N/A')}, RSI: {technical.get('rsi', 'N/A')}")
+            onchain_signal = onchain.get("signal", "NEUTRAL")
+            fng_value = fear_greed.get("value", 50) if fear_greed else 50
+            
+            prompt = self._construct_detailed_llm_prompt(
                 symbol=symbol,
                 price=current_price,
-                technical=technical,
-                onchain=onchain,
-                sentiment=sentiment,
-                news_summary=news_summary,
-                context="SELL",
-                has_position=True,
-                pnl_pct=pnl_pct
+                technical_summary=tech_summary + position_context,
+                onchain_signal=onchain_signal,
+                fng_value=fng_value,
+                reddit_insight=reddit_insight,
+                news_insight=news_insight,
+                context="SELL"
             )
             
-            # Metrics: End Timer
-            elapsed_ms = (time.perf_counter() - start_time) * 1000
-            self._update_latency_ema("strategy_latency_ema_ms", elapsed_ms)
+            llm_result = await self._call_decision_llm(prompt)
             
             if llm_result:
                 self._llm_calls += 1
-                decision["metadata"]["llm_used"] = True
-                decision["metadata"]["source"] = "LLM"
+                result["metadata"]["llm_used"] = True
+                result["metadata"]["llm_decision"] = llm_result.get("decision")
                 
-                llm_action = llm_result.get("decision", "HOLD")
-                llm_conf = llm_result.get("confidence", 0)
+                llm_decision = llm_result.get("decision", "HOLD")
                 llm_reason = llm_result.get("reason", "")[:60]
-                sl_bias = llm_result.get("sl_bias", "neutral")
-                tp_bias = llm_result.get("tp_bias", "neutral")
                 
-                # Log the parsed LLM decision
-                sym = position.get("symbol", market_snapshot.get("symbol", "UNKNOWN"))
-                logger.info(f"[LLM DECISION] {sym}: decision={llm_action} conf={llm_conf} sl={sl_bias} tp={tp_bias} reason={llm_reason}")
+                # If LLM says SELL, use its confidence; otherwise 0 for SELL context
+                if llm_decision == "SELL":
+                    llm_score = llm_result.get("confidence", 0)
+                else:
+                    llm_score = 0
                 
-                if llm_action == "SELL" and llm_conf >= self._sell_threshold:
-                    decision["action"] = "SELL"
-                    decision["confidence"] = llm_conf
-                    decision["reason"] = f"LLM: {llm_reason}"
-                elif decision["action"] == "SELL" and llm_action == "HOLD":
-                    decision["action"] = "HOLD"
-                    decision["reason"] = f"LLM Veto: {llm_reason}"
+                logger.info(f"[LLM SELL] {symbol}: decision={llm_decision} conf={llm_result.get('confidence', 0)} reason={llm_reason}")
             else:
-                # LLM failed, count as failure/fallback
                 self.llm_metrics["strategy_failures"] += 1
                 self.llm_metrics["strategy_fallbacks"] += 1
-                        
-        return decision
+                logger.warning(f"[LLM FAIL] {symbol}: Math-only fallback (SELL)")
+        
+        result["metadata"]["llm_score"] = llm_score
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 3: Calculate Final Weighted Score
+        # ═══════════════════════════════════════════════════════════════════
+        if result["metadata"]["llm_used"]:
+            final_score = (math_score * WEIGHT_MATH) + (llm_score * WEIGHT_AI)
+        else:
+            final_score = math_score * WEIGHT_MATH
+            llm_reason = "LLM unavailable"
+        
+        result["metadata"]["final_score"] = round(final_score, 1)
+        result["confidence"] = result["metadata"]["final_score"]
+        
+        # ═══════════════════════════════════════════════════════════════════
+        # STEP 4: Make Decision
+        # ═══════════════════════════════════════════════════════════════════
+        if final_score >= self._sell_threshold:
+            result["action"] = "SELL"
+            result["metadata"]["exit_type"] = "AI"
+            result["reason"] = f"Score {final_score:.0f} (Math:{math_score}, LLM:{llm_score})"
+            if llm_reason:
+                result["reason"] = f"{llm_reason} [Score:{final_score:.0f}]"
+        else:
+            result["action"] = "HOLD"
+            result["reason"] = f"Score {final_score:.0f} < {self._sell_threshold} threshold"
+        
+        logger.info(f"[DECISION] {symbol}: {result['action']} (Math={math_score}*0.35 + LLM={llm_score}*0.65 = {final_score:.1f}, PnL={pnl_pct:+.1f}%)")
+        
+        return result
 
     def _build_rule_based_sell_decision(
         self,
@@ -568,7 +730,224 @@ class StrategyEngine:
             "onchain": onchain_score,
             "sentiment": sentiment_score
         }
-    
+
+    def _calculate_math_score(
+        self,
+        technical: Dict[str, Any],
+        onchain: Dict[str, Any],
+        fear_greed: Dict[str, Any],
+        context: str = "BUY"
+    ) -> int:
+        """
+        Calculate pure mathematical score (35% of final decision).
+        
+        Weights: Tech 70% + On-Chain 15% + F&G 15%
+        
+        Returns:
+            Single integer 0-100
+        """
+        # ─── Technical Score (0-100) ───
+        tech_score = 50  # Base
+        
+        if context == "BUY":
+            # Bullish indicators
+            if technical.get("trend_bullish") or technical.get("trend") in ["BULLISH", "STRONG_BULLISH"]:
+                tech_score += 20
+            if technical.get("momentum_positive"):
+                tech_score += 15
+            
+            # RSI
+            rsi = technical.get("rsi")
+            if rsi:
+                if 30 <= rsi <= 50:  # Oversold recovering
+                    tech_score += 10
+                elif rsi > 70:  # Overbought
+                    tech_score -= 15
+            
+            # ADX (trend strength)
+            adx = technical.get("adx")
+            if adx:
+                if adx >= 40:
+                    tech_score += 10
+                elif adx >= 25:
+                    tech_score += 5
+                elif adx < 20:
+                    tech_score -= 10  # Weak trend
+        else:  # SELL context
+            # Bearish indicators
+            if technical.get("trend") in ["BEARISH", "NEUTRAL_BEARISH"]:
+                tech_score += 20
+            if not technical.get("momentum_positive"):
+                tech_score += 15
+            
+            rsi = technical.get("rsi")
+            if rsi and rsi > 70:
+                tech_score += 15  # Overbought = sell signal
+        
+        tech_score = max(0, min(100, tech_score))
+        
+        # ─── On-Chain Score (0-100) ───
+        onchain_score = 50  # Base
+        signal = onchain.get("signal", "NEUTRAL")
+        
+        if context == "BUY":
+            if signal == "STRONG_SELL_PRESSURE":
+                onchain_score -= 30  # Whales dumping = bad for buy
+            elif signal == "MODERATE_SELL_PRESSURE":
+                onchain_score -= 15
+            elif signal == "LIGHT_SELL_PRESSURE":
+                onchain_score -= 5
+            elif signal == "NEUTRAL":
+                onchain_score += 10  # No whale selling is good
+        else:  # SELL context
+            if signal == "STRONG_SELL_PRESSURE":
+                onchain_score += 25  # Follow whales
+            elif signal == "MODERATE_SELL_PRESSURE":
+                onchain_score += 15
+        
+        onchain_score = max(0, min(100, onchain_score))
+        
+        # ─── Fear & Greed Score (0-100) - Contrarian Logic ───
+        fng_score = 50  # Base
+        fng_value = fear_greed.get("value", 50) if fear_greed else 50
+        
+        if context == "BUY":
+            # Buy when fearful (contrarian)
+            if fng_value <= 20:  # Extreme fear
+                fng_score += 25  # Great buying opportunity
+            elif fng_value <= 40:  # Fear
+                fng_score += 15
+            elif fng_value >= 80:  # Extreme greed
+                fng_score -= 20  # Dangerous to buy
+            elif fng_value >= 60:  # Greed
+                fng_score -= 5
+        else:  # SELL context
+            # Sell when greedy
+            if fng_value >= 80:  # Extreme greed
+                fng_score += 25  # Time to take profits
+            elif fng_value >= 60:  # Greed
+                fng_score += 10
+            elif fng_value <= 20:  # Extreme fear
+                fng_score -= 15  # Don't sell in panic
+        
+        fng_score = max(0, min(100, fng_score))
+        
+        # ─── Weighted Combination ───
+        final_score = (
+            tech_score * MATH_WEIGHT_TECHNICAL +
+            onchain_score * MATH_WEIGHT_ONCHAIN +
+            fng_score * MATH_WEIGHT_FNG
+        )
+        
+        return int(round(final_score))
+
+    def _construct_detailed_llm_prompt(
+        self,
+        symbol: str,
+        price: float,
+        technical_summary: str,
+        onchain_signal: str,
+        fng_value: int,
+        reddit_insight: str,
+        news_insight: str,
+        context: str = "BUY"
+    ) -> str:
+        """
+        Construct detailed LLM prompt with coin-specific Reddit & News.
+        
+        This prompt drives 65% of the final decision weight.
+        """
+        action_word = "buying" if context == "BUY" else "selling"
+        
+        return f"""You are a professional Crypto Trader. Analyze the following data for {symbol} @ ${price:.2f}:
+
+**TECHNICALS:** {technical_summary}
+
+**ON-CHAIN:** {onchain_signal}
+
+**SENTIMENT:** Fear & Greed Index: {fng_value}
+
+**REDDIT INSIGHT:** {reddit_insight if reddit_insight else "No specific Reddit discussion found."}
+
+**NEWS INSIGHT:**
+{news_insight if news_insight else "No specific news for this coin."}
+
+**TASK:** Based on these inputs, with HEAVY EMPHASIS on News and Reddit insights, make a {context} decision for {action_word} {symbol}.
+
+Output ONLY valid JSON:
+{{"decision": "BUY|SELL|HOLD", "confidence": 0-100, "reason": "One sentence max 60 chars"}}
+"""
+
+    async def _call_decision_llm(self, prompt: str) -> Optional[Dict[str, Any]]:
+        """
+        Direct LLM call for decision-making (65% weight).
+        
+        Returns:
+            Parsed JSON dict or None on failure
+        """
+        if not self._enable_llm or not GEMINI_AVAILABLE:
+            return None
+        
+        try:
+            genai.configure(api_key=self._gemini_key)
+            safety_settings = [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ]
+            model = genai.GenerativeModel('models/gemini-2.5-flash', safety_settings=safety_settings)
+            
+            # Metrics tracking
+            self.llm_metrics["strategy_calls"] += 1
+            start_time = time.perf_counter()
+            
+            loop = asyncio.get_event_loop()
+            def sync_generate():
+                return model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.1,
+                        max_output_tokens=200,
+                        response_mime_type="application/json"
+                    )
+                )
+            
+            response = await loop.run_in_executor(None, sync_generate)
+            
+            # Update latency
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            self._update_latency_ema("strategy_latency_ema_ms", elapsed_ms)
+            
+            if not response or not response.text:
+                self.llm_metrics["api_fail"] += 1
+                return None
+            
+            raw = response.text.strip()
+            logger.debug(f"[LLM RAW] {raw[:200]}")
+            
+            # Parse JSON
+            result, parse_error = safe_json_loads(raw)
+            
+            if result is None:
+                self.llm_metrics["parse_fail"] += 1
+                logger.warning(f"[LLM PARSE FAIL] {parse_error}")
+                return None
+            
+            # Validate required fields
+            validated = validate_decision(result)
+            if validated is None:
+                self.llm_metrics["schema_fail"] += 1
+                logger.warning(f"[LLM SCHEMA FAIL] Missing required fields")
+                return None
+            
+            return validated
+            
+        except Exception as e:
+            self.llm_metrics["api_fail"] += 1
+            logger.warning(f"[LLM ERROR] {str(e)[:100]}")
+            return None
+
     def _calculate_sell_scores(
         self,
         technical: Dict[str, Any],
@@ -810,6 +1189,14 @@ SADECE JSON yanıt ver:
                 {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             ]
             model = genai.GenerativeModel('models/gemini-2.5-flash', safety_settings=safety_settings)
+            
+            # Get coin-specific news if available (from snapshot via news_summary)
+            coin_news_str = ""
+            if isinstance(news_summary, dict):
+                coin_news_str = news_summary.get("coin_news_str", "")
+            
+            news_section = coin_news_str if coin_news_str else str(news_summary)
+            
             prompt = f"""Act as a professional quant PM. Produce a concise internal analysis (no JSON, no final decision).
 Sections:
 - Trend evaluation
@@ -827,7 +1214,7 @@ Price: {price}
 Technical: {technical}
 On-chain: {onchain}
 Sentiment: {sentiment}
-News summary: {news_summary}
+{news_section}
 """
             logger.info("[LLM DEBUG] Gemini çağrısı başlatılıyor.")
             logger.info(f"[LLM DEBUG] Gönderilen Prompt:\n{prompt}")
