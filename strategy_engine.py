@@ -857,25 +857,18 @@ class StrategyEngine:
         
         This prompt drives 65% of the final decision weight.
         """
-        action_word = "buying" if context == "BUY" else "selling"
-        
-        return f"""You are a professional Crypto Trader. Analyze the following data for {symbol} @ ${price:.2f}:
+        return f"""Analyze {symbol} @ ${price:.2f}
 
-**TECHNICALS:** {technical_summary}
+Tech: {technical_summary}
+OnChain: {onchain_signal}
+FnG: {fng_value}
+Reddit: {reddit_insight if reddit_insight else "N/A"}
+News: {news_insight if news_insight else "N/A"}
 
-**ON-CHAIN:** {onchain_signal}
+{context} decision? Weigh News/Reddit.
 
-**SENTIMENT:** Fear & Greed Index: {fng_value}
-
-**REDDIT INSIGHT:** {reddit_insight if reddit_insight else "No specific Reddit discussion found."}
-
-**NEWS INSIGHT:**
-{news_insight if news_insight else "No specific news for this coin."}
-
-**TASK:** Based on these inputs, with HEAVY EMPHASIS on News and Reddit insights, make a {context} decision for {action_word} {symbol}.
-
-Output ONLY valid JSON:
-{{"decision": "BUY|SELL|HOLD", "confidence": 0-100, "reason": "One sentence max 60 chars"}}
+Reply ONLY JSON (NO markdown, NO text before/after):
+{{"decision":"BUY","confidence":75,"reason":"max 30 chars"}}
 """
 
     async def _call_decision_llm(self, prompt: str) -> Optional[Dict[str, Any]]:
@@ -908,8 +901,7 @@ Output ONLY valid JSON:
                     prompt,
                     generation_config=genai.types.GenerationConfig(
                         temperature=0.1,
-                        max_output_tokens=200,
-                        response_mime_type="application/json"
+                        max_output_tokens=500
                     )
                 )
             
@@ -919,19 +911,54 @@ Output ONLY valid JSON:
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             self._update_latency_ema("strategy_latency_ema_ms", elapsed_ms)
             
+            # Check for truncated response
+            if response.candidates:
+                finish_reason = response.candidates[0].finish_reason
+                if finish_reason and str(finish_reason) not in ["STOP", "1"]:
+                    logger.warning(f"[LLM FINISH] Unexpected finish_reason: {finish_reason}")
+            
             if not response or not response.text:
                 self.llm_metrics["api_fail"] += 1
                 return None
             
             raw = response.text.strip()
-            logger.debug(f"[LLM RAW] {raw[:200]}")
+            logger.debug(f"[LLM RAW] {raw[:300]}")
             
-            # Parse JSON
+            # Parse JSON - try safe_json_loads first
             result, parse_error = safe_json_loads(raw)
+            
+            # Fallback: use extract_json_block directly
+            if result is None:
+                from llm_utils import extract_json_block
+                extracted = extract_json_block(raw)
+                if extracted:
+                    try:
+                        import json
+                        result = json.loads(extracted)
+                        parse_error = None
+                        logger.debug(f"[LLM FALLBACK] Parsed via extract_json_block")
+                    except json.JSONDecodeError as e:
+                        parse_error = f"fallback_json_error: {str(e)[:50]}"
+            
+            # Fallback 2: Try to repair truncated JSON (finish_reason=MAX_TOKENS)
+            if result is None and '"decision"' in raw:
+                import re
+                import json
+                # Try to extract decision and confidence even from truncated JSON
+                decision_match = re.search(r'"decision"\s*:\s*"([A-Z]+)"', raw)
+                conf_match = re.search(r'"confidence"\s*:\s*(\d+)', raw)
+                if decision_match and conf_match:
+                    result = {
+                        "decision": decision_match.group(1),
+                        "confidence": int(conf_match.group(1)),
+                        "reason": "Truncated response"
+                    }
+                    parse_error = None
+                    logger.debug(f"[LLM REPAIR] Extracted from truncated: {result}")
             
             if result is None:
                 self.llm_metrics["parse_fail"] += 1
-                logger.warning(f"[LLM PARSE FAIL] {parse_error}")
+                logger.warning(f"[LLM PARSE FAIL] {parse_error} - raw[:100]={raw[:100]}")
                 return None
             
             # Validate required fields
