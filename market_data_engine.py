@@ -1042,6 +1042,9 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
             return {"posts": [], "signal": "UNAVAILABLE", "reason": "credentials_missing"}
         
         try:
+            import warnings
+            # PRAW async uyarısını bastır (asyncpraw geçişi yapılana kadar)
+            warnings.filterwarnings("ignore", message=".*asynchronous environment.*")
             import praw
             
             reddit = praw.Reddit(
