@@ -89,8 +89,10 @@ class Settings:
     # ═══════════════════════════════════════════════════════════════════════════
     # İŞLEM MODU
     # ═══════════════════════════════════════════════════════════════════════════
-    LIVE_TRADING: bool = _get_env_bool("LIVE_TRADING", "0")
-    ALLOW_DANGEROUS_ACTIONS: bool = _get_env_bool("ALLOW_DANGEROUS_ACTIONS", "0")
+    # True = Gerçek para ile işlem yapar (ÇOK DİKKATLİ KULLANIN!)
+    LIVE_TRADING: bool = False
+    # True = LIVE_TRADING aktifken işleme izin verir (güvenlik kilidi)
+    ALLOW_DANGEROUS_ACTIONS: bool = False
     
     # ═══════════════════════════════════════════════════════════════════════════
     # API ANAHTARLARI (Zorunlu - .env'den okunmalı)
@@ -101,55 +103,161 @@ class Settings:
     TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
     
+    # Reddit API (sentiment analizi için)
+    REDDIT_CLIENT_ID: str = os.getenv("REDDIT_CLIENT_ID", "")
+    REDDIT_CLIENT_SECRET: str = os.getenv("REDDIT_CLIENT_SECRET", "")
+    REDDIT_USER_AGENT: str = os.getenv("REDDIT_USER_AGENT", "CryptoBot/1.0")
+    REDDIT_USERNAME: str = os.getenv("REDDIT_USERNAME", "")
+    REDDIT_PASSWORD: str = os.getenv("REDDIT_PASSWORD", "")
+    
+    # Etherscan API (on-chain whale tracking için)
+    ETHERSCAN_API_KEY: str = os.getenv("ETHERSCAN_API_KEY", "")
+    
     # ═══════════════════════════════════════════════════════════════════════════
     # AI AGENT EŞİKLERİ
     # ═══════════════════════════════════════════════════════════════════════════
-    AI_TECH_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_TECH_CONFIDENCE_THRESHOLD", 75)
-    AI_NEWS_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_NEWS_CONFIDENCE_THRESHOLD", 80)
-    AI_SELL_CONFIDENCE_THRESHOLD: int = _get_env_int("AI_SELL_CONFIDENCE_THRESHOLD", 70)
+    # Teknik analiz için minimum güven skoru (0-100)
+    AI_TECH_CONFIDENCE_THRESHOLD: int = 75
+    # Haber analizi için minimum güven skoru (0-100)
+    AI_NEWS_CONFIDENCE_THRESHOLD: int = 80
+    # AI satış kararı için minimum güven skoru (0-100)
+    AI_SELL_CONFIDENCE_THRESHOLD: int = 70
     # False ise, bot haber analizi için LLM çağrısı yapmaz
-    USE_NEWS_LLM: bool = _get_env_bool("USE_NEWS_LLM", True)
+    USE_NEWS_LLM: bool = True
     
     # Strateji LLM Kontrolleri
     # USE_STRATEGY_LLM: False ise, strateji kararları sadece kurallara dayalıdır (Gemini çağrısı yok)
-    USE_STRATEGY_LLM: bool = _get_env_bool("USE_STRATEGY_LLM", True)
+    USE_STRATEGY_LLM: bool = True
     # STRATEGY_LLM_MODE: "only_on_signal" = RULES BUY/SELL derse LLM çağır
     #                    "always" = her döngüde her sembol için LLM çağır (pahalı)
-    STRATEGY_LLM_MODE: str = os.getenv("STRATEGY_LLM_MODE", "only_on_signal").strip().lower()
+    STRATEGY_LLM_MODE: str = "always"
     # STRATEGY_LLM_MIN_RULES_CONF: Kurallar güveni bu eşiğin üzerindeyse LLM çağır
-    STRATEGY_LLM_MIN_RULES_CONF: int = _get_env_int("STRATEGY_LLM_MIN_RULES_CONF", 65)
+    STRATEGY_LLM_MIN_RULES_CONF: int = 65
+    
+    # Strategy Engine Ağırlıkları
+    # Ana karar ağırlıkları (toplam = 1.0)
+    STRATEGY_WEIGHT_MATH: float = 0.35  # Matematiksel skorlar (%35)
+    STRATEGY_WEIGHT_AI: float = 0.65    # LLM kararı (%65)
+    
+    # Math Layer alt ağırlıkları (toplam = 1.0)
+    MATH_WEIGHT_TECHNICAL: float = 0.70  # Teknik göstergeler
+    MATH_WEIGHT_ONCHAIN: float = 0.15    # On-chain veri
+    MATH_WEIGHT_FNG: float = 0.15        # Fear & Greed Index
     
     # Haber LLM Kontrolleri
     # NEWS_LLM_MODE: "off" = haber LLM'i asla çağırma
     #                "global_summary" = TTL başına bir kez genel haber özeti oluştur
-    NEWS_LLM_MODE: str = os.getenv("NEWS_LLM_MODE", "global_summary").strip().lower()
+    NEWS_LLM_MODE: str = "global_summary"
     NEWS_LLM_GLOBAL_TTL_SEC: int = _get_env_int("NEWS_LLM_GLOBAL_TTL_SEC", 900)  # 15 dakika
     
+    # Market Data Engine Ayarları
+    # RSS Feed URL'leri (haber kaynakları)
+    RSS_FEED_URLS: tuple = (
+        "https://cointelegraph.com/rss",
+        "https://decrypt.co/feed",
+        "https://www.coindesk.com/arc/outboundfeeds/rss/"
+    )
+    RSS_MAX_AGE_HOURS: int = 4  # Haberlerin max yaşı (saat)
+    
+    # Cache TTL ayarları (saniye)
+    CACHE_TTL_PRICE: float = 1.0  # Fiyat cache
+    CACHE_TTL_TECH: float = 15.0  # Teknik göstergeler
+    CACHE_TTL_SENTIMENT: float = 90.0  # Sentiment (FnG, Reddit, RSS)
+    CACHE_TTL_ONCHAIN: float = 120.0  # On-chain veri
+    
+    # API Timeout ayarları (saniye)
+    API_TIMEOUT_DEFAULT: int = 10  # Genel API timeout
+    API_TIMEOUT_FNG: int = 15  # Fear & Greed API
+    API_TIMEOUT_ETHERSCAN: int = 10  # Etherscan API
+    
     # Global Risk Kontrolleri
-    MAX_DAILY_LOSS_PCT: float = _get_env_float("MAX_DAILY_LOSS_PCT", 6.0)
-    MAX_OPEN_POSITIONS: int = _get_env_int("MAX_OPEN_POSITIONS", 6)
-    MAX_CONSECUTIVE_LOSSES: int = _get_env_int("MAX_CONSECUTIVE_LOSSES", 5)
-    COOLDOWN_MINUTES: int = _get_env_int("COOLDOWN_MINUTES", 60)
+    # Günlük maksimum kayıp yüzdesi - aşılırsa işlemler durur
+    MAX_DAILY_LOSS_PCT: float = 8.0
+    # Aynı anda açık tutulabilecek maksimum pozisyon sayısı
+    MAX_OPEN_POSITIONS: int = 10
+    # Ardışık zarar sayısı - aşılırsa cooldown başlar
+    MAX_CONSECUTIVE_LOSSES: int = 5
+    # Ardışık zarar sonrası bekleme süresi (dakika)
+    COOLDOWN_MINUTES: int = 60
     
     # ADX Eşikleri (Yarı-agresif varsayılanlar)
-    MIN_ADX_ENTRY: float = _get_env_float("MIN_ADX_ENTRY", 22.0)
-    MIN_ADX_ENTRY_SOFT: float = _get_env_float("MIN_ADX_ENTRY_SOFT", 18.0)
-    SOFTEN_ADX_WHEN_CONF_GE: int = _get_env_int("SOFTEN_ADX_WHEN_CONF_GE", 75)
+    MIN_ADX_ENTRY: float = 22.0
+    MIN_ADX_ENTRY_SOFT: float = 18.0
+    SOFTEN_ADX_WHEN_CONF_GE: int = 75
+    
+    # Risk Manager Ayarları
+    RISK_PER_TRADE: float = 0.02  # İşlem başına max risk (%2)
+    MIN_VOLUME_GUARDRAIL: int = 1_000_000  # Min 24h volume ($1M)
+    FNG_EXTREME_FEAR: int = 20  # Bu değerin altında alım yapma
     
     # ═══════════════════════════════════════════════════════════════════════════
     # TRADING AYARLARI
     # ═══════════════════════════════════════════════════════════════════════════
-    BASLANGIC_BAKIYE: float = _get_env_float("BASLANGIC_BAKIYE", 1000.0)
-    MIN_VOLUME_USD: int = _get_env_int("MIN_VOLUME_USD", 200_000)
-    MIN_ADX: int = _get_env_int("MIN_ADX", 25)
+    # Paper trading başlangıç bakiyesi (USDT)
+    BASLANGIC_BAKIYE: float = 1000.0
+    # İşlem için minimum 24 saatlik hacim (USD)
+    MIN_VOLUME_USD: int = 200_000
+    # Minimum ADX değeri - trend gücü göstergesi
+    MIN_ADX: int = 22
+    
+    # İzlenecek coinler (USDT bazlı çiftler)
+    # Bu listeyi düzenleyerek coin ekle/çıkarabilirsiniz
+    WATCHLIST: tuple = (
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "BNBUSDT",
+        "XRPUSDT",
+        "AVAXUSDT",
+        "LINKUSDT"
+    )
+    
+    # Kâr Koruma Ayarları
+    # Kârlı pozisyonların erken satılmasını engeller
+    PROTECT_PROFITABLE_POSITIONS: bool = True
+    MIN_PROFIT_TO_PROTECT: float = 0.5  # %0.5 kâr varsa koru
+    AI_SELL_OVERRIDE_CONFIDENCE: int = 90  # AI bu güvenin üstündeyse kâr korumasını geç
+    
+    # Live Order Retry Ayarları
+    LIVE_ORDER_MAX_RETRIES: int = 3  # Başarısız order için max deneme
+    LIVE_ORDER_RETRY_DELAY: float = 2.0  # Denemeler arası bekleme (saniye)
+    
+    # Order Executor Ayarları
+    # Slippage ve fee simülasyonu (paper trading için)
+    SIMULATED_SLIPPAGE_PCT: float = 0.001  # %0.1 slippage
+    SIMULATED_FEE_PCT: float = 0.001  # %0.1 fee (Binance default)
+    
+    # Rate Limiting - çok hızlı order spam'ini engeller
+    ORDER_MIN_INTERVAL_SEC: float = 1.0  # İki order arası minimum bekleme
+    
+    # SL/TP Watchdog Ayarları
+    # Açık pozisyonların SL/TP kontrolünü ana döngüden bağımsız yapar
+    SLTP_WATCHDOG_ENABLED: bool = True  # Watchdog aktif mi?
+    SLTP_WATCHDOG_INTERVAL_SEC: int = 30  # Kaç saniyede bir kontrol (varsayılan: 30sn)
+    
+    # LoopController Alarm Eşikleri
+    # Telegram uyarısı göndermeden önce kaç ardışık hata beklenecek
+    ALARM_PARSE_FAIL_THRESHOLD: int = 15  # LLM parse hata limiti
+    ALARM_ADX_BLOCK_THRESHOLD: int = 20   # ADX bloğu limiti
+    ALARM_DATA_FAIL_THRESHOLD: int = 5    # Veri çekme hatası limiti
+    
+    # Logger Ayarları
+    LOG_LEVEL: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_JSON_ENABLED: bool = False  # JSON log dosyası oluştur (log analizi için)
+    LOG_MAX_BYTES: int = 10_000_000  # 10 MB
+    LOG_BACKUP_COUNT: int = 5  # Eski log dosyası sayısı
     
     # ═══════════════════════════════════════════════════════════════════════════
     # TELEGRAM BİLDİRİM AYARLARI
     # ═══════════════════════════════════════════════════════════════════════════
-    TELEGRAM_NOTIFY_TRADES: bool = _get_env_bool("TELEGRAM_NOTIFY_TRADES", "1")
-    TELEGRAM_NOTIFY_REDDIT: bool = _get_env_bool("TELEGRAM_NOTIFY_REDDIT", "0")
-    TELEGRAM_NOTIFY_ONCHAIN: bool = _get_env_bool("TELEGRAM_NOTIFY_ONCHAIN", "0")
-    TELEGRAM_NOTIFY_IMPORTANT_NEWS: bool = _get_env_bool("TELEGRAM_NOTIFY_IMPORTANT_NEWS", "0")
+    # Trade işlemleri için bildirim gönder (BUY/SELL)
+    TELEGRAM_NOTIFY_TRADES: bool = True
+    # Reddit sentiment analizi için bildirim gönder
+    TELEGRAM_NOTIFY_REDDIT: bool = False
+    # On-chain whale hareketleri için bildirim gönder
+    TELEGRAM_NOTIFY_ONCHAIN: bool = False
+    # Önemli haberler için bildirim gönder
+    TELEGRAM_NOTIFY_IMPORTANT_NEWS: bool = False
     
     def is_configured(self) -> bool:
         """Zorunlu API anahtarlarının ayarlanıp ayarlanmadığını kontrol eder."""
@@ -262,13 +370,6 @@ def print_settings_summary():
     else:
         print("✅ Tüm zorunlu API anahtarları ayarlanmış.")
     
-    print("\n📝 .ENV DOSYASI ŞABLONu:")
-    print("-" * 60)
-    for var in REQUIRED_ENV_VARS:
-        print(f"{var}=your_{var.lower()}_here")
-    print("-" * 60)
-    print()
-
 
 # Modül doğrudan çalıştırılırsa ayarları göster
 if __name__ == "__main__":

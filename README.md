@@ -1,4 +1,5 @@
 # NewsToMe - AI-Powered Crypto Trading Bot
+logs/terminal_log_YYYYMMDD_HHMMSS.txt
 
 Hybrid algorithmic trading bot that combines AI analysis, technical indicators, on-chain data, and sentiment analysis for cryptocurrency trading decisions.
 

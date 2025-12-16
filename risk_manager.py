@@ -10,11 +10,13 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from config import SETTINGS
 
-# Default Constants (StrategyEngine'den taşındı)
-# now using settings defaults
-DEFAULT_MIN_VOLUME = 1_000_000
-DEFAULT_FNG_EXTREME_FEAR = 20
-DEFAULT_RISK_PER_TRADE = 0.02
+# Logger import
+try:
+    from trade_logger import logger
+except ImportError:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
 
 class RiskManager:
     """
@@ -34,10 +36,12 @@ class RiskManager:
         self.config = config or {}
         # Use config or fall back to SETTINGS
         self._min_adx = self.config.get("min_adx") or SETTINGS.MIN_ADX_ENTRY
-        self._min_volume = self.config.get("min_volume") or DEFAULT_MIN_VOLUME
-        self._fng_extreme_fear = self.config.get("fng_extreme_fear") or DEFAULT_FNG_EXTREME_FEAR
-        self._risk_per_trade = self.config.get("risk_per_trade") or DEFAULT_RISK_PER_TRADE
+        self._min_volume = self.config.get("min_volume") or getattr(SETTINGS, 'MIN_VOLUME_GUARDRAIL', 1_000_000)
+        self._fng_extreme_fear = self.config.get("fng_extreme_fear") or getattr(SETTINGS, 'FNG_EXTREME_FEAR', 20)
+        self._risk_per_trade = self.config.get("risk_per_trade") or getattr(SETTINGS, 'RISK_PER_TRADE', 0.02)
         self._initial_balance = initial_balance
+        
+        logger.debug(f"RiskManager başlatıldı: ADX={self._min_adx}, Volume=${self._min_volume/1e6:.1f}M, Risk={self._risk_per_trade*100:.1f}%")
 
     def evaluate_entry_risk(
         self,
@@ -275,3 +279,128 @@ class RiskManager:
             
         # Fallback
         return round((balance * self._risk_per_trade) / price, 6)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEST / DEMO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def demo():
+    """RiskManager demo - tüm risk kontrollerini test eder."""
+    print("\n" + "=" * 60)
+    print("🧪 RISK MANAGER DEMO")
+    print("=" * 60 + "\n")
+    
+    rm = RiskManager()
+    
+    print("📋 Config Değerleri (config.py'den):")
+    print(f"   MIN_ADX_ENTRY: {rm._min_adx}")
+    print(f"   MIN_VOLUME_GUARDRAIL: ${rm._min_volume/1e6:.1f}M")
+    print(f"   FNG_EXTREME_FEAR: {rm._fng_extreme_fear}")
+    print(f"   RISK_PER_TRADE: {rm._risk_per_trade*100:.1f}%")
+    
+    print("\n" + "-" * 60)
+    print("📊 TEST 1: Guardrails Check")
+    print("-" * 60)
+    
+    # Test senaryoları
+    test_cases = [
+        {
+            "name": "✅ Tüm koşullar OK",
+            "snapshot": {
+                "technical": {"trend": "BULLISH", "adx": 25},
+                "volume_24h": 5_000_000,
+                "sentiment": {"fear_greed": {"value": 50}}
+            }
+        },
+        {
+            "name": "❌ Düşük ADX",
+            "snapshot": {
+                "technical": {"trend": "BULLISH", "adx": 15},
+                "volume_24h": 5_000_000,
+                "sentiment": {"fear_greed": {"value": 50}}
+            }
+        },
+        {
+            "name": "❌ Düşük Volume",
+            "snapshot": {
+                "technical": {"trend": "BULLISH", "adx": 25},
+                "volume_24h": 500_000,
+                "sentiment": {"fear_greed": {"value": 50}}
+            }
+        },
+        {
+            "name": "❌ Extreme Fear",
+            "snapshot": {
+                "technical": {"trend": "BULLISH", "adx": 25},
+                "volume_24h": 5_000_000,
+                "sentiment": {"fear_greed": {"value": 15}}
+            }
+        }
+    ]
+    
+    for tc in test_cases:
+        result = rm._check_guardrails(tc["snapshot"])
+        status = "✅ PASSED" if result["passed"] else f"❌ BLOCKED: {result['reason']}"
+        print(f"   {tc['name']}: {status}")
+    
+    print("\n" + "-" * 60)
+    print("📊 TEST 2: SL/TP Hesaplama")
+    print("-" * 60)
+    
+    price = 100.0
+    atr = 2.0
+    
+    print(f"   Fiyat: ${price}, ATR: ${atr}")
+    
+    # Farklı bias senaryoları
+    for sl_bias in ["neutral", "tighter", "looser"]:
+        result = rm._calculate_sl_tp(price, atr, sl_bias=sl_bias)
+        print(f"   SL Bias={sl_bias}: SL=${result['stop_loss']:.2f}, TP=${result['take_profit']:.2f}")
+    
+    print("\n" + "-" * 60)
+    print("📊 TEST 3: Quantity Hesaplama")
+    print("-" * 60)
+    
+    balance = 1000.0
+    price = 100.0
+    stop_loss = 95.0
+    
+    quantity = rm._calculate_quantity(balance, price, stop_loss)
+    risk_amount = (price - stop_loss) * quantity
+    
+    print(f"   Bakiye: ${balance}")
+    print(f"   Fiyat: ${price}, SL: ${stop_loss}")
+    print(f"   Hesaplanan Quantity: {quantity:.6f}")
+    print(f"   Risk Miktarı: ${risk_amount:.2f} ({risk_amount/balance*100:.1f}% of balance)")
+    
+    print("\n" + "-" * 60)
+    print("📊 TEST 4: Entry Risk Evaluation")
+    print("-" * 60)
+    
+    mock_snapshot = {
+        "price": 100.0,
+        "technical": {"price": 100.0, "trend": "BULLISH", "adx": 25, "atr": 2.0},
+        "volume_24h": 5_000_000,
+        "sentiment": {"fear_greed": {"value": 50}}
+    }
+    mock_decision = {"action": "BUY", "confidence": 80}
+    mock_portfolio = {"balance": 1000.0}
+    
+    result = rm.evaluate_entry_risk(mock_snapshot, mock_decision, mock_portfolio)
+    
+    print(f"   Allowed: {result.get('allowed')}")
+    if result.get("allowed"):
+        print(f"   SL: ${result.get('stop_loss'):.2f}")
+        print(f"   TP: ${result.get('take_profit'):.2f}")
+        print(f"   Quantity: {result.get('quantity'):.6f}")
+    else:
+        print(f"   Reason: {result.get('reason')}")
+    
+    print("\n" + "=" * 60)
+    print("✅ Demo tamamlandı!")
+    print("=" * 60 + "\n")
+
+
+if __name__ == "__main__":
+    demo()

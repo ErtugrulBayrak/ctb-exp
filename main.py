@@ -185,27 +185,20 @@ def create_order_executor(binance_client=None):
         dry_run=not SETTINGS.LIVE_TRADING
     )
 
-# RSS Feed Kaynakları (NewsAPI yerine - gerçek zamanlı)
-RSS_FEEDS = [
-    "https://cointelegraph.com/rss",
-    "https://www.coindesk.com/arc/outboundfeeds/rss/",
-    "https://decrypt.co/feed",
-    "https://cryptoslate.com/feed/",
-    "https://bitcoinist.com/feed/"
-]
+# API Anahtarları (config.py'den)
 GEMINI_API_KEY = SETTINGS.GEMINI_API_KEY
 TELEGRAM_BOT_TOKEN = SETTINGS.TELEGRAM_BOT_TOKEN
 TELEGRAM_CHAT_ID = SETTINGS.TELEGRAM_CHAT_ID
 BINANCE_API_KEY = SETTINGS.BINANCE_API_KEY
 BINANCE_SECRET_KEY = SETTINGS.BINANCE_SECRET_KEY
 
-# Reddit ve Etherscan anahtarları (şimdilik hardcoded, config.py'a taşınabilir)
-REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID', 'G0rIefRfVdRJoJAFsTKuXA')
-REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET', 'tINXoJs8U8nmwLeDxw4mNZPwPymNNw')
-REDDIT_USER_AGENT = os.getenv('REDDIT_USER_AGENT', 'NewsToMe by Milburn89')
-REDDIT_USERNAME = os.getenv('REDDIT_USERNAME', 'Milburn89')
-REDDIT_PASSWORD = os.getenv('REDDIT_PASSWORD', 'Nwpss_reddit2')
-ETHERSCAN_API_KEY = os.getenv('ETHERSCAN_API_KEY', '1V19JUXS8257WGG4DQQ4YTTYCGBJNRYR9R')
+# Reddit ve Etherscan (config.py'den)
+REDDIT_CLIENT_ID = SETTINGS.REDDIT_CLIENT_ID
+REDDIT_CLIENT_SECRET = SETTINGS.REDDIT_CLIENT_SECRET
+REDDIT_USER_AGENT = SETTINGS.REDDIT_USER_AGENT
+REDDIT_USERNAME = SETTINGS.REDDIT_USERNAME
+REDDIT_PASSWORD = SETTINGS.REDDIT_PASSWORD
+ETHERSCAN_API_KEY = SETTINGS.ETHERSCAN_API_KEY
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GÜVENLİK KAPISI - Canlı işlem koruması
@@ -265,45 +258,16 @@ TRADE_LOG_DOSYASI = "trade_decisions_log.json"  # AI karar detayları için
 BASLANGIC_BAKIYE = SETTINGS.BASLANGIC_BAKIYE  # USDT - artık config'den
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HİBRİT TRADER KONFİGÜRASYONU
+# HİBRİT TRADER KONFİGÜRASYONU (config.py'den okunuyor)
 # ─────────────────────────────────────────────────────────────────────────────
-WATCHLIST = [
-    "BTCUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "BNBUSDT",
-    "XRPUSDT",
-    "AVAXUSDT",
-    "LINKUSDT"
-]  # MATIC -> POL (Binance güncellendi)
-HABER_MAX_SAAT = 4  # 4 saatten eski haberleri filtrele
-MIN_VOLUME_USD = SETTINGS.MIN_VOLUME_USD  # $10M minimum 24h hacim
-MIN_ADX = SETTINGS.MIN_ADX  # Güçlü trend eşiği
-FNG_EXTREME_FEAR = 20  # Alım yapma eşiği (Aşırı Korku)
+WATCHLIST = list(SETTINGS.WATCHLIST)
+HABER_MAX_SAAT = getattr(SETTINGS, 'RSS_MAX_AGE_HOURS', 4)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# AI AGENT KONFİGÜRASYONU
-# ─────────────────────────────────────────────────────────────────────────────
-AI_TECH_CONFIDENCE_THRESHOLD = SETTINGS.AI_TECH_CONFIDENCE_THRESHOLD   # Teknik tarama için minimum güven skoru
-AI_NEWS_CONFIDENCE_THRESHOLD = SETTINGS.AI_NEWS_CONFIDENCE_THRESHOLD   # Haber tarama için minimum güven skoru
-AI_SELL_CONFIDENCE_THRESHOLD = SETTINGS.AI_SELL_CONFIDENCE_THRESHOLD   # Satış kararı için minimum güven skoru
-AI_MAX_RETRIES = 3                  # API hatalarında tekrar deneme sayısı
-AI_RETRY_DELAY = 2                  # Tekrar deneme arasındaki bekleme (saniye)
-AI_BATCH_SIZE = 3                   # Batch AI çağrısı için coin sayısı (MAX_TOKENS önlemek için düşürüldü)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TREND FİLTRESİ VE KÂR KORUMA AYARLARI
-# ─────────────────────────────────────────────────────────────────────────────
-BLOCK_BUY_IN_DOWNTREND = True       # Düşüş trendinde alım engelle (GÜÇLÜ DÜŞÜŞ iken BUY reddet)
-PROTECT_PROFITABLE_POSITIONS = True # Kârdaki pozisyonları AI SELL'den koru
-MIN_PROFIT_TO_PROTECT = 0.5         # Koruma için minimum kâr yüzdesi (%)
-AI_SELL_OVERRIDE_CONFIDENCE = 90    # Bu güven skorunun üstünde kâr korumasını geç
-
-# Telegram Bildirim Ayarları
-TELEGRAM_NOTIFY_REDDIT = False      # Reddit analizi bildirimi gönder?
-TELEGRAM_NOTIFY_ONCHAIN = False     # On-chain analizi bildirimi gönder?
-TELEGRAM_NOTIFY_TRADES = True       # Trade bildirimleri gönder? (SADECE BU AKTİF)
-TELEGRAM_NOTIFY_IMPORTANT_NEWS = False  # Önemli haber bildirimleri gönder?
+# Telegram Bildirim Ayarları (config.py'den)
+TELEGRAM_NOTIFY_REDDIT = SETTINGS.TELEGRAM_NOTIFY_REDDIT
+TELEGRAM_NOTIFY_ONCHAIN = SETTINGS.TELEGRAM_NOTIFY_ONCHAIN
+TELEGRAM_NOTIFY_TRADES = SETTINGS.TELEGRAM_NOTIFY_TRADES
+TELEGRAM_NOTIFY_IMPORTANT_NEWS = SETTINGS.TELEGRAM_NOTIFY_IMPORTANT_NEWS
 
 
 # Loglama yardımcı fonksiyonları
@@ -438,7 +402,11 @@ async def ana_dongu():
     log_bolum("Modüler Mimari Başlatılıyor", "🔧")
     try:
         # Initialize ExchangeRouter with credentials (binance_client optional)
-        router = ExchangeRouter(SETTINGS.BINANCE_API_KEY, SETTINGS.BINANCE_SECRET_KEY, SETTINGS)
+        router = ExchangeRouter(
+            api_key=SETTINGS.BINANCE_API_KEY, 
+            api_secret=SETTINGS.BINANCE_SECRET_KEY, 
+            symbols=set(WATCHLIST)  # Tüm watchlist coinleri için WebSocket stream
+        )
         if binance_client:
             router._client = binance_client  # Use existing client
         log("ExchangeRouter başlatıldı", "OK")

@@ -88,6 +88,16 @@ except ImportError:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
+# Config import (slippage, fee, rate limit ayarları için)
+try:
+    from config import SETTINGS
+except ImportError:
+    class MockSettings:
+        SIMULATED_SLIPPAGE_PCT = 0.001
+        SIMULATED_FEE_PCT = 0.001
+        ORDER_MIN_INTERVAL_SEC = 1.0
+    SETTINGS = MockSettings()
+
 
 
 class OrderExecutor:
@@ -124,6 +134,9 @@ class OrderExecutor:
         self.dry_run = dry_run
         self.max_retries = max_retries
         
+        # Rate limiting için son order zamanı
+        self._last_order_time: float = 0.0
+        
         # Canlı modda client zorunlu
         if not dry_run and client is None:
             raise ValueError(
@@ -153,34 +166,28 @@ class OrderExecutor:
         self,
         price: float,
         quantity: float,
-        slippage_pct: float = 0.001,
-        fee_pct: float = 0.001
+        slippage_pct: Optional[float] = None,
+        fee_pct: Optional[float] = None
     ) -> Tuple[float, float]:
         """
         Slippage ve fee simülasyonu.
         
-        Gerçek piyasa koşullarını simüle eder:
-        - Slippage: Market emrinde gerçekleşen fiyat farkı
-        - Fee: Binance işlem ücreti
-        
         Args:
             price: Baz fiyat
             quantity: İşlem miktarı
-            slippage_pct: Slippage yüzdesi (0.001 = %0.1). Default: 0.001
-            fee_pct: Fee yüzdesi (0.001 = %0.1). Default: 0.001
+            slippage_pct: Slippage yüzdesi (None ise config'den alınır)
+            fee_pct: Fee yüzdesi (None ise config'den alınır)
         
         Returns:
             Tuple[executed_price, fee_amount]
-            - executed_price: Slippage sonrası gerçekleşen fiyat
-            - fee_amount: Ödenen toplam fee
-        
-        Example:
-            >>> executor = OrderExecutor(dry_run=True)
-            >>> price, fee = executor.simulate_slippage_and_fees(100.0, 1.0)
-            >>> print(f"Price: {price}, Fee: {fee}")
-            Price: 100.1, Fee: 0.1001
         """
-        # Slippage uygula (alımda fiyat artar, satımda azalır - burada genel ortalama)
+        # Config'den varsayılan değerleri al
+        if slippage_pct is None:
+            slippage_pct = getattr(SETTINGS, 'SIMULATED_SLIPPAGE_PCT', 0.001)
+        if fee_pct is None:
+            fee_pct = getattr(SETTINGS, 'SIMULATED_FEE_PCT', 0.001)
+        
+        # Slippage uygula
         executed_price = price * (1 + slippage_pct)
         
         # Fee hesapla
@@ -304,6 +311,15 @@ class OrderExecutor:
         
         if quantity <= 0:
             raise ValueError(f"Geçersiz quantity: {quantity}. Pozitif olmalı.")
+        
+        # Rate limiting - çok hızlı order spam'ini engelle
+        min_interval = getattr(SETTINGS, 'ORDER_MIN_INTERVAL_SEC', 1.0)
+        elapsed = time.time() - self._last_order_time
+        if elapsed < min_interval:
+            wait_time = min_interval - elapsed
+            logger.debug(f"Rate limit: {wait_time:.2f}s bekleniyor...")
+            await asyncio.sleep(wait_time)
+        self._last_order_time = time.time()
         
         # Client order ID oluştur
         client_order_id = self._generate_client_order_id(symbol)
@@ -602,11 +618,17 @@ async def demo():
     print("🧪 OrderExecutor Demo (Dry Run)")
     print("=" * 60 + "\n")
     
+    # Config değerlerini göster
+    print("📋 Config Değerleri (config.py'den):")
+    print(f"   SIMULATED_SLIPPAGE_PCT: {getattr(SETTINGS, 'SIMULATED_SLIPPAGE_PCT', 0.001) * 100:.2f}%")
+    print(f"   SIMULATED_FEE_PCT: {getattr(SETTINGS, 'SIMULATED_FEE_PCT', 0.001) * 100:.2f}%")
+    print(f"   ORDER_MIN_INTERVAL_SEC: {getattr(SETTINGS, 'ORDER_MIN_INTERVAL_SEC', 1.0)}s")
+    
     # Dry run executor oluştur
     executor = OrderExecutor(dry_run=True)
     
     # Market BUY emri
-    print("1. Market BUY emri:")
+    print("\n1. Market BUY emri:")
     order = await executor.create_order(
         symbol="BTCUSDT",
         side="BUY",
@@ -616,23 +638,26 @@ async def demo():
     print(f"   Status: {order['status']}")
     print(f"   Simulated: {order.get('_simulated', False)}")
     
-    # Market SELL emri
-    print("\n2. Market SELL emri:")
+    # Rate limiting testi
+    print("\n2. Rate Limiting Testi (ardışık orderlar):")
+    start = time.time()
     order = await executor.create_order(
         symbol="ETHUSDT",
         side="SELL",
         quantity=0.5
     )
+    elapsed = time.time() - start
     print(f"   Order ID: {order['orderId']}")
+    print(f"   Bekleme süresi: {elapsed:.2f}s (min: {getattr(SETTINGS, 'ORDER_MIN_INTERVAL_SEC', 1.0)}s)")
     
     # Slippage hesaplama
-    print("\n3. Slippage ve Fee hesaplama:")
+    print("\n3. Slippage ve Fee hesaplama (config'den):")
     price, fee = executor.simulate_slippage_and_fees(
         price=3500.0,
         quantity=0.1
     )
     print(f"   Orijinal fiyat: $3500.00")
-    print(f"   Executed fiyat: ${price:.2f}")
+    print(f"   Executed fiyat: ${price:.2f} (+{(price/3500-1)*100:.2f}% slippage)")
     print(f"   Fee: ${fee:.4f}")
     
     print("\n" + "=" * 60)

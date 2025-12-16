@@ -64,11 +64,11 @@ class LoopController:
         self.loop_duration = getattr(SETTINGS, "LOOP_SECONDS", 900)
         self.cooldown_until = 0.0
         
-        # Alarm tracking
+        # Alarm tracking - config'den oku
         self._alarm_thresholds = {
-            "consecutive_parse_fail": 15,   # Only alert after 15+ consecutive failures (was 5)
-            "consecutive_adx_block": 20,    # Only alert after 20+ ADX blocks (was 10)
-            "consecutive_data_fail": 5      # Only alert after 5+ data fetch failures (was 3)
+            "consecutive_parse_fail": getattr(SETTINGS, 'ALARM_PARSE_FAIL_THRESHOLD', 15),
+            "consecutive_adx_block": getattr(SETTINGS, 'ALARM_ADX_BLOCK_THRESHOLD', 20),
+            "consecutive_data_fail": getattr(SETTINGS, 'ALARM_DATA_FAIL_THRESHOLD', 5)
         }
         self._alarm_counters = {
             "parse_fail": 0,
@@ -157,44 +157,67 @@ class LoopController:
     async def run(self):
         """Main infinite loop."""
         logger.info("LoopController.run() started.")
-        while True:
-            try:
-                start_time = time.time()
-                await self.run_once()
-                
-                # Adaptive Sleep
-                elapsed = time.time() - start_time
-                sleep_time = max(10, self.loop_duration - elapsed)
-                
-                # LLM Metrics Log (Granular)
+        
+        # SL/TP Watchdog'u başlat (paralel task)
+        watchdog_task = None
+        if getattr(SETTINGS, 'SLTP_WATCHDOG_ENABLED', True):
+            live_trading = getattr(SETTINGS, 'LIVE_TRADING', False)
+            watchdog_task = asyncio.create_task(
+                self.position_manager.start_watchdog(live_trading_enabled=live_trading)
+            )
+        
+        try:
+            while True:
                 try:
-                    sm = self.strategy_engine.get_llm_metrics()
-                    nm = self.market_data_engine.get_llm_metrics()
-                    logger.info(
-                        f"[LLM METRICS] Strategy: calls={sm.get('strategy_calls',0)} "
-                        f"api_f={sm.get('api_fail',0)} parse_f={sm.get('parse_fail',0)} "
-                        f"schema_f={sm.get('schema_fail',0)} fb={sm.get('strategy_fallbacks',0)} "
-                        f"retry={sm.get('retry_count',0)}/{sm.get('retry_success',0)} "
-                        f"ema={sm.get('strategy_latency_ema_ms',0):.0f}ms | "
-                        f"News: calls={nm.get('news_calls',0)} fail={nm.get('news_failures',0)} "
-                        f"fb={nm.get('news_fallbacks',0)} ema={nm.get('news_latency_ema_ms',0):.0f}ms"
-                    )
-                except Exception:
+                    start_time = time.time()
+                    await self.run_once()
+                    
+                    # Adaptive Sleep
+                    elapsed = time.time() - start_time
+                    sleep_time = max(10, self.loop_duration - elapsed)
+                    
+                    # LLM Metrics Log (only if errors)
+                    try:
+                        sm = self.strategy_engine.get_llm_metrics()
+                        nm = self.market_data_engine.get_llm_metrics()
+                        # Sadece hata varsa logla
+                        total_errors = sm.get('api_fail', 0) + sm.get('parse_fail', 0) + nm.get('news_failures', 0)
+                        if total_errors > 0:
+                            logger.info(
+                                f"[LLM METRICS] Strategy: calls={sm.get('strategy_calls',0)} "
+                                f"api_f={sm.get('api_fail',0)} parse_f={sm.get('parse_fail',0)} "
+                                f"schema_f={sm.get('schema_fail',0)} fb={sm.get('strategy_fallbacks',0)} "
+                                f"retry={sm.get('retry_count',0)}/{sm.get('retry_success',0)} "
+                                f"ema={sm.get('strategy_latency_ema_ms',0):.0f}ms | "
+                                f"News: calls={nm.get('news_calls',0)} fail={nm.get('news_failures',0)} "
+                                f"fb={nm.get('news_fallbacks',0)} ema={nm.get('news_latency_ema_ms',0):.0f}ms"
+                            )
+                    except Exception:
+                        pass
+
+                    # Check for alarm conditions
+                    await self._check_alarms(sm, nm)
+
+                    logger.info(f"💤 Sleeping for {sleep_time:.1f}s...")
+                    await asyncio.sleep(sleep_time)
+                    
+                except asyncio.CancelledError:
+                    logger.info("LoopController cancelled.")
+                    break
+                except Exception as e:
+                    logger.error(f"❌ Critical Loop Error: {e}")
+                    traceback.print_exc()
+                    await asyncio.sleep(60) # Wait before retry on crash
+        finally:
+            # Watchdog'u durdur
+            if watchdog_task:
+                self.position_manager.stop_watchdog()
+                watchdog_task.cancel()
+                try:
+                    await watchdog_task
+                except asyncio.CancelledError:
                     pass
-
-                # Check for alarm conditions
-                await self._check_alarms(sm, nm)
-
-                logger.info(f"💤 Sleeping for {sleep_time:.1f}s...")
-                await asyncio.sleep(sleep_time)
-                
-            except asyncio.CancelledError:
-                logger.info("LoopController cancelled.")
-                break
-            except Exception as e:
-                logger.error(f"❌ Critical Loop Error: {e}")
-                traceback.print_exc()
-                await asyncio.sleep(60) # Wait before retry on crash
+                logger.info("🐕 Watchdog task stopped.")
 
     async def run_once(self):
         """Executes one 15-min cycle."""

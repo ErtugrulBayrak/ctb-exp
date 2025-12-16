@@ -120,17 +120,21 @@ class MarketDataEngine:
     - On-chain: Whale movements via Etherscan
     """
     
-    # Cache TTL (saniye)
-    TECHNICAL_TTL = 15.0
-    SENTIMENT_TTL = 90.0
-    ONCHAIN_TTL = 120.0
-    RSS_TTL = 90.0
+    # Cache TTL (saniye) - config'den oku, fallback değerlerle
+    TECHNICAL_TTL = getattr(SETTINGS, 'CACHE_TTL_TECH', 15.0)
+    SENTIMENT_TTL = getattr(SETTINGS, 'CACHE_TTL_SENTIMENT', 90.0)
+    ONCHAIN_TTL = getattr(SETTINGS, 'CACHE_TTL_ONCHAIN', 120.0)
+    RSS_TTL = getattr(SETTINGS, 'CACHE_TTL_SENTIMENT', 90.0)
+    
     # Desteklenen mum periyotları
     VALID_INTERVALS = {"1m", "5m", "15m", "1h", "4h", "1d"}
     DEFAULT_INTERVAL = "15m"
     
+    # API Timeout (config'den oku)
+    API_TIMEOUT = getattr(SETTINGS, 'API_TIMEOUT_DEFAULT', 10)
+    
     CACHE_TTL = {
-        "fng": 3600,      # 1 hour
+        "fng": 3600,      # 1 hour (fixed - rarely changes)
         "reddit": 900,    # 15 min
         "whales": 300,    # 5 min
         "news": 900       # 15 min
@@ -1093,13 +1097,16 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         try:
             import feedparser
             
-            feeds = [
+            # Config'den RSS feed'leri al
+            feeds = list(getattr(SETTINGS, 'RSS_FEED_URLS', (
                 "https://cointelegraph.com/rss",
                 "https://decrypt.co/feed",
                 "https://www.coindesk.com/arc/outboundfeeds/rss/"
-            ]
+            )))
             
-            cutoff = datetime.now(timezone.utc) - timedelta(hours=4)
+            max_age = getattr(SETTINGS, 'RSS_MAX_AGE_HOURS', 4)
+            
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age)
             articles = []
             
             for feed_url in feeds:
