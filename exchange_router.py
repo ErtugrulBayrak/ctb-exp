@@ -388,17 +388,35 @@ class ExchangeRouter:
     # ─────────────────────────────────────────────────────────────────────────
     # WEBSOCKET MANAGEMENT
     # ─────────────────────────────────────────────────────────────────────────
-    def _handle_socket_message(self, msg: Dict[str, Any]) -> None:
-        """WebSocket mesaj handler."""
-        if msg.get('e') == 'error':
+    def _handle_socket_message(self, msg) -> None:
+        """WebSocket mesaj handler (combined stream için)."""
+        # Hata kontrolü
+        if isinstance(msg, dict) and msg.get('e') == 'error':
             logger.error(f"[ExchangeRouter] WebSocket error: {msg}")
             self._is_connected = False
             return
         
-        # Mini ticker stream
-        if 's' in msg and 'c' in msg:
-            symbol = msg['s']
-            price = float(msg['c'])
+        # Combined stream array formatında gelir
+        if isinstance(msg, list):
+            for ticker in msg:
+                self._process_ticker(ticker)
+        elif isinstance(msg, dict) and 's' in msg:
+            self._process_ticker(msg)
+    
+    def _process_ticker(self, ticker: Dict[str, Any]) -> None:
+        """Tek bir ticker mesajını işle."""
+        symbol = ticker.get('s', '')
+        
+        # Sadece watchlist'teki coinleri işle
+        if symbol not in self._symbols:
+            return
+        
+        price_str = ticker.get('c')  # Close price
+        if not price_str:
+            return
+        
+        try:
+            price = float(price_str)
             self._update_price_cache(symbol, price)
             self._last_heartbeat = time.time()
             
@@ -408,6 +426,8 @@ class ExchangeRouter:
                     cb(symbol, price)
                 except Exception as e:
                     logger.warning(f"[ExchangeRouter] Callback hatası: {e}")
+        except (ValueError, TypeError):
+            pass
     
     def _start_websocket_sync(self) -> None:
         """Senkron WebSocket başlat (thread içinde)."""
@@ -418,19 +438,17 @@ class ExchangeRouter:
             )
             self._twm.start()
             
-            # Her sembol için mini ticker stream başlat
-            for symbol in self._symbols:
-                self._twm.start_symbol_miniticker_socket(
-                    callback=self._handle_socket_message,
-                    symbol=symbol.lower()
-                )
-                logger.info(f"[ExchangeRouter] WebSocket stream başlatıldı: {symbol}")
+            # TÜM coinler için tek combined stream (daha verimli)
+            # !miniTicker@arr tüm USDT çiftlerini tek bağlantıda alır
+            self._twm.start_miniticker_socket(
+                callback=self._handle_socket_message
+            )
             
             self._is_connected = True
             self._last_heartbeat = time.time()
             self._reconnect_attempts = 0
             
-            logger.info("[ExchangeRouter] ✅ WebSocket bağlantısı kuruldu")
+            logger.info(f"[ExchangeRouter] ✅ WebSocket bağlantısı kuruldu ({len(self._symbols)} coin izleniyor)")
             
         except Exception as e:
             logger.error(f"[ExchangeRouter] WebSocket başlatma hatası: {e}")
@@ -636,21 +654,30 @@ async def demo():
     load_dotenv()
     
     api_key = os.getenv('BINANCE_API_KEY', '')
-    api_secret = os.getenv('BINANCE_API_SECRET', '')
+    api_secret = os.getenv('BINANCE_SECRET_KEY', '')  # Doğru değişken adı
     
     if not api_key or not api_secret:
-        print("❌ BINANCE_API_KEY ve BINANCE_API_SECRET gerekli")
+        print("❌ BINANCE_API_KEY ve BINANCE_SECRET_KEY gerekli (.env dosyasında)")
         return
     
     print("\n" + "=" * 60)
     print("🔄 EXCHANGE ROUTER DEMO")
     print("=" * 60 + "\n")
     
+    # Config'den watchlist al (varsa)
+    try:
+        from config import SETTINGS
+        symbols = set(SETTINGS.WATCHLIST)
+        print(f"📋 Config'den {len(symbols)} coin yüklendi")
+    except ImportError:
+        symbols = {'BTCUSDT', 'ETHUSDT', 'SOLUSDT'}
+        print("📋 Varsayılan 3 coin kullanılıyor")
+    
     # Router oluştur
     router = create_router(
         api_key=api_key,
         api_secret=api_secret,
-        symbols={'BTCUSDT', 'ETHUSDT'}
+        symbols=symbols
     )
     
     # Başlat
@@ -669,13 +696,17 @@ async def demo():
     for i in range(10):
         await asyncio.sleep(1)
         
-        btc = router.get_price("BTCUSDT")
-        eth = router.get_price("ETHUSDT")
+        # Tüm coinlerin fiyatlarını göster
+        prices = []
+        for symbol in sorted(symbols):
+            price = router.get_price(symbol)
+            short_name = symbol.replace("USDT", "")
+            if price:
+                prices.append(f"{short_name}: ${price:,.2f}")
+            else:
+                prices.append(f"{short_name}: N/A")
         
-        btc_str = f"${btc:,.2f}" if btc else "N/A"
-        eth_str = f"${eth:,.2f}" if eth else "N/A"
-        
-        print(f"  [{i+1}/10] BTC: {btc_str} | ETH: {eth_str}")
+        print(f"  [{i+1:2}/10] " + " | ".join(prices))
     
     # Health check
     print("\n📋 Health Check:")

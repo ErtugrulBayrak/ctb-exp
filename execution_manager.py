@@ -50,10 +50,19 @@ class ExecutionManager:
     - SELL flow: find position, profit protection, close, live order, notify, log
     """
     
-    # Profit protection defaults (can be overridden)
-    PROTECT_PROFITABLE_POSITIONS = True
-    MIN_PROFIT_TO_PROTECT = 0.5
-    AI_SELL_OVERRIDE_CONFIDENCE = 90
+    # Profit protection - artık config'den okunuyor
+    # Bu değerler SETTINGS'den alınır, fallback olarak burada
+    @property
+    def PROTECT_PROFITABLE_POSITIONS(self):
+        return getattr(SETTINGS, 'PROTECT_PROFITABLE_POSITIONS', True)
+    
+    @property
+    def MIN_PROFIT_TO_PROTECT(self):
+        return getattr(SETTINGS, 'MIN_PROFIT_TO_PROTECT', 0.5)
+    
+    @property
+    def AI_SELL_OVERRIDE_CONFIDENCE(self):
+        return getattr(SETTINGS, 'AI_SELL_OVERRIDE_CONFIDENCE', 90)
     
     def __init__(
         self,
@@ -397,23 +406,32 @@ class ExecutionManager:
                 )
                 await self._telegram_fn(self.bot_token, self.chat_id, mesaj)
             
-            # LIVE TRADING
+            # LIVE TRADING with retry logic
             if SETTINGS.LIVE_TRADING and self.executor:
-                try:
-                    live_order = await self.executor.create_order(
-                        symbol=f"{symbol}USDT",
-                        side="BUY",
-                        quantity=quantity,
-                        order_type="MARKET"
-                    )
-                    position["live_order_id"] = live_order.get("orderId")
-                    if self._save_portfolio:
-                        self._save_portfolio(self.portfolio)
-                    self._log(f"🔴 CANLI EMİR: {symbol} OrderId={live_order.get('orderId')}", "OK")
-                    self._stats["live_orders_placed"] += 1
-                except Exception as e:
-                    self._log(f"❌ CANLI EMİR BAŞARISIZ: {e}", "ERR")
-                    self._stats["live_orders_failed"] += 1
+                max_retries = getattr(SETTINGS, 'LIVE_ORDER_MAX_RETRIES', 3)
+                retry_delay = getattr(SETTINGS, 'LIVE_ORDER_RETRY_DELAY', 2.0)
+                
+                for attempt in range(max_retries):
+                    try:
+                        live_order = await self.executor.create_order(
+                            symbol=f"{symbol}USDT",
+                            side="BUY",
+                            quantity=quantity,
+                            order_type="MARKET"
+                        )
+                        position["live_order_id"] = live_order.get("orderId")
+                        if self._save_portfolio:
+                            self._save_portfolio(self.portfolio)
+                        self._log(f"🔴 CANLI EMİR: {symbol} OrderId={live_order.get('orderId')}", "OK")
+                        self._stats["live_orders_placed"] += 1
+                        break  # Başarılı, döngüden çık
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            self._log(f"⚠️ CANLI EMİR DENEME {attempt + 1}/{max_retries} BAŞARISIZ: {e}", "WARN")
+                            await asyncio.sleep(retry_delay)
+                        else:
+                            self._log(f"❌ CANLI EMİR TÜM DENEMELER BAŞARISIZ: {e}", "ERR")
+                            self._stats["live_orders_failed"] += 1
             
             self._stats["buys_executed"] += 1
             return True, position
@@ -528,37 +546,46 @@ class ExecutionManager:
                 )
                 await self._telegram_fn(self.bot_token, self.chat_id, mesaj)
             
-            # LIVE TRADING: Gerçek SELL emri
+            # LIVE TRADING: Gerçek SELL emri with retry
             if SETTINGS.LIVE_TRADING and self.executor:
                 quantity = target_position.get('quantity', 0)
-                try:
-                    live_order = await self.executor.create_order(
-                        symbol=f"{symbol}USDT",
-                        side="SELL",
-                        quantity=quantity,
-                        order_type="MARKET"
-                    )
-                    
-                    closed["live_sell_order_id"] = live_order.get("orderId")
-                    closed["live_sell_status"] = "FILLED"
-                    if self._save_portfolio:
-                        self._save_portfolio(self.portfolio)
-                    
-                    self._log(f"🔴 CANLI SATIŞ BAŞARILI: {symbol} OrderId={live_order.get('orderId')}", "OK")
-                    self._stats["live_orders_placed"] += 1
-                    
-                except Exception as e:
-                    self._log(f"❌ CANLI SATIŞ BAŞARISIZ: {symbol} - {e}", "ERR")
-                    self._log(f"⚠️ RECOVERY GEREKLİ: Pozisyon paper'da kapatıldı ama canlı satış yapılamadı!", "ERR")
-                    
-                    if self.portfolio.get("history"):
-                        self.portfolio["history"][-1]["live_sell_failed"] = True
-                        self.portfolio["history"][-1]["live_sell_error"] = str(e)
-                        self.portfolio["history"][-1]["recovery_needed"] = True
+                max_retries = getattr(SETTINGS, 'LIVE_ORDER_MAX_RETRIES', 3)
+                retry_delay = getattr(SETTINGS, 'LIVE_ORDER_RETRY_DELAY', 2.0)
+                
+                for attempt in range(max_retries):
+                    try:
+                        live_order = await self.executor.create_order(
+                            symbol=f"{symbol}USDT",
+                            side="SELL",
+                            quantity=quantity,
+                            order_type="MARKET"
+                        )
+                        
+                        closed["live_sell_order_id"] = live_order.get("orderId")
+                        closed["live_sell_status"] = "FILLED"
                         if self._save_portfolio:
                             self._save_portfolio(self.portfolio)
-                    
-                    self._stats["live_orders_failed"] += 1
+                        
+                        self._log(f"🔴 CANLI SATIŞ BAŞARILI: {symbol} OrderId={live_order.get('orderId')}", "OK")
+                        self._stats["live_orders_placed"] += 1
+                        break  # Başarılı, döngüden çık
+                        
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            self._log(f"⚠️ CANLI SATIŞ DENEME {attempt + 1}/{max_retries} BAŞARISIZ: {e}", "WARN")
+                            await asyncio.sleep(retry_delay)
+                        else:
+                            self._log(f"❌ CANLI SATIŞ TÜM DENEMELER BAŞARISIZ: {symbol} - {e}", "ERR")
+                            self._log(f"⚠️ RECOVERY GEREKLİ: Pozisyon paper'da kapatıldı ama canlı satış yapılamadı!", "ERR")
+                            
+                            if self.portfolio.get("history"):
+                                self.portfolio["history"][-1]["live_sell_failed"] = True
+                                self.portfolio["history"][-1]["live_sell_error"] = str(e)
+                                self.portfolio["history"][-1]["recovery_needed"] = True
+                                if self._save_portfolio:
+                                    self._save_portfolio(self.portfolio)
+                            
+                            self._stats["live_orders_failed"] += 1
             
             self._stats["sells_executed"] += 1
             return True, pnl, closed
@@ -614,3 +641,127 @@ def create_execution_manager(
         executor=executor,
         **kwargs
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEST / DEMO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+async def demo():
+    """ExecutionManager demo - gerçek işlem yapmaz."""
+    print("\n" + "=" * 60)
+    print("🧪 EXECUTION MANAGER DEMO")
+    print("=" * 60 + "\n")
+    
+    # Mock portföy oluştur
+    mock_portfolio = {
+        "balance": 1000.0,
+        "positions": [],
+        "history": []
+    }
+    
+    def mock_save(p):
+        print(f"   💾 Portföy kaydedildi (balance: ${p['balance']:.2f})")
+    
+    # ExecutionManager oluştur
+    em = ExecutionManager(
+        portfolio=mock_portfolio,
+        save_portfolio_fn=mock_save
+    )
+    
+    print("📋 Config Değerleri (config.py'den):")
+    print(f"   PROTECT_PROFITABLE_POSITIONS: {em.PROTECT_PROFITABLE_POSITIONS}")
+    print(f"   MIN_PROFIT_TO_PROTECT: {em.MIN_PROFIT_TO_PROTECT}%")
+    print(f"   AI_SELL_OVERRIDE_CONFIDENCE: {em.AI_SELL_OVERRIDE_CONFIDENCE}%")
+    print(f"   LIVE_ORDER_MAX_RETRIES: {getattr(SETTINGS, 'LIVE_ORDER_MAX_RETRIES', 3)}")
+    print(f"   LIVE_ORDER_RETRY_DELAY: {getattr(SETTINGS, 'LIVE_ORDER_RETRY_DELAY', 2.0)}s")
+    
+    print("\n" + "-" * 60)
+    print("📊 TEST 1: Pozisyon Açma")
+    print("-" * 60)
+    
+    # Mock karar
+    mock_decision = {
+        "stop_loss": 95.0,
+        "take_profit": 110.0,
+        "quantity": 2.0,
+        "confidence": 85,
+        "reason": "Teknik göstergeler güçlü alım sinyali veriyor"
+    }
+    
+    success, result = await em.execute_buy_flow(
+        symbol="BTCUSDT",
+        current_price=100.0,
+        decision_result=mock_decision,
+        trade_reason="AI-TECH",
+        trigger_info="Demo Test"
+    )
+    
+    if success:
+        print(f"\n✅ Pozisyon açıldı!")
+        print(f"   ID: {result['id']}")
+        print(f"   Fiyat: ${result['entry_price']:.2f}")
+        print(f"   Miktar: {result['quantity']}")
+        print(f"   Kalan bakiye: ${mock_portfolio['balance']:.2f}")
+    else:
+        print(f"❌ Pozisyon açılamadı: {result}")
+    
+    print("\n" + "-" * 60)
+    print("🛡️ TEST 2: Kâr Koruma Mekanizması")
+    print("-" * 60)
+    
+    # Fiyat yükseldi - pozisyon kâra geçti
+    current_price_profit = 102.0  # %2 kâr
+    profit_pct = ((current_price_profit - 100.0) / 100.0) * 100
+    print(f"   Güncel fiyat: ${current_price_profit:.2f} (+{profit_pct:.1f}%)")
+    print(f"   AI güven: 70% (< {em.AI_SELL_OVERRIDE_CONFIDENCE}% eşiği)")
+    
+    success, pnl, msg = await em.execute_sell_flow(
+        symbol="BTCUSDT",
+        current_price=current_price_profit,
+        ai_reasoning="Momentum zayıflıyor",
+        ai_confidence=70  # Düşük güven
+    )
+    
+    if not success:
+        print(f"\n🛡️ Kâr koruma çalıştı! {msg}")
+    else:
+        print(f"⚠️ Beklenmedik: Pozisyon kapatıldı")
+    
+    print("\n" + "-" * 60)
+    print("💰 TEST 3: Yüksek Güvenli Satış")
+    print("-" * 60)
+    
+    print(f"   AI güven: 95% (>= {em.AI_SELL_OVERRIDE_CONFIDENCE}% eşiği)")
+    
+    success, pnl, closed = await em.execute_sell_flow(
+        symbol="BTCUSDT",
+        current_price=current_price_profit,
+        ai_reasoning="Kritik direnç seviyesi, düşüş bekleniyor",
+        ai_confidence=95  # Yüksek güven - kâr korumasını geçer
+    )
+    
+    if success:
+        print(f"\n✅ Pozisyon kapatıldı!")
+        print(f"   PnL: ${pnl:.2f}")
+        print(f"   Kâr %: {closed['profit_pct']:.1f}%")
+        print(f"   Güncel bakiye: ${mock_portfolio['balance']:.2f}")
+    else:
+        print(f"❌ Satış yapılamadı: {closed}")
+    
+    print("\n" + "-" * 60)
+    print("📈 İSTATİSTİKLER")
+    print("-" * 60)
+    
+    stats = em.get_stats()
+    for k, v in stats.items():
+        print(f"   {k}: {v}")
+    
+    print("\n" + "=" * 60)
+    print("✅ Demo tamamlandı!")
+    print("=" * 60 + "\n")
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(demo())

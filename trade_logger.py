@@ -22,12 +22,25 @@ Kullanım:
 Log Dosyası:
 -----------
     logs/trader.log (max 10MB, 5 backup)
+    logs/trader.json (JSON format, opsiyonel)
 """
 
 import os
+import json
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONFIG IMPORT (opsiyonel - yoksa env/fallback kullanılır)
+# ═══════════════════════════════════════════════════════════════════════════════
+try:
+    from config import SETTINGS
+    _config_available = True
+except ImportError:
+    _config_available = False
+    SETTINGS = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -35,15 +48,26 @@ from datetime import datetime
 # ═══════════════════════════════════════════════════════════════════════════════
 LOG_DIR = "logs"
 LOG_FILE = os.path.join(LOG_DIR, "trader.log")
-MAX_BYTES = 10_000_000  # 10 MB
-BACKUP_COUNT = 5
+LOG_FILE_JSON = os.path.join(LOG_DIR, "trader.json")
+
+# Config'den veya env'den al
+if _config_available:
+    MAX_BYTES = getattr(SETTINGS, 'LOG_MAX_BYTES', 10_000_000)
+    BACKUP_COUNT = getattr(SETTINGS, 'LOG_BACKUP_COUNT', 5)
+    JSON_ENABLED = getattr(SETTINGS, 'LOG_JSON_ENABLED', False)
+    _config_level = getattr(SETTINGS, 'LOG_LEVEL', 'INFO').upper()
+else:
+    MAX_BYTES = 10_000_000  # 10 MB
+    BACKUP_COUNT = 5
+    JSON_ENABLED = False
+    _config_level = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 # Detaylı format: modül adı ve satır numarası ile
 LOG_FORMAT = "[%(asctime)s] %(levelname)-8s [%(name)s] %(message)s"
 LOG_FORMAT_DEBUG = "[%(asctime)s] %(levelname)-8s [%(name)s:%(funcName)s:%(lineno)d] %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-# Ortam değişkeninden log seviyesi al (DEBUG için: LOG_LEVEL=DEBUG)
+# Log seviyesi haritası
 LOG_LEVEL_MAP = {
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
@@ -51,8 +75,13 @@ LOG_LEVEL_MAP = {
     "ERROR": logging.ERROR,
     "CRITICAL": logging.CRITICAL
 }
-_env_level = os.environ.get("LOG_LEVEL", "INFO").upper()
-DEFAULT_LEVEL = LOG_LEVEL_MAP.get(_env_level, logging.INFO)
+
+# Env variable override (her zaman öncelikli)
+_env_level = os.environ.get("LOG_LEVEL", "").upper()
+if _env_level:
+    DEFAULT_LEVEL = LOG_LEVEL_MAP.get(_env_level, logging.INFO)
+else:
+    DEFAULT_LEVEL = LOG_LEVEL_MAP.get(_config_level, logging.INFO)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -60,6 +89,27 @@ DEFAULT_LEVEL = LOG_LEVEL_MAP.get(_env_level, logging.INFO)
 # ═══════════════════════════════════════════════════════════════════════════════
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# JSON FORMATTER (Opsiyonel - log analizi için)
+# ═══════════════════════════════════════════════════════════════════════════════
+class JsonFormatter(logging.Formatter):
+    """Log kayıtlarını JSON formatında yazar."""
+    
+    def format(self, record):
+        log_data = {
+            "timestamp": datetime.fromtimestamp(record.created).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno
+        }
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_data, ensure_ascii=False)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -91,10 +141,26 @@ console_handler = logging.StreamHandler()
 console_handler.setLevel(DEFAULT_LEVEL)
 console_handler.setFormatter(formatter)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# JSON Handler (Opsiyonel)
+# ─────────────────────────────────────────────────────────────────────────────
+json_handler = None
+if JSON_ENABLED:
+    json_handler = RotatingFileHandler(
+        LOG_FILE_JSON,
+        maxBytes=MAX_BYTES,
+        backupCount=BACKUP_COUNT,
+        encoding='utf-8'
+    )
+    json_handler.setLevel(DEFAULT_LEVEL)
+    json_handler.setFormatter(JsonFormatter())
+
 # Handler'ları ekle (duplicate önle)
 if not logger.handlers:
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+    if json_handler:
+        logger.addHandler(json_handler)
 
 # Propagation'ı kapat (parent logger'a gönderme)
 logger.propagate = False
@@ -280,10 +346,17 @@ def set_level(level: str) -> None:
 if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("🧪 TRADE LOGGER TEST")
-    print(f"   Current Level: {logging.getLevelName(DEFAULT_LEVEL)}")
     print("=" * 60 + "\n")
     
+    print("📋 Config Değerleri:")
+    print(f"   LOG_LEVEL: {logging.getLevelName(DEFAULT_LEVEL)}")
+    print(f"   LOG_MAX_BYTES: {MAX_BYTES / 1e6:.1f} MB")
+    print(f"   LOG_BACKUP_COUNT: {BACKUP_COUNT}")
+    print(f"   LOG_JSON_ENABLED: {JSON_ENABLED}")
+    print(f"   Config Source: {'config.py' if _config_available else 'env/fallback'}")
+    
     # Tüm log seviyelerini test et
+    print("\n--- Log Levels ---")
     logger.debug("DEBUG: Detaylı bilgi (sadece LOG_LEVEL=DEBUG ile görünür)")
     logger.info("INFO: Genel bilgi mesajı")
     logger.warning("WARNING: Dikkat gerektiren durum")
@@ -304,6 +377,10 @@ if __name__ == "__main__":
     log_warning_once("test_key", "Bu uyarı sadece bir kez görünür")
     log_warning_once("test_key", "Bu tekrar görünmez")
     
-    print(f"\n✅ Log dosyası: {LOG_FILE}")
+    print("\n" + "-" * 60)
+    print(f"✅ Log dosyası: {LOG_FILE}")
+    if JSON_ENABLED:
+        print(f"✅ JSON log: {LOG_FILE_JSON}")
     print(f"📝 DEBUG için: LOG_LEVEL=DEBUG python trade_logger.py")
+    print(f"📝 JSON için: config.py'de LOG_JSON_ENABLED=True")
     print("=" * 60 + "\n")

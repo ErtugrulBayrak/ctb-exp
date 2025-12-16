@@ -270,3 +270,91 @@ Original request:
 {original_prompt[:500]}
 
 Output ONLY the JSON:"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TEST / DEMO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def demo():
+    """LLM Utils demo - tüm parsing senaryolarını test eder."""
+    print("\n" + "=" * 60)
+    print("🧪 LLM UTILS DEMO")
+    print("=" * 60 + "\n")
+    
+    test_cases = [
+        # (Açıklama, Test Metni)
+        ("✅ Temiz JSON", '{"decision": "BUY", "confidence": 85, "reason": "Strong momentum"}'),
+        
+        ("✅ Markdown fence ile", '''```json
+{"decision": "SELL", "confidence": 70, "reason": "Resistance hit"}
+```'''),
+        
+        ("✅ Prose ile çevrili", '''Here is my analysis based on the data:
+{"decision": "HOLD", "confidence": 50, "reason": "Mixed signals"}
+I hope this helps with your trading decisions.'''),
+        
+        ("✅ Trailing comma (tamir)", '{"decision": "BUY", "confidence": 90, "reason": "Breakout",}'),
+        
+        ("❌ JSON yok", 'I think you should buy because the market looks good.'),
+        
+        ("✅ Alternatif key (action)", '{"action": "BUY", "conf": 80, "reason": "Bull trend"}'),
+    ]
+    
+    for i, (desc, text) in enumerate(test_cases, 1):
+        print(f"Test {i}: {desc}")
+        print(f"   Input: {text[:50]}..." if len(text) > 50 else f"   Input: {text}")
+        
+        obj, error = safe_json_loads(text)
+        
+        if obj:
+            validated = validate_decision(obj)
+            if validated:
+                print(f"   ✅ Parsed: decision={validated['decision']}, confidence={validated['confidence']}")
+            else:
+                print(f"   ⚠️ Parsed JSON ama validation başarısız")
+        else:
+            print(f"   ❌ Parse hatası: {error}")
+        
+        print()
+    
+    print("-" * 60)
+    print("📋 FONKSIYON TESTLERİ")
+    print("-" * 60 + "\n")
+    
+    # strip_code_fences testi
+    fenced = '```json\n{"test": true}\n```'
+    stripped = strip_code_fences(fenced)
+    print(f"strip_code_fences:")
+    print(f"   Input:  {fenced}")
+    print(f"   Output: {stripped}")
+    print(f"   ✅ Pass" if stripped == '{"test": true}' else "   ❌ Fail")
+    
+    print()
+    
+    # extract_json_block testi
+    messy = 'Blah blah {"key": "value"} more text'
+    extracted = extract_json_block(messy)
+    print(f"extract_json_block:")
+    print(f"   Input:  {messy}")
+    print(f"   Output: {extracted}")
+    print(f"   ✅ Pass" if extracted == '{"key": "value"}' else "   ❌ Fail")
+    
+    print()
+    
+    # validate_decision testi
+    raw_decision = {"action": "buy", "score": 75, "reason": "Test reason here"}
+    validated = validate_decision(raw_decision)
+    print(f"validate_decision:")
+    print(f"   Input:  {raw_decision}")
+    print(f"   Output: {validated}")
+    expected = validated and validated["decision"] == "BUY" and validated["confidence"] == 75
+    print(f"   ✅ Pass" if expected else "   ❌ Fail")
+    
+    print("\n" + "=" * 60)
+    print("✅ Demo tamamlandı!")
+    print("=" * 60 + "\n")
+
+
+if __name__ == "__main__":
+    demo()

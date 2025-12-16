@@ -71,14 +71,14 @@ DEFAULT_SELL_CONFIDENCE = 70   # Minimum SELL confidence
 DEFAULT_BUY_CONFIDENCE = 65    # Minimum BUY confidence
 DEFAULT_RISK_PER_TRADE = 0.02  # Bakiyenin %2'si
 
-# 35% Math / 65% AI Weighted Model
-WEIGHT_MATH = 0.35
-WEIGHT_AI = 0.65
+# Weighted Model - config'den oku, fallback değerlerle
+WEIGHT_MATH = getattr(SETTINGS, 'STRATEGY_WEIGHT_MATH', 0.35)
+WEIGHT_AI = getattr(SETTINGS, 'STRATEGY_WEIGHT_AI', 0.65)
 
-# Math Layer Sub-Weights (sum to 1.0)
-MATH_WEIGHT_TECHNICAL = 0.70
-MATH_WEIGHT_ONCHAIN = 0.15
-MATH_WEIGHT_FNG = 0.15
+# Math Layer Sub-Weights (sum to 1.0) - config'den oku
+MATH_WEIGHT_TECHNICAL = getattr(SETTINGS, 'MATH_WEIGHT_TECHNICAL', 0.70)
+MATH_WEIGHT_ONCHAIN = getattr(SETTINGS, 'MATH_WEIGHT_ONCHAIN', 0.15)
+MATH_WEIGHT_FNG = getattr(SETTINGS, 'MATH_WEIGHT_FNG', 0.15)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
