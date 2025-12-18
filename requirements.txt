@@ -24,8 +24,8 @@ feedparser>=6.0.0
 newspaper3k>=0.2.8
 lxml>=4.9.0
 
-# Reddit API
-praw>=7.7.0
+# Reddit API (Async)
+asyncpraw>=7.7.0
 
 # Utilities
 python-dateutil>=2.8.0

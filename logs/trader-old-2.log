@@ -1,0 +1,1155 @@
+[2025-12-16 21:21:43] INFO     [trader:__init__:148] OrderExecutor başlatıldı: 🟢 DRY RUN (Simülasyon)
+[2025-12-16 21:21:43] DEBUG    [trader:__init__:44] RiskManager başlatıldı: ADX=22.0, Volume=$1.0M, Risk=2.0%
+[2025-12-16 21:21:52] INFO     [trader:_fetch_whale_movements:1444] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 21:21:56] INFO     [trader:_fetch_whale_movements:1444] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 21:21:58] INFO     [trader:_fetch_whale_movements:1490] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-16 21:22:08] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market sentiment is a mix of broad optimism for a 'Santa
+[2025-12-16 21:23:10] INFO     [trader:start_watchdog:263] 🐕 SL/TP Watchdog başlatıldı (her 30sn)
+[2025-12-16 21:23:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 21:23:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 21:23:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 21:23:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 21:23:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 21:23:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 21:23:11] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 21:23:17] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, whale accumulation"}
+[2025-12-16 21:23:17] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Extreme fear, whale accumulation
+[2025-12-16 21:23:17] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-16 21:23:23] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, weak bearish trend"}
+[2025-12-16 21:23:23] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=60 reason=Extreme fear, weak bearish trend
+[2025-12-16 21:23:23] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=55*0.35 + LLM=60*0.65 = 58.2)
+[2025-12-16 21:23:28] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"ETP launch & extreme fear"}
+[2025-12-16 21:23:28] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=ETP launch & extreme fear
+[2025-12-16 21:23:28] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-16 21:23:33] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, positive news"}
+[2025-12-16 21:23:33] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=60 reason=Extreme fear, positive news
+[2025-12-16 21:23:33] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=55*0.35 + LLM=60*0.65 = 58.2)
+[2025-12-16 21:23:38] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":40,"reason":"Extreme Fear (FnG=11)"}
+[2025-12-16 21:23:38] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=40 reason=Extreme Fear (FnG=11)
+[2025-12-16 21:23:38] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=55*0.35 + LLM=40*0.65 = 45.2)
+[2025-12-16 21:23:44] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, positive long-term news"}
+[2025-12-16 21:23:44] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=60 reason=Extreme fear, positive long-term news
+[2025-12-16 21:23:44] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: HOLD (Math=55*0.35 + LLM=60*0.65 = 58.2)
+[2025-12-16 21:23:50] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"FnG 11 & positive news"}
+[2025-12-16 21:23:50] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=FnG 11 & positive news
+[2025-12-16 21:23:50] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-16 21:24:37] INFO     [trader:start_watchdog:279] 🐕 SL/TP Watchdog durduruldu (cancelled)
+[2025-12-16 21:24:37] INFO     [trader:start_watchdog:285] 🐕 SL/TP Watchdog sonlandı
+[2025-12-16 21:29:20] INFO     [trader:__init__:148] OrderExecutor başlatıldı: 🟢 DRY RUN (Simülasyon)
+[2025-12-16 21:29:20] DEBUG    [trader:__init__:44] RiskManager başlatıldı: ADX=22.0, Volume=$1.0M, Risk=2.0%
+[2025-12-16 21:29:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 21:29:31] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 21:29:32] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$8808788.01, movements=3, signal=MODERATE_SELL_PRESSURE
+[2025-12-16 21:29:43] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The Reddit crypto community exhibits a mixed sentiment, show
+[2025-12-16 21:30:50] INFO     [trader:start_watchdog:263] 🐕 SL/TP Watchdog başlatıldı (her 30sn)
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 21:30:50] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 21:30:56] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, bullish news/whales"}
+[2025-12-16 21:30:56] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Extreme fear, bullish news/whales
+[2025-12-16 21:30:56] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=44*0.35 + LLM=75*0.65 = 64.2)
+[2025-12-16 21:31:02] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Inst. adoption, F&G 11, news"}
+[2025-12-16 21:31:02] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Inst. adoption, F&G 11, news
+[2025-12-16 21:31:02] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=52*0.35 + LLM=75*0.65 = 67.0)
+[2025-12-16 21:31:08] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Visa integration, adoption"}
+[2025-12-16 21:31:08] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Visa integration, adoption
+[2025-12-16 21:31:08] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=52*0.35 + LLM=75*0.65 = 67.0)
+[2025-12-16 21:31:13] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Weak bearish trend, fear high"}
+[2025-12-16 21:31:13] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=60 reason=Weak bearish trend, fear high
+[2025-12-16 21:31:13] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=44*0.35 + LLM=0*0.65 = 15.4)
+[2025-12-16 21:31:19] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, positive macro news"}
+[2025-12-16 21:31:19] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=60 reason=Extreme fear, positive macro news
+[2025-12-16 21:31:19] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=44*0.35 + LLM=60*0.65 = 54.4)
+[2025-12-16 21:31:24] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear & positive news"}
+[2025-12-16 21:31:24] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Extreme fear & positive news
+[2025-12-16 21:31:24] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=52*0.35 + LLM=75*0.65 = 67.0)
+[2025-12-16 21:31:30] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-16 21:31:30] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-16 21:31:30] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=52*0.35 + LLM=75*0.65 = 67.0)
+[2025-12-16 21:44:23] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 21:44:26] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 21:44:27] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 21:45:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 21:45:23] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, whale accumulation"}
+[2025-12-16 21:45:23] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Extreme fear, whale accumulation
+[2025-12-16 21:45:23] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-16 21:45:29] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, institutional adoption"}
+[2025-12-16 21:45:29] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=60 reason=Extreme fear, institutional adoption
+[2025-12-16 21:45:29] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=59*0.35 + LLM=60*0.65 = 59.6)
+[2025-12-16 21:45:35] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Visa adoption, Extreme Fear"}
+[2025-12-16 21:45:35] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=65 reason=Visa adoption, Extreme Fear
+[2025-12-16 21:45:35] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=48*0.35 + LLM=65*0.65 = 59.0)
+[2025-12-16 21:45:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Market plummeting, negative momentum"}
+[2025-12-16 21:45:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=60 reason=Market plummeting, negative momentum
+[2025-12-16 21:45:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-16 21:45:46] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"FnG & strong positive news"}
+[2025-12-16 21:45:46] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=60 reason=FnG & strong positive news
+[2025-12-16 21:45:46] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=60*0.65 = 55.8)
+[2025-12-16 21:45:51] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Extreme fear, positive momentum"}
+[2025-12-16 21:45:51] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=65 reason=Extreme fear, positive momentum
+[2025-12-16 21:45:51] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: HOLD (Math=59*0.35 + LLM=65*0.65 = 62.9)
+[2025-12-16 21:45:58] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Contrarian buy, strong F&G"}
+[2025-12-16 21:45:58] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=60 reason=Contrarian buy, strong F&G
+[2025-12-16 21:45:58] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=48*0.35 + LLM=60*0.65 = 55.8)
+[2025-12-16 21:59:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 21:59:30] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 21:59:31] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-16 21:59:43] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market presents a mixed picture, with Bitcoin showing re
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 21:59:58] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 22:00:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Whale accumulation on dips"}
+[2025-12-16 22:00:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Whale accumulation on dips
+[2025-12-16 22:00:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=55*0.35 + LLM=70*0.65 = 64.8)
+[2025-12-16 22:00:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Bearish news, weak tech, high fear"}
+[2025-12-16 22:00:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=SELL conf=60 reason=Bearish news, weak tech, high fear
+[2025-12-16 22:00:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=59*0.35 + LLM=0*0.65 = 20.6)
+[2025-12-16 22:00:15] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Strong SOL news vs market dip"}
+[2025-12-16 22:00:15] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=60 reason=Strong SOL news vs market dip
+[2025-12-16 22:00:15] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=48*0.35 + LLM=60*0.65 = 55.8)
+[2025-12-16 22:00:21] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Mixed signals, market fear"}
+[2025-12-16 22:00:21] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=60 reason=Mixed signals, market fear
+[2025-12-16 22:00:21] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-16 22:00:27] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear (FnG 11)"}
+[2025-12-16 22:00:27] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=60 reason=Extreme fear (FnG 11)
+[2025-12-16 22:00:27] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=60*0.65 = 55.8)
+[2025-12-16 22:00:31] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-16 22:00:31] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-16 22:00:31] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-16 22:00:37] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"FDIC news & extreme fear"}
+[2025-12-16 22:00:37] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=60 reason=FDIC news & extreme fear
+[2025-12-16 22:00:37] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=48*0.35 + LLM=60*0.65 = 55.8)
+[2025-12-16 22:14:23] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 22:14:26] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 22:14:27] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$799999.55, movements=1, signal=NEUTRAL
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 22:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 22:14:34] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whale accumulation, extreme fear"}
+[2025-12-16 22:14:34] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whale accumulation, extreme fear
+[2025-12-16 22:14:34] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-16 22:14:39] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":65,"reason":"Bearish tech & news, extreme fear"}
+[2025-12-16 22:14:39] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=SELL conf=65 reason=Bearish tech & news, extreme fear
+[2025-12-16 22:14:39] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-16 22:14:45] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Market crash, bearish tech"}
+[2025-12-16 22:14:45] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=SELL conf=80 reason=Market crash, bearish tech
+[2025-12-16 22:14:45] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-16 22:14:51] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Market plummet, bearish tech"}
+[2025-12-16 22:14:51] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=60 reason=Market plummet, bearish tech
+[2025-12-16 22:14:51] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-16 22:14:57] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-16 22:14:57] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-16 22:14:57] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-16 22:15:03] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Extreme fear, positive momentum"}
+[2025-12-16 22:15:03] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=65 reason=Extreme fear, positive momentum
+[2025-12-16 22:15:03] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=66*0.35 + LLM=65*0.65 = 65.3)
+[2025-12-16 22:15:10] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":30,"reason":"Contrarian F&G, positive news"}
+[2025-12-16 22:15:10] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=30 reason=Contrarian F&G, positive news
+[2025-12-16 22:15:10] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=55*0.35 + LLM=30*0.65 = 38.8)
+[2025-12-16 22:29:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 22:29:32] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 22:29:33] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$1799095.90, movements=1, signal=LIGHT_SELL_PRESSURE
+[2025-12-16 22:29:44] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] A mixed but cautiously optimistic mood, with significant sho
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 22:30:00] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 22:30:06] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whale accumulation, extreme fear"}
+[2025-12-16 22:30:06] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whale accumulation, extreme fear
+[2025-12-16 22:30:06] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-16 22:30:11] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, strong DeFi news"}
+[2025-12-16 22:30:11] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Extreme fear, strong DeFi news
+[2025-12-16 22:30:11] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-16 22:30:17] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Strong adoption despite dip"}
+[2025-12-16 22:30:17] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=70 reason=Strong adoption despite dip
+[2025-12-16 22:30:17] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=53*0.35 + LLM=70*0.65 = 64.0)
+[2025-12-16 22:30:23] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":30,"reason":"Extreme fear (FnG=11)"}
+[2025-12-16 22:30:23] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=30 reason=Extreme fear (FnG=11)
+[2025-12-16 22:30:23] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=53*0.35 + LLM=30*0.65 = 38.0)
+[2025-12-16 22:30:28] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":40,"reason":"Extreme fear, positive news"}
+[2025-12-16 22:30:28] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=40 reason=Extreme fear, positive news
+[2025-12-16 22:30:28] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=53*0.35 + LLM=40*0.65 = 44.5)
+[2025-12-16 22:30:33] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-16 22:30:33] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-16 22:30:33] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-16 22:30:38] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"FnG 11, weak bearish trend"}
+[2025-12-16 22:30:38] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=FnG 11, weak bearish trend
+[2025-12-16 22:30:38] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-16 22:44:24] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 22:44:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 22:44:28] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$2143508.80, movements=1, signal=LIGHT_SELL_PRESSURE
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 22:44:36] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 22:44:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Whale accumulation, extreme fear"}
+[2025-12-16 22:44:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=60 reason=Whale accumulation, extreme fear
+[2025-12-16 22:44:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=53*0.35 + LLM=60*0.65 = 57.5)
+[2025-12-16 22:44:48] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, DeFi boost, weak trend"}
+[2025-12-16 22:44:48] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Extreme fear, DeFi boost, weak trend
+[2025-12-16 22:44:48] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-16 22:44:53] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Visa integration, F&G 11"}
+[2025-12-16 22:44:53] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Visa integration, F&G 11
+[2025-12-16 22:44:53] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-16 22:44:59] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Strong market downturn, neg tech"}
+[2025-12-16 22:44:59] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=80 reason=Strong market downturn, neg tech
+[2025-12-16 22:44:59] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-16 22:45:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"SEC Aave news positive"}
+[2025-12-16 22:45:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=SEC Aave news positive
+[2025-12-16 22:45:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-16 22:45:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-16 22:45:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-16 22:45:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-16 22:45:14] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-16 22:45:14] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-16 22:45:14] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-16 22:59:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 22:59:30] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 22:59:31] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-16 22:59:41] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The overall market mood is mixed, with strong long-term opti
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 22:59:47] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 22:59:53] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whales accumulate during dip"}
+[2025-12-16 22:59:53] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whales accumulate during dip
+[2025-12-16 22:59:53] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-16 22:59:58] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Extreme fear, positive momentum"}
+[2025-12-16 22:59:58] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=70 reason=Extreme fear, positive momentum
+[2025-12-16 22:59:58] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=70*0.65 = 66.2)
+[2025-12-16 23:00:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Bearish tech, strong market fear"}
+[2025-12-16 23:00:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=HOLD conf=60 reason=Bearish tech, strong market fear
+[2025-12-16 23:00:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-16 23:00:10] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":90,"reason":"BTC plummeted, market red"}
+[2025-12-16 23:00:10] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=90 reason=BTC plummeted, market red
+[2025-12-16 23:00:10] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-16 23:00:16] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"SEC news positive, F&G 11"}
+[2025-12-16 23:00:16] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=SEC news positive, F&G 11
+[2025-12-16 23:00:16] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-16 23:00:21] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"FnG 11 & positive news"}
+[2025-12-16 23:00:21] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=FnG 11 & positive news
+[2025-12-16 23:00:21] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-16 23:00:26] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":50,"reason":"Weak tech, neutral on-chain"}
+[2025-12-16 23:00:26] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=HOLD conf=50 reason=Weak tech, neutral on-chain
+[2025-12-16 23:00:26] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-16 23:14:23] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 23:14:26] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 23:14:28] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$2255060.93, movements=3, signal=LIGHT_SELL_PRESSURE
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 23:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 23:14:34] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whales accumulate during dip"}
+[2025-12-16 23:14:34] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whales accumulate during dip
+[2025-12-16 23:14:34] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-16 23:14:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, positive momentum"}
+[2025-12-16 23:14:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=60 reason=Extreme fear, positive momentum
+[2025-12-16 23:14:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=56*0.35 + LLM=60*0.65 = 58.6)
+[2025-12-16 23:14:45] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Bearish tech, market crash news"}
+[2025-12-16 23:14:45] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=SELL conf=60 reason=Bearish tech, market crash news
+[2025-12-16 23:14:45] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-16 23:14:51] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Strong bearish signals"}
+[2025-12-16 23:14:51] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=80 reason=Strong bearish signals
+[2025-12-16 23:14:51] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-16 23:14:56] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"SEC Aave news & F&G 11"}
+[2025-12-16 23:14:56] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=SEC Aave news & F&G 11
+[2025-12-16 23:14:56] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-16 23:15:01] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"FnG 11, positive crypto news"}
+[2025-12-16 23:15:01] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=FnG 11, positive crypto news
+[2025-12-16 23:15:01] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-16 23:15:06] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Fear & positive news flow"}
+[2025-12-16 23:15:06] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Fear & positive news flow
+[2025-12-16 23:15:06] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-16 23:29:28] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 23:29:31] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 23:29:32] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$1728153.00, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-16 23:29:46] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market shows a strong contrast: Bitcoin is perceived wit
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 23:29:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 23:30:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Reddit/FnG suggest dip buy"}
+[2025-12-16 23:30:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Reddit/FnG suggest dip buy
+[2025-12-16 23:30:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=70*0.65 = 61.6)
+[2025-12-16 23:30:10] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Extreme fear, positive news"}
+[2025-12-16 23:30:10] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=60 reason=Extreme fear, positive news
+[2025-12-16 23:30:10] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=56*0.35 + LLM=60*0.65 = 58.6)
+[2025-12-16 23:30:16] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Visa adoption, extreme fear"}
+[2025-12-16 23:30:16] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=60 reason=Visa adoption, extreme fear
+[2025-12-16 23:30:16] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=46*0.35 + LLM=60*0.65 = 55.1)
+[2025-12-16 23:30:22] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Bearish tech & market news"}
+[2025-12-16 23:30:22] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=60 reason=Bearish tech & market news
+[2025-12-16 23:30:22] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-16 23:30:28] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":30,"reason":"Extreme fear (FnG 11)"}
+[2025-12-16 23:30:28] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=30 reason=Extreme fear (FnG 11)
+[2025-12-16 23:30:28] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=30*0.65 = 35.6)
+[2025-12-16 23:30:34] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Macro news, extreme fear"}
+[2025-12-16 23:30:34] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Macro news, extreme fear
+[2025-12-16 23:30:34] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-16 23:30:39] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"F&G Extreme Fear, Positive News"}
+[2025-12-16 23:30:39] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=F&G Extreme Fear, Positive News
+[2025-12-16 23:30:39] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-16 23:44:23] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 23:44:26] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 23:44:28] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 23:44:34] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 23:44:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Reddit/FnG suggest dip buy"}
+[2025-12-16 23:44:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Reddit/FnG suggest dip buy
+[2025-12-16 23:44:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=48*0.35 + LLM=70*0.65 = 62.3)
+[2025-12-16 23:44:47] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Extreme fear, positive momentum"}
+[2025-12-16 23:44:47] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=70 reason=Extreme fear, positive momentum
+[2025-12-16 23:44:47] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=70*0.65 = 66.2)
+[2025-12-16 23:44:52] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Visa adoption, extreme fear"}
+[2025-12-16 23:44:52] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=70 reason=Visa adoption, extreme fear
+[2025-12-16 23:44:52] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=70*0.65 = 66.2)
+[2025-12-16 23:44:58] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Market plummeting, negative momentum"}
+[2025-12-16 23:44:58] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=60 reason=Market plummeting, negative momentum
+[2025-12-16 23:44:58] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-16 23:45:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":20,"reason":"Extreme fear, potential bottom"}
+[2025-12-16 23:45:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=20 reason=Extreme fear, potential bottom
+[2025-12-16 23:45:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=20*0.65 = 29.8)
+[2025-12-16 23:45:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"FnG, news positive, momentum"}
+[2025-12-16 23:45:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=FnG, news positive, momentum
+[2025-12-16 23:45:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-16 23:45:15] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, extreme fear"}
+[2025-12-16 23:45:15] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, extreme fear
+[2025-12-16 23:45:15] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-16 23:59:28] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-16 23:59:31] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-16 23:59:33] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-16 23:59:42] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] A blend of cautious optimism and frustration; while altcoins
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-16 23:59:43] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-16 23:59:49] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whales accumulating 30% dip"}
+[2025-12-16 23:59:49] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whales accumulating 30% dip
+[2025-12-16 23:59:49] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-16 23:59:55] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Extreme fear, positive momentum"}
+[2025-12-16 23:59:55] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=65 reason=Extreme fear, positive momentum
+[2025-12-16 23:59:55] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=59*0.35 + LLM=65*0.65 = 62.9)
+[2025-12-17 00:00:01] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Visa adoption, extreme fear"}
+[2025-12-17 00:00:01] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Visa adoption, extreme fear
+[2025-12-17 00:00:01] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 00:00:07] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Market plummeted, negative momentum"}
+[2025-12-17 00:00:07] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=60 reason=Market plummeted, negative momentum
+[2025-12-17 00:00:07] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 00:00:12] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":85,"reason":"XRP demand evaporated, neg momentum"}
+[2025-12-17 00:00:12] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=85 reason=XRP demand evaporated, neg momentum
+[2025-12-17 00:00:12] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 00:00:17] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-17 00:00:17] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-17 00:00:17] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 00:00:22] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"News positive, F&G extreme fear"}
+[2025-12-17 00:00:22] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=News positive, F&G extreme fear
+[2025-12-17 00:00:22] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 00:14:23] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 00:14:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 00:14:28] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$2016998.00, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 00:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 00:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 00:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 00:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 00:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 00:14:28] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 00:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 00:14:35] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whales accumulate 30% dip"}
+[2025-12-17 00:14:35] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whales accumulate 30% dip
+[2025-12-17 00:14:35] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-17 00:14:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Extreme fear, positive news"}
+[2025-12-17 00:14:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=65 reason=Extreme fear, positive news
+[2025-12-17 00:14:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=64*0.35 + LLM=65*0.65 = 64.7)
+[2025-12-17 00:14:46] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Visa adoption, strong utility"}
+[2025-12-17 00:14:46] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=65 reason=Visa adoption, strong utility
+[2025-12-17 00:14:46] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=56*0.35 + LLM=65*0.65 = 61.8)
+[2025-12-17 00:14:52] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Market plummeted, bearish tech"}
+[2025-12-17 00:14:52] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=SELL conf=80 reason=Market plummeted, bearish tech
+[2025-12-17 00:14:52] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-17 00:14:57] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":20,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 00:14:57] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=20 reason=Extreme fear (FnG 11)
+[2025-12-17 00:14:57] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=53*0.35 + LLM=20*0.65 = 31.5)
+[2025-12-17 00:15:02] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive crypto news"}
+[2025-12-17 00:15:02] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Extreme fear, positive crypto news
+[2025-12-17 00:15:02] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 00:15:08] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 11"}
+[2025-12-17 00:15:08] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, F&G 11
+[2025-12-17 00:15:08] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 00:29:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 00:29:31] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 00:29:32] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$2016998.00, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 00:29:43] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] Reddit shows a mixed crypto market sentiment, with strong wh
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 00:30:01] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 00:30:07] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Whale accumulation during dip"}
+[2025-12-17 00:30:07] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Whale accumulation during dip
+[2025-12-17 00:30:07] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=70*0.65 = 61.6)
+[2025-12-17 00:30:13] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"FnG, DeFi news outweigh sell pressure"}
+[2025-12-17 00:30:13] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=FnG, DeFi news outweigh sell pressure
+[2025-12-17 00:30:13] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 00:30:19] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Market crash outweighs SOL news"}
+[2025-12-17 00:30:19] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=SELL conf=60 reason=Market crash outweighs SOL news
+[2025-12-17 00:30:19] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=56*0.35 + LLM=0*0.65 = 19.6)
+[2025-12-17 00:30:24] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":50,"reason":"Mixed signals, extreme fear"}
+[2025-12-17 00:30:24] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=50 reason=Mixed signals, extreme fear
+[2025-12-17 00:30:24] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-17 00:30:30] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":85,"reason":"Demand evaporated, negative momentum"}
+[2025-12-17 00:30:30] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=85 reason=Demand evaporated, negative momentum
+[2025-12-17 00:30:30] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-17 00:30:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Fear index low, positive momentum"}
+[2025-12-17 00:30:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=60 reason=Fear index low, positive momentum
+[2025-12-17 00:30:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: HOLD (Math=56*0.35 + LLM=60*0.65 = 58.6)
+[2025-12-17 00:30:41] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear & positive news"}
+[2025-12-17 00:30:41] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Extreme fear & positive news
+[2025-12-17 00:30:41] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 00:44:23] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 00:44:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 00:44:29] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 00:44:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 00:44:37] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whale accumulation during dip"}
+[2025-12-17 00:44:37] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whale accumulation during dip
+[2025-12-17 00:44:37] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 00:44:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"FnG extreme fear, positive news"}
+[2025-12-17 00:44:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=70 reason=FnG extreme fear, positive news
+[2025-12-17 00:44:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=70*0.65 = 66.2)
+[2025-12-17 00:44:48] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Visa adoption, extreme fear"}
+[2025-12-17 00:44:48] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=65 reason=Visa adoption, extreme fear
+[2025-12-17 00:44:48] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=59*0.35 + LLM=65*0.65 = 62.9)
+[2025-12-17 00:44:53] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Fear & Greed, Positive Momentum"}
+[2025-12-17 00:44:53] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=60 reason=Fear & Greed, Positive Momentum
+[2025-12-17 00:44:53] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=59*0.35 + LLM=60*0.65 = 59.6)
+[2025-12-17 00:44:59] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":85,"reason":"XRP demand evaporated, bearish tech"}
+[2025-12-17 00:44:59] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=85 reason=XRP demand evaporated, bearish tech
+[2025-12-17 00:44:59] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 00:45:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Momentum up, extreme fear"}
+[2025-12-17 00:45:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Momentum up, extreme fear
+[2025-12-17 00:45:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 00:45:10] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Extreme Fear (FnG: 11)"}
+[2025-12-17 00:45:10] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=65 reason=Extreme Fear (FnG: 11)
+[2025-12-17 00:45:10] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=59*0.35 + LLM=65*0.65 = 62.9)
+[2025-12-17 00:59:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 00:59:30] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 00:59:31] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$500000.00, movements=1, signal=NEUTRAL
+[2025-12-17 00:59:43] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The overall market mood is mixed, characterized by frustrati
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 00:59:48] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 00:59:54] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Fear & accumulation"}
+[2025-12-17 00:59:54] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Fear & accumulation
+[2025-12-17 00:59:54] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 01:00:00] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive DeFi news"}
+[2025-12-17 01:00:00] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Extreme fear, positive DeFi news
+[2025-12-17 01:00:00] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:00:05] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Visa adoption & extreme fear"}
+[2025-12-17 01:00:05] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Visa adoption & extreme fear
+[2025-12-17 01:00:05] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:00:11] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Weak trend, market plummet news"}
+[2025-12-17 01:00:11] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=60 reason=Weak trend, market plummet news
+[2025-12-17 01:00:11] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=59*0.35 + LLM=0*0.65 = 20.6)
+[2025-12-17 01:00:16] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Negative tech & demand news"}
+[2025-12-17 01:00:16] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=80 reason=Negative tech & demand news
+[2025-12-17 01:00:16] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 01:00:22] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-17 01:00:22] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-17 01:00:22] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:00:26] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-17 01:00:26] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-17 01:00:26] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:14:24] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 01:14:27] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 01:14:29] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 01:14:29] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 01:14:35] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Extreme fear, large holder accumulation"}
+[2025-12-17 01:14:35] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Extreme fear, large holder accumulation
+[2025-12-17 01:14:35] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=55*0.35 + LLM=70*0.65 = 64.8)
+[2025-12-17 01:14:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Crypto majors plummeted"}
+[2025-12-17 01:14:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=SELL conf=80 reason=Crypto majors plummeted
+[2025-12-17 01:14:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=59*0.35 + LLM=0*0.65 = 20.6)
+[2025-12-17 01:14:46] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Mixed signals, market uncertainty"}
+[2025-12-17 01:14:46] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=HOLD conf=60 reason=Mixed signals, market uncertainty
+[2025-12-17 01:14:46] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=59*0.35 + LLM=0*0.65 = 20.6)
+[2025-12-17 01:14:51] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, contrarian play"}
+[2025-12-17 01:14:51] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Extreme fear, contrarian play
+[2025-12-17 01:14:51] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:14:57] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Evaporated demand, bearish tech"}
+[2025-12-17 01:14:57] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=80 reason=Evaporated demand, bearish tech
+[2025-12-17 01:14:57] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-17 01:15:02] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-17 01:15:02] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-17 01:15:02] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:15:06] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, positive news"}
+[2025-12-17 01:15:06] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Extreme fear, positive news
+[2025-12-17 01:15:06] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:29:29] WARNING  [trader:_fetch_whale_movements:1470] [MarketDataEngine] Etherscan Binance/USDT: HTTPSConnectionPool(host='api.etherscan.io', port=443): Read timed out. (read timeout=5)
+[2025-12-17 01:29:33] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 01:29:34] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 01:29:46] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market shows clear signs of a short-term downturn, with 
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 01:30:03] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 01:30:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, whale accumulation"}
+[2025-12-17 01:30:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Extreme fear, whale accumulation
+[2025-12-17 01:30:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:30:14] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Fear, DeFi boost, stablecoin clarity"}
+[2025-12-17 01:30:14] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Fear, DeFi boost, stablecoin clarity
+[2025-12-17 01:30:14] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:30:20] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Visa adoption, extreme fear"}
+[2025-12-17 01:30:20] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=65 reason=Visa adoption, extreme fear
+[2025-12-17 01:30:20] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=59*0.35 + LLM=65*0.65 = 62.9)
+[2025-12-17 01:30:25] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Market plummeted, weak trend"}
+[2025-12-17 01:30:25] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=HOLD conf=60 reason=Market plummeted, weak trend
+[2025-12-17 01:30:25] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: HOLD (Math=66*0.35 + LLM=0*0.65 = 23.1)
+[2025-12-17 01:30:31] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":30,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 01:30:31] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=30 reason=Extreme fear (FnG 11)
+[2025-12-17 01:30:31] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=30*0.65 = 36.3)
+[2025-12-17 01:30:37] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Extreme fear, positive news"}
+[2025-12-17 01:30:37] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=70 reason=Extreme fear, positive news
+[2025-12-17 01:30:37] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=70*0.65 = 66.2)
+[2025-12-17 01:30:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Weak tech, mixed news"}
+[2025-12-17 01:30:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=HOLD conf=60 reason=Weak tech, mixed news
+[2025-12-17 01:30:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 01:38:01] INFO     [trader:start_watchdog:279] 🐕 SL/TP Watchdog durduruldu (cancelled)
+[2025-12-17 01:38:01] INFO     [trader:start_watchdog:285] 🐕 SL/TP Watchdog sonlandı
+[2025-12-17 01:38:59] INFO     [trader:__init__:148] OrderExecutor başlatıldı: 🟢 DRY RUN (Simülasyon)
+[2025-12-17 01:38:59] DEBUG    [trader:__init__:44] RiskManager başlatıldı: ADX=22.0, Volume=$1.0M, Risk=2.0%
+[2025-12-17 01:39:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 01:39:11] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 01:39:13] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 01:39:21] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] Reddit sentiment is mixed, showing significant frustration a
+[2025-12-17 01:40:30] INFO     [trader:start_watchdog:263] 🐕 SL/TP Watchdog başlatıldı (her 30sn)
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 01:40:30] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 01:40:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Whale accumulation, regulatory ease"}
+[2025-12-17 01:40:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Whale accumulation, regulatory ease
+[2025-12-17 01:40:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=59*0.35 + LLM=70*0.65 = 66.2)
+[2025-12-17 01:40:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 01:40:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 01:40:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:40:46] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 01:40:46] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 01:40:46] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:40:51] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Bullish regulatory news"}
+[2025-12-17 01:40:51] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Bullish regulatory news
+[2025-12-17 01:40:51] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 01:40:57] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":70,"reason":"XRP demand evaporated, downside"}
+[2025-12-17 01:40:57] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=70 reason=XRP demand evaporated, downside
+[2025-12-17 01:40:57] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 01:41:02] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G extreme fear"}
+[2025-12-17 01:41:02] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive news, F&G extreme fear
+[2025-12-17 01:41:02] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:41:06] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, contrarian buy"}
+[2025-12-17 01:41:06] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Strong news, contrarian buy
+[2025-12-17 01:41:06] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 01:54:03] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 01:54:06] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 01:54:07] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 01:54:14] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 01:54:20] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"2025 BTC-gold ratio drop"}
+[2025-12-17 01:54:20] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=80 reason=2025 BTC-gold ratio drop
+[2025-12-17 01:54:20] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=59*0.35 + LLM=0*0.65 = 20.6)
+[2025-12-17 01:54:26] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 11"}
+[2025-12-17 01:54:26] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Positive news, F&G 11
+[2025-12-17 01:54:26] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:54:30] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, SEC softening"}
+[2025-12-17 01:54:30] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong news, SEC softening
+[2025-12-17 01:54:30] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:54:35] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, F&G buy signal"}
+[2025-12-17 01:54:35] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong news, F&G buy signal
+[2025-12-17 01:54:35] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 01:54:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":85,"reason":"Evaporated demand, widespread selling"}
+[2025-12-17 01:54:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=85 reason=Evaporated demand, widespread selling
+[2025-12-17 01:54:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 01:54:44] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, extreme fear"}
+[2025-12-17 01:54:44] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive news, extreme fear
+[2025-12-17 01:54:44] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 01:54:49] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, F&G extreme fear"}
+[2025-12-17 01:54:49] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Strong news, F&G extreme fear
+[2025-12-17 01:54:49] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 02:09:55] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 02:10:43] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 02:10:45] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$3048665.00, movements=1, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 02:10:56] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market sentiment is polarized, with strong despair among
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 02:10:57] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 02:11:03] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"2025 BTC-gold ratio drop"}
+[2025-12-17 02:11:03] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=60 reason=2025 BTC-gold ratio drop
+[2025-12-17 02:11:03] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-17 02:11:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear (FnG)"}
+[2025-12-17 02:11:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, extreme fear (FnG)
+[2025-12-17 02:11:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 02:11:14] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, F&G 11"}
+[2025-12-17 02:11:14] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong news, F&G 11
+[2025-12-17 02:11:14] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 02:11:19] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Reg softening, extreme fear"}
+[2025-12-17 02:11:19] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Reg softening, extreme fear
+[2025-12-17 02:11:19] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=64*0.35 + LLM=75*0.65 = 71.2)
+[2025-12-17 02:11:25] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":20,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 02:11:25] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=20 reason=Extreme fear (FnG 11)
+[2025-12-17 02:11:25] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=20*0.65 = 29.1)
+[2025-12-17 02:11:29] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive regulatory news"}
+[2025-12-17 02:11:29] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong positive regulatory news
+[2025-12-17 02:11:29] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 02:11:33] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 02:11:33] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 02:11:33] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 02:24:04] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 02:24:07] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 02:24:09] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 02:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 02:24:15] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Accumulation, regulatory clarity"}
+[2025-12-17 02:24:15] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Accumulation, regulatory clarity
+[2025-12-17 02:24:15] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=48*0.35 + LLM=70*0.65 = 62.3)
+[2025-12-17 02:24:20] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive regulatory news"}
+[2025-12-17 02:24:20] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Positive regulatory news
+[2025-12-17 02:24:20] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 02:24:23] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, reg clarity"}
+[2025-12-17 02:24:23] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Positive news, reg clarity
+[2025-12-17 02:24:23] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 02:24:29] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G extreme fear"}
+[2025-12-17 02:24:29] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Positive news, F&G extreme fear
+[2025-12-17 02:24:29] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 02:24:34] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Weak tech, bearish news"}
+[2025-12-17 02:24:34] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=80 reason=Weak tech, bearish news
+[2025-12-17 02:24:34] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 02:24:37] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"News & F&G outweigh weak tech"}
+[2025-12-17 02:24:37] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=News & F&G outweigh weak tech
+[2025-12-17 02:24:37] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 02:24:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Bullish news, low F&G"}
+[2025-12-17 02:24:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Bullish news, low F&G
+[2025-12-17 02:24:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 02:39:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 02:39:11] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 02:39:12] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 02:39:19] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market mood is cautiously optimistic, characterized by m
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 02:39:26] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 02:39:32] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Whale accumulation, extreme fear"}
+[2025-12-17 02:39:32] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Whale accumulation, extreme fear
+[2025-12-17 02:39:32] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 02:39:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive news, F&G"}
+[2025-12-17 02:39:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong positive news, F&G
+[2025-12-17 02:39:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 02:39:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong crypto news, positive momentum"}
+[2025-12-17 02:39:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong crypto news, positive momentum
+[2025-12-17 02:39:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 02:39:45] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"News & F&G signal buy"}
+[2025-12-17 02:39:45] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=News & F&G signal buy
+[2025-12-17 02:39:45] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 02:39:50] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Negative momentum, selling, fear"}
+[2025-12-17 02:39:50] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=SELL conf=80 reason=Negative momentum, selling, fear
+[2025-12-17 02:39:50] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-17 02:39:54] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 02:39:54] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 02:39:54] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 02:39:59] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 02:39:59] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 02:39:59] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 02:54:04] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 02:54:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 02:54:09] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$1474720.83, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 02:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 02:54:17] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Future demand softened; gold dom"}
+[2025-12-17 02:54:17] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=80 reason=Future demand softened; gold dom
+[2025-12-17 02:54:17] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-17 02:54:21] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 02:54:21] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 02:54:21] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 02:54:26] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"News, F&G, momentum positive"}
+[2025-12-17 02:54:26] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=News, F&G, momentum positive
+[2025-12-17 02:54:26] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=64*0.35 + LLM=75*0.65 = 71.2)
+[2025-12-17 02:54:30] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, F&G buy signal"}
+[2025-12-17 02:54:30] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong news, F&G buy signal
+[2025-12-17 02:54:30] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=64*0.35 + LLM=75*0.65 = 71.2)
+[2025-12-17 02:54:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":20,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 02:54:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=20 reason=Extreme fear (FnG 11)
+[2025-12-17 02:54:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=20*0.65 = 29.1)
+[2025-12-17 02:54:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Bullish news, extreme fear"}
+[2025-12-17 02:54:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Bullish news, extreme fear
+[2025-12-17 02:54:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 02:54:44] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, extreme fear"}
+[2025-12-17 02:54:44] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, extreme fear
+[2025-12-17 02:54:44] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-17 03:09:06] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 03:09:10] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 03:09:11] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 03:09:21] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] Reddit shows a bifurcated market sentiment, with significant
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 03:09:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 03:09:41] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"HOLD","confidence":60,"reason":"Future demand soft, tech weak"}
+[2025-12-17 03:09:41] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=HOLD conf=60 reason=Future demand soft, tech weak
+[2025-12-17 03:09:41] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 03:09:45] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Reg softening, extreme fear"}
+[2025-12-17 03:09:45] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Reg softening, extreme fear
+[2025-12-17 03:09:45] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 03:09:49] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, fear index"}
+[2025-12-17 03:09:49] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Positive news, fear index
+[2025-12-17 03:09:49] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 03:09:55] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive regulatory news"}
+[2025-12-17 03:09:55] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong positive regulatory news
+[2025-12-17 03:09:55] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=80*0.35 + LLM=75*0.65 = 76.8)
+[2025-12-17 03:10:00] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":20,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 03:10:00] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=20 reason=Extreme fear (FnG 11)
+[2025-12-17 03:10:00] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=20*0.65 = 29.8)
+[2025-12-17 03:10:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive regulatory news"}
+[2025-12-17 03:10:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong positive regulatory news
+[2025-12-17 03:10:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 03:10:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, contrarian F&G"}
+[2025-12-17 03:10:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, contrarian F&G
+[2025-12-17 03:10:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 03:24:03] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 03:24:07] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 03:24:09] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 03:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 03:24:15] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":85,"reason":"Future SOV loss outweighs dips"}
+[2025-12-17 03:24:15] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=85 reason=Future SOV loss outweighs dips
+[2025-12-17 03:24:15] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-17 03:24:20] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Reg softening & extreme fear"}
+[2025-12-17 03:24:20] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Reg softening & extreme fear
+[2025-12-17 03:24:20] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 03:24:25] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, regulatory clarity"}
+[2025-12-17 03:24:25] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Positive news, regulatory clarity
+[2025-12-17 03:24:25] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=66*0.35 + LLM=75*0.65 = 71.8)
+[2025-12-17 03:24:28] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong regulatory tailwinds"}
+[2025-12-17 03:24:28] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong regulatory tailwinds
+[2025-12-17 03:24:28] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 03:24:34] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":30,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 03:24:34] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=30 reason=Extreme fear (FnG 11)
+[2025-12-17 03:24:34] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=55*0.35 + LLM=30*0.65 = 38.8)
+[2025-12-17 03:24:38] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Bullish regulatory news"}
+[2025-12-17 03:24:38] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Bullish regulatory news
+[2025-12-17 03:24:38] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 03:24:43] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, extreme fear"}
+[2025-12-17 03:24:43] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, extreme fear
+[2025-12-17 03:24:43] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 03:39:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 03:39:12] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 03:39:13] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 03:39:25] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market displays mixed signals, with widespread altcoin p
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 03:39:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 03:39:31] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"Major future demand softening"}
+[2025-12-17 03:39:31] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=80 reason=Major future demand softening
+[2025-12-17 03:39:31] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=55*0.35 + LLM=0*0.65 = 19.2)
+[2025-12-17 03:39:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 03:39:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 03:39:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 03:39:41] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive regulatory news"}
+[2025-12-17 03:39:41] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong positive regulatory news
+[2025-12-17 03:39:41] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=59*0.35 + LLM=75*0.65 = 69.4)
+[2025-12-17 03:39:46] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Bullish news, F&G extreme"}
+[2025-12-17 03:39:46] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Bullish news, F&G extreme
+[2025-12-17 03:39:46] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 03:39:51] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":20,"reason":"Extreme fear (FnG 11)"}
+[2025-12-17 03:39:51] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=20 reason=Extreme fear (FnG 11)
+[2025-12-17 03:39:51] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=55*0.35 + LLM=20*0.65 = 32.2)
+[2025-12-17 03:39:56] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme F&G"}
+[2025-12-17 03:39:56] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong news, extreme F&G
+[2025-12-17 03:39:56] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 03:40:00] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news & F&G"}
+[2025-12-17 03:40:00] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news & F&G
+[2025-12-17 03:40:00] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 03:54:04] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 03:54:07] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 03:54:08] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$0.00, movements=0, signal=NEUTRAL
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 03:54:17] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 03:54:23] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Whale accumulation, F&G extreme fear"}
+[2025-12-17 03:54:23] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=60 reason=Whale accumulation, F&G extreme fear
+[2025-12-17 03:54:23] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=55*0.35 + LLM=60*0.65 = 58.2)
+[2025-12-17 03:54:28] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong regulatory clarity"}
+[2025-12-17 03:54:28] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong regulatory clarity
+[2025-12-17 03:54:28] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 03:54:31] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Bullish tech, positive news"}
+[2025-12-17 03:54:31] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Bullish tech, positive news
+[2025-12-17 03:54:31] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 03:54:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Reg softening, F&G extreme"}
+[2025-12-17 03:54:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Reg softening, F&G extreme
+[2025-12-17 03:54:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 03:54:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":10,"reason":"Extreme fear, but strong sell news"}
+[2025-12-17 03:54:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=10 reason=Extreme fear, but strong sell news
+[2025-12-17 03:54:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=55*0.35 + LLM=10*0.65 = 25.8)
+[2025-12-17 03:54:45] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 11"}
+[2025-12-17 03:54:45] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive news, F&G 11
+[2025-12-17 03:54:45] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 03:54:49] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Reg clarity, extreme fear"}
+[2025-12-17 03:54:49] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Reg clarity, extreme fear
+[2025-12-17 03:54:49] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 04:09:07] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 04:09:10] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 04:09:12] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$500000.00, movements=1, signal=NEUTRAL
+[2025-12-17 04:09:23] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The overall market sentiment is mixed, displaying significan
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 04:09:25] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 04:09:31] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Strong negative future news"}
+[2025-12-17 04:09:31] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=60 reason=Strong negative future news
+[2025-12-17 04:09:31] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 04:09:36] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive news & F&G"}
+[2025-12-17 04:09:36] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong positive news & F&G
+[2025-12-17 04:09:36] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 04:09:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong tech & regulatory news"}
+[2025-12-17 04:09:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong tech & regulatory news
+[2025-12-17 04:09:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 04:09:45] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive regulatory news"}
+[2025-12-17 04:09:45] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Positive regulatory news
+[2025-12-17 04:09:45] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 04:09:50] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"NOT BUY","confidence":80,"reason":"Evaporated demand, neg momentum"}
+[2025-12-17 04:09:50] WARNING  [trader:_call_decision_llm:968] [LLM SCHEMA FAIL] Missing required fields
+[2025-12-17 04:09:50] WARNING  [trader:evaluate_buy_opportunity:312] [LLM FAIL] XRP: Math-only fallback
+[2025-12-17 04:09:50] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 04:09:55] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 04:09:55] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 04:09:55] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 04:10:01] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, extreme fear"}
+[2025-12-17 04:10:01] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, extreme fear
+[2025-12-17 04:10:01] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 04:24:03] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 04:24:07] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 04:24:08] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$1198837.04, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 04:24:09] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 04:24:16] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":80,"reason":"BTC demand softened, gold dom."}
+[2025-12-17 04:24:16] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=80 reason=BTC demand softened, gold dom.
+[2025-12-17 04:24:16] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=46*0.35 + LLM=0*0.65 = 16.1)
+[2025-12-17 04:24:21] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive news, extreme fear"}
+[2025-12-17 04:24:21] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong positive news, extreme fear
+[2025-12-17 04:24:21] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-17 04:24:26] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Regulatory clarity, bullish tech"}
+[2025-12-17 04:24:26] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Regulatory clarity, bullish tech
+[2025-12-17 04:24:26] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=67*0.35 + LLM=75*0.65 = 72.2)
+[2025-12-17 04:24:30] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 04:24:30] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 04:24:30] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=60*0.35 + LLM=75*0.65 = 69.8)
+[2025-12-17 04:24:35] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":30,"reason":"Extreme fear (FnG 16)"}
+[2025-12-17 04:24:35] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=30 reason=Extreme fear (FnG 16)
+[2025-12-17 04:24:35] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=46*0.35 + LLM=30*0.65 = 35.6)
+[2025-12-17 04:24:39] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 16"}
+[2025-12-17 04:24:39] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive news, F&G 16
+[2025-12-17 04:24:39] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: HOLD (Math=46*0.35 + LLM=75*0.65 = 64.8)
+[2025-12-17 04:24:43] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 04:24:43] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 04:24:43] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 04:39:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 04:39:12] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 04:39:13] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$694148.60, movements=1, signal=NEUTRAL
+[2025-12-17 04:39:24] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market shows a mixed sentiment; significant whale and sh
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 04:39:44] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 04:39:50] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"SELL","confidence":60,"reason":"Future SoV demand soft"}
+[2025-12-17 04:39:50] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=SELL conf=60 reason=Future SoV demand soft
+[2025-12-17 04:39:50] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=48*0.35 + LLM=0*0.65 = 16.8)
+[2025-12-17 04:39:55] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, contrarian buy"}
+[2025-12-17 04:39:55] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, contrarian buy
+[2025-12-17 04:39:55] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 04:39:59] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Tech bullish, fear, news"}
+[2025-12-17 04:39:59] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Tech bullish, fear, news
+[2025-12-17 04:39:59] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 04:40:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 04:40:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 04:40:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=62*0.35 + LLM=75*0.65 = 70.5)
+[2025-12-17 04:40:08] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":80,"reason":"Strong news, F&G extreme fear"}
+[2025-12-17 04:40:08] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=80 reason=Strong news, F&G extreme fear
+[2025-12-17 04:40:08] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=59*0.35 + LLM=80*0.65 = 72.7)
+[2025-12-17 04:40:14] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Regulatory clarity, F&G"}
+[2025-12-17 04:40:14] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Regulatory clarity, F&G
+[2025-12-17 04:40:14] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 04:40:20] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":60,"reason":"Positive news, extreme fear"}
+[2025-12-17 04:40:20] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=60 reason=Positive news, extreme fear
+[2025-12-17 04:40:20] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: HOLD (Math=55*0.35 + LLM=60*0.65 = 58.2)
+[2025-12-17 04:54:03] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 04:54:07] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 04:54:08] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$2629252.37, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 04:54:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 04:54:16] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Smart money accumulation on dips"}
+[2025-12-17 04:54:16] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=65 reason=Smart money accumulation on dips
+[2025-12-17 04:54:16] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=53*0.35 + LLM=65*0.65 = 60.8)
+[2025-12-17 04:54:21] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, F&G contrarian"}
+[2025-12-17 04:54:21] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, F&G contrarian
+[2025-12-17 04:54:21] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 04:54:25] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong tech, positive news, F&G"}
+[2025-12-17 04:54:25] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong tech, positive news, F&G
+[2025-12-17 04:54:25] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=67*0.35 + LLM=75*0.65 = 72.2)
+[2025-12-17 04:54:30] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 16"}
+[2025-12-17 04:54:30] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Positive news, F&G 16
+[2025-12-17 04:54:30] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=67*0.35 + LLM=75*0.65 = 72.2)
+[2025-12-17 04:54:35] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, bullish news"}
+[2025-12-17 04:54:35] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=Extreme fear, bullish news
+[2025-12-17 04:54:35] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 04:54:40] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 16"}
+[2025-12-17 04:54:40] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive news, F&G 16
+[2025-12-17 04:54:40] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 04:54:46] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"News bullish, altcoin ETPs"}
+[2025-12-17 04:54:46] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=News bullish, altcoin ETPs
+[2025-12-17 04:54:46] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 05:09:09] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 05:09:13] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 05:09:14] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$800002.55, movements=1, signal=NEUTRAL
+[2025-12-17 05:09:22] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] Mixed sentiment, with strong bullish anticipation and accumu
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 05:09:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 05:09:31] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Reddit bullish, FnG extreme fear"}
+[2025-12-17 05:09:31] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Reddit bullish, FnG extreme fear
+[2025-12-17 05:09:31] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 05:09:37] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"News & F&G strong, tech weak"}
+[2025-12-17 05:09:37] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=News & F&G strong, tech weak
+[2025-12-17 05:09:37] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 05:09:41] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, tech, FnG buy"}
+[2025-12-17 05:09:41] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong news, tech, FnG buy
+[2025-12-17 05:09:41] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=69*0.35 + LLM=75*0.65 = 72.9)
+[2025-12-17 05:09:47] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Regulatory clarity, F&G 16"}
+[2025-12-17 05:09:47] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Regulatory clarity, F&G 16
+[2025-12-17 05:09:47] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 05:09:52] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, long-term bullish"}
+[2025-12-17 05:09:52] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=Extreme fear, long-term bullish
+[2025-12-17 05:09:52] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 05:09:58] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive macro news, F&G"}
+[2025-12-17 05:09:58] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive macro news, F&G
+[2025-12-17 05:09:58] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=48*0.35 + LLM=75*0.65 = 65.5)
+[2025-12-17 05:10:02] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, fear high"}
+[2025-12-17 05:10:02] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, fear high
+[2025-12-17 05:10:02] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=55*0.35 + LLM=75*0.65 = 68.0)
+[2025-12-17 05:24:04] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 05:24:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 05:24:09] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$1313280.41, movements=2, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 05:24:10] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 05:24:16] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":70,"reason":"Extreme fear, bullish Reddit"}
+[2025-12-17 05:24:16] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=70 reason=Extreme fear, bullish Reddit
+[2025-12-17 05:24:16] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: HOLD (Math=53*0.35 + LLM=70*0.65 = 64.0)
+[2025-12-17 05:24:22] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, contrarian F&G"}
+[2025-12-17 05:24:22] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong news, contrarian F&G
+[2025-12-17 05:24:22] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 05:24:27] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, altcoin ETPs, low sell"}
+[2025-12-17 05:24:27] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Extreme fear, altcoin ETPs, low sell
+[2025-12-17 05:24:27] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=56*0.35 + LLM=75*0.65 = 68.3)
+[2025-12-17 05:24:33] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 05:24:33] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 05:24:33] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 05:24:38] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, contrarian buy"}
+[2025-12-17 05:24:38] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=Strong news, contrarian buy
+[2025-12-17 05:24:38] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 05:24:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive news outweighs tech"}
+[2025-12-17 05:24:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong positive news outweighs tech
+[2025-12-17 05:24:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 05:24:47] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, low RSI, fear"}
+[2025-12-17 05:24:47] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, low RSI, fear
+[2025-12-17 05:24:47] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 05:39:08] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 05:39:11] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 05:39:12] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$7000000.00, movements=1, signal=MODERATE_SELL_PRESSURE
+[2025-12-17 05:39:22] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] The market sentiment is mixed to cautious; while Bitcoin sho
+[2025-12-17 12:36:20] WARNING  [trader:analyze_single_article:1257] [MarketDataEngine] Article analysis error: 504 Deadline Exceeded
+[2025-12-17 12:36:21] WARNING  [trader:_get_article_content:1701] [MarketDataEngine] Makale çekme hatası: Article `download()` failed with HTTPSConnectionPool(host='www.coindesk.com', port=443): Max retries exceeded with url: /markets/2025/12/17/hashkey-s-shares-fall-5-on-debut-in-hong-kong (Caused by NameResolutionError("<urllib3.connection.HTTPSConnection object at 0x00000282736EE210>: Failed to resolve 'www.coindesk.com' ([Errno 11001] getaddrinfo failed)")) on URL https://www.coindesk.com/markets/2025/12/17/hashkey-s-shares-fall-5-on-debut-in-hong-kong
+[2025-12-17 12:46:15] WARNING  [trader:analyze_single_article:1257] [MarketDataEngine] Article analysis error: Timeout of 600.0s exceeded, last exception: 503 failed to connect to all addresses; last error: UNKNOWN: ipv4:172.217.17.138:443: socket is null
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 12:46:24] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 12:46:33] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDT): 10000 txs
+[2025-12-17 12:46:39] INFO     [trader:_fetch_whale_movements:1447] [OnChain] Raw API response (Binance/USDC): 10000 txs
+[2025-12-17 12:46:40] INFO     [trader:_fetch_whale_movements:1493] [OnChain] Parsed: inflow=$1099996.00, movements=1, signal=LIGHT_SELL_PRESSURE
+[2025-12-17 12:46:47] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, whale accumulation"}
+[2025-12-17 12:46:47] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Extreme fear, whale accumulation
+[2025-12-17 12:46:47] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:46:53] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 16"}
+[2025-12-17 12:46:53] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Positive news, F&G 16
+[2025-12-17 12:46:53] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:46:59] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":65,"reason":"Strong long-term fundamentals"}
+[2025-12-17 12:46:59] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=65 reason=Strong long-term fundamentals
+[2025-12-17 12:46:59] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: HOLD (Math=60*0.35 + LLM=65*0.65 = 63.2)
+[2025-12-17 12:47:05] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 12:47:05] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 12:47:05] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=64*0.35 + LLM=75*0.65 = 71.2)
+[2025-12-17 12:47:12] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":55,"reason":"Extreme fear (FnG 16)"}
+[2025-12-17 12:47:12] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=55 reason=Extreme fear (FnG 16)
+[2025-12-17 12:47:12] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: HOLD (Math=53*0.35 + LLM=55*0.65 = 54.3)
+[2025-12-17 12:47:18] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 16"}
+[2025-12-17 12:47:18] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Positive news, F&G 16
+[2025-12-17 12:47:18] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:47:23] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, F&G 16"}
+[2025-12-17 12:47:23] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Strong news, F&G 16
+[2025-12-17 12:47:23] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:47:47] INFO     [trader:get_crypto_reddit_summary:450] [REDDIT SUMMARY] Reddit sentiment is generally bullish, with significant anti
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for XRP (15m)...
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for SOL (15m)...
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BNB (15m)...
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for BTC (15m)...
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for LINK (15m)...
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for AVAX (15m)...
+[2025-12-17 12:48:35] INFO     [trader:get_technical_snapshot:749] [MarketDataEngine] Fetching candles for ETH (15m)...
+[2025-12-17 12:48:42] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Extreme fear, whale accumulation"}
+[2025-12-17 12:48:42] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BTC: decision=BUY conf=75 reason=Extreme fear, whale accumulation
+[2025-12-17 12:48:42] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BTC: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:48:48] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong reg clarity & inst int"}
+[2025-12-17 12:48:48] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] ETH: decision=BUY conf=75 reason=Strong reg clarity & inst int
+[2025-12-17 12:48:48] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] ETH: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:48:54] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong positive news for altcoins"}
+[2025-12-17 12:48:54] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] SOL: decision=BUY conf=75 reason=Strong positive news for altcoins
+[2025-12-17 12:48:54] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] SOL: BUY (Math=60*0.35 + LLM=75*0.65 = 69.8)
+[2025-12-17 12:49:00] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G extreme"}
+[2025-12-17 12:49:00] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] BNB: decision=BUY conf=75 reason=Positive news, F&G extreme
+[2025-12-17 12:49:00] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] BNB: BUY (Math=64*0.35 + LLM=75*0.65 = 71.2)
+[2025-12-17 12:49:04] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, F&G 16"}
+[2025-12-17 12:49:04] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] XRP: decision=BUY conf=75 reason=Positive news, F&G 16
+[2025-12-17 12:49:04] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] XRP: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:49:09] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Strong news, extreme fear"}
+[2025-12-17 12:49:09] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] AVAX: decision=BUY conf=75 reason=Strong news, extreme fear
+[2025-12-17 12:49:09] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] AVAX: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:49:14] DEBUG    [trader:_call_decision_llm:925] [LLM RAW] {"decision":"BUY","confidence":75,"reason":"Positive news, extreme fear"}
+[2025-12-17 12:49:14] INFO     [trader:evaluate_buy_opportunity:307] [LLM BUY] LINK: decision=BUY conf=75 reason=Positive news, extreme fear
+[2025-12-17 12:49:14] INFO     [trader:evaluate_buy_opportunity:342] [DECISION] LINK: BUY (Math=53*0.35 + LLM=75*0.65 = 67.3)
+[2025-12-17 12:49:51] INFO     [trader:start_watchdog:279] 🐕 SL/TP Watchdog durduruldu (cancelled)
+[2025-12-17 12:49:51] INFO     [trader:start_watchdog:285] 🐕 SL/TP Watchdog sonlandı

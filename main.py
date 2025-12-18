@@ -141,10 +141,42 @@ class TeeLogger:
 # Terminal log'u aktifleştir
 ENABLE_TERMINAL_LOG = True  # False yaparak kapatılabilir
 
+tee_logger = None
 if ENABLE_TERMINAL_LOG:
     try:
         tee_logger = TeeLogger()
         sys.stdout = tee_logger
+        
+        # ═══════════════════════════════════════════════════════════════════════════
+        # LOGGING MODÜLÜNÜ TEE LOGGER'A YÖNLENDİR
+        # ═══════════════════════════════════════════════════════════════════════════
+        # Tüm modüllerdeki logger.info() çağrıları da log dosyasına yazılsın
+        import logging
+        
+        class TeeHandler(logging.Handler):
+            """Logging çıktılarını TeeLogger'a yönlendiren handler"""
+            def __init__(self, tee_logger_instance):
+                super().__init__()
+                self.tee_logger = tee_logger_instance
+            
+            def emit(self, record):
+                try:
+                    msg = self.format(record) + '\n'
+                    self.tee_logger.write(msg)
+                except Exception:
+                    pass
+        
+        # Root logger'a TeeHandler ekle
+        root_logger = logging.getLogger()
+        tee_handler = TeeHandler(tee_logger)
+        tee_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        tee_handler.setLevel(logging.INFO)
+        root_logger.addHandler(tee_handler)
+        root_logger.setLevel(logging.INFO)
+        
+        # NOTE: Alt modüllere ayrı handler EKLEME - propagation otomatik olarak 
+        # logları root logger'a iletir. Handler eklemek duplikasyona neden olur.
+        
     except (OSError, PermissionError):
         pass  # Headless mode - TeeLogger cannot be initialized
 
@@ -508,6 +540,24 @@ async def ana_dongu():
             "notify_trades": TELEGRAM_NOTIFY_TRADES
         }
     )
+
+    # ──────────────── SİSTEM HAZIR BİLDİRİMİ ────────────────
+    # Döngü başlamadan önce Telegram'a "sistem hazır" mesajı gönder
+    try:
+        startup_msg = (
+            " <b>SİSTEM BAŞLATILDI</b> \n\n"
+            f"📊 <b>Mod:</b> {'🔴 CANLI İŞLEM' if SETTINGS.LIVE_TRADING else '🟢 Paper Trading'}\n"
+            f"💰 <b>Bakiye:</b> ${portfolio_summary['balance']:.2f}\n"
+            f"📈 <b>Açık Pozisyon:</b> {portfolio_summary['open_positions']}\n"
+            f"🎯 <b>Watchlist:</b> {', '.join(WATCHLIST)}\n"
+            f"⏱️ <b>Döngü Süresi:</b> {SETTINGS.LOOP_SECONDS}s\n\n"
+            "✅ Tüm modüller başarıyla yüklendi.\n"
+            f"<i>Başlangıç: {time.strftime('%Y-%m-%d %H:%M:%S')}</i>"
+        )
+        await telegrama_bildirim_gonder(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, startup_msg)
+        log("Sistem başlangıç bildirimi gönderildi", "OK")
+    except Exception as e:
+        log(f"Başlangıç bildirimi gönderilemedi: {e}", "WARN")
 
     # ──────────────── ANA DÖNGÜYÜ BAŞLAT ────────────────
     await loop_controller.run()

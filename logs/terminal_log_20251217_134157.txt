@@ -1,0 +1,78 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[13:42:03] • News LLM analysis is ENABLED
+[13:42:03] • [GLOBAL RISK] Daily Loss Limit = 8.0%
+[13:42:03] • [GLOBAL RISK] Max Open Positions = 5
+[13:42:03] • [GLOBAL RISK] Max Consecutive Losses = 5
+[13:42:03] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[13:42:03] ✓ ExchangeRouter başlatıldı
+[13:42:03] ✓ MarketDataEngine başlatıldı
+[13:42:03] ✓ StrategyEngine başlatıldı (LLM=True)
+[13:42:03] ✓ OrderExecutor başlatıldı (dry_run=True)
+[13:42:03] ✓ RiskManager başlatıldı
+[13:42:03] ✓ ExecutionManager başlatıldı
+[13:42:03] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[13:42:03] ✓ Bakiye: $1000.00
+[13:42:03] • Açık Pozisyon: 0
+[13:42:03] • Toplam İşlem: 0 | Win Rate: 0.0%
+[13:42:03] → Toplam PnL: $0.00
+2025-12-17 13:42:03,811 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 13:42:03,811 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 13:42:03,812 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-17 13:42:03,812 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-17 13:42:03,813 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-17 13:42:03,813 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-17 13:42:03,814 - LoopController - INFO - Max Open Positions: 5
+2025-12-17 13:42:03,814 - LoopController - INFO - Max Open Positions: 5
+2025-12-17 13:42:03,815 - LoopController - INFO - Max Loss Streak: 5
+2025-12-17 13:42:03,815 - LoopController - INFO - Max Loss Streak: 5
+2025-12-17 13:42:03,816 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-17 13:42:03,816 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-17 13:42:03,817 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 13:42:03,817 - LoopController - INFO - ════════════════════════════════════════
+[13:42:03] ⚠ Başlangıç bildirimi gönderilemedi: 'Settings' object has no attribute 'LOOP_SECONDS'
+2025-12-17 13:42:03,819 - LoopController - INFO - LoopController.run() started.
+2025-12-17 13:42:03,819 - LoopController - INFO - LoopController.run() started.
+2025-12-17 13:42:03,820 - LoopController - INFO - 
+⚡ Cycle Start: 13:42:03
+2025-12-17 13:42:03,820 - LoopController - INFO - 
+⚡ Cycle Start: 13:42:03
+2025-12-17 13:42:04,698 - praw - WARNING - It appears that you are using PRAW in an asynchronous environment.
+It is strongly recommended to use Async PRAW: https://asyncpraw.readthedocs.io.
+See https://praw.readthedocs.io/en/latest/getting_started/multiple_instances.html#discord-bots-and-asynchronous-environments for more info.
+
+2025-12-17 13:42:06,265 - praw - WARNING - It appears that you are using PRAW in an asynchronous environment.
+It is strongly recommended to use Async PRAW: https://asyncpraw.readthedocs.io.
+See https://praw.readthedocs.io/en/latest/getting_started/multiple_instances.html#discord-bots-and-asynchronous-environments for more info.
+
+2025-12-17 13:42:07,057 - praw - WARNING - It appears that you are using PRAW in an asynchronous environment.
+It is strongly recommended to use Async PRAW: https://asyncpraw.readthedocs.io.
+See https://praw.readthedocs.io/en/latest/getting_started/multiple_instances.html#discord-bots-and-asynchronous-environments for more info.
+
+2025-12-17 13:42:18,182 - LoopController - INFO - 🌡️ Global Sentiment: F&G=16 (Extreme Fear)
+2025-12-17 13:42:18,182 - LoopController - INFO - 🌡️ Global Sentiment: F&G=16 (Extreme Fear)
+2025-12-17 13:42:18,183 - LoopController - INFO - 🐋 Global On-Chain: STRONG_SELL_PRESSURE ($29,640,867)
+2025-12-17 13:42:18,183 - LoopController - INFO - 🐋 Global On-Chain: STRONG_SELL_PRESSURE ($29,640,867)
+2025-12-17 13:42:31,930 - LoopController - INFO - 📢 Reddit Summary: The Reddit crypto community shows a cautiously bullish sentiment, driven by institutional accumulation and strong price predictions for Bitcoin, alongside some underlying concerns about market manipulation and current price confusion.
+2025-12-17 13:42:31,930 - LoopController - INFO - 📢 Reddit Summary: The Reddit crypto community shows a cautiously bullish sentiment, driven by institutional accumulation and strong price predictions for Bitcoin, alongside some underlying concerns about market manipulation and current price confusion.
+2025-12-17 13:43:31,589 - LoopController - INFO - 📰 Analyzed 8 new articles
+2025-12-17 13:43:31,589 - LoopController - INFO - 📰 Analyzed 8 new articles
+2025-12-17 13:43:31,591 - LoopController - INFO - 📥 Collecting snapshots for 7 symbols...
+2025-12-17 13:43:31,591 - LoopController - INFO - 📥 Collecting snapshots for 7 symbols...
+2025-12-17 13:43:31,594 - LoopController - INFO - LoopController cancelled.
+2025-12-17 13:43:31,594 - LoopController - INFO - LoopController cancelled.
+2025-12-17 13:43:31,596 - LoopController - INFO - 🐕 Watchdog task stopped.
+2025-12-17 13:43:31,596 - LoopController - INFO - 🐕 Watchdog task stopped.

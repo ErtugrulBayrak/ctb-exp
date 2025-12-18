@@ -1,0 +1,112 @@
+{
+  "timestamp": "2025-12-12T15:41:03.529434",
+  "summary": {
+    "total_checks": 6,
+    "pass": 6,
+    "warn": 0,
+    "fail": 0,
+    "total_duration_ms": 7776.56
+  },
+  "checks": [
+    {
+      "name": "CHECK_IMPORTS",
+      "status": "PASS",
+      "message": "All 7 modules imported",
+      "details": {
+        "imported": [
+          "requests",
+          "pandas",
+          "binance",
+          "feedparser",
+          "dateutil",
+          "newspaper",
+          "google.generativeai"
+        ],
+        "missing_required": [],
+        "missing_optional": []
+      },
+      "duration_ms": 5530.3
+    },
+    {
+      "name": "CHECK_ENV_KEYS",
+      "status": "PASS",
+      "message": "All API keys configured",
+      "details": {
+        "keys": {
+          "BINANCE_API_KEY": "cVDD...GoXO",
+          "BINANCE_SECRET_KEY": "Eo43...60Hc",
+          "GEMINI_API_KEY": "AIza...zhW8",
+          "TELEGRAM_BOT_TOKEN": "8420...8z_o",
+          "TELEGRAM_CHAT_ID": "7965...2622",
+          "ETHERSCAN_API_KEY": "1V19...YR9R"
+        },
+        "missing_critical": [],
+        "missing_optional": [],
+        "live_trading": false
+      },
+      "duration_ms": 11.8
+    },
+    {
+      "name": "CHECK_LOGGER_MISUSE",
+      "status": "PASS",
+      "message": "No logger misuse in 12 files",
+      "details": {
+        "files_scanned": 12,
+        "violations_count": 0,
+        "violations": []
+      },
+      "duration_ms": 14.94
+    },
+    {
+      "name": "CHECK_FILE_IO",
+      "status": "PASS",
+      "message": "3 I/O checks passed",
+      "details": {
+        "checks_passed": [
+          "logs/ exists",
+          "logs/ writable",
+          "portfolio.json readable (3 keys)"
+        ],
+        "issues": []
+      },
+      "duration_ms": 2.21
+    },
+    {
+      "name": "CHECK_BINANCE_PUBLIC",
+      "status": "PASS",
+      "message": "Ping 265ms, drift 0.08s",
+      "details": {
+        "ping_ms": 264.68,
+        "server_time_ms": 1765543262067,
+        "local_time_ms": 1765543262150,
+        "drift_seconds": 0.083
+      },
+      "duration_ms": 842.8
+    },
+    {
+      "name": "CHECK_BINANCE_MARKET",
+      "status": "PASS",
+      "message": "All 2 symbols OK",
+      "details": {
+        "symbols_tested": {
+          "BTCUSDT": {
+            "price": 92137.26,
+            "kline_count": 200,
+            "df_rows": 200,
+            "last_close": 92137.26,
+            "numeric_ok": true
+          },
+          "ETHUSDT": {
+            "price": 3237.83,
+            "kline_count": 200,
+            "df_rows": 200,
+            "last_close": 3237.83,
+            "numeric_ok": true
+          }
+        },
+        "failures": []
+      },
+      "duration_ms": 1374.51
+    }
+  ]
+}

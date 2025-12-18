@@ -81,12 +81,7 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s', datefmt='%H:%M:%S')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+    # Handler ekleme main.py tarafından yapılır - duplikasyonu önle
 
 # Config import (slippage, fee, rate limit ayarları için)
 try:

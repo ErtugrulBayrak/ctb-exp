@@ -20,13 +20,10 @@ except ImportError:
         BASLANGIC_BAKIYE = 1000
 
 # Setup Logger
+# NOTE: Handler ekleme işlemi main.py'deki merkezi TeeHandler tarafından yapılıyor
+# Bu dosyada handler eklemek duplikasyona neden olur
 logger = logging.getLogger("LoopController")
-if not logger.handlers:
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)
 
 
 class LoopController:
@@ -264,7 +261,7 @@ class LoopController:
         # 4c. Fetch Reddit LLM Summary (TTL cached)
         reddit_summary = None
         try:
-            reddit_summary = self.market_data_engine.get_crypto_reddit_summary(self.watchlist)
+            reddit_summary = await self.market_data_engine.get_crypto_reddit_summary(self.watchlist)
             if reddit_summary:
                 logger.info(f"📢 Reddit Summary: {reddit_summary.get('general_impact', 'N/A')}")
         except Exception as e:
@@ -490,6 +487,14 @@ class LoopController:
 
                 # 3. Execution
                 current_price = snapshot.get("price")
+                if not current_price:
+                    # Fallback to technical price if available
+                    current_price = snapshot.get("technical", {}).get("price")
+                
+                if not current_price:
+                    logger.warning(f"🚫 SELL Failed: No valid price for {symbol}")
+                    return
+                
                 success, pnl, trade = await self.execution_manager.execute_sell_flow(
                     symbol=symbol,
                     current_price=current_price,

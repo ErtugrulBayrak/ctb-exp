@@ -1,0 +1,48 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[23:04:50] • News LLM analysis is ENABLED
+[23:04:50] • [GLOBAL RISK] Daily Loss Limit = 8.0%
+[23:04:50] • [GLOBAL RISK] Max Open Positions = 5
+[23:04:50] • [GLOBAL RISK] Max Consecutive Losses = 5
+[23:04:50] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[23:04:51] ✓ ExchangeRouter başlatıldı
+[23:04:51] ✓ MarketDataEngine başlatıldı
+[23:04:51] ✓ StrategyEngine başlatıldı (LLM=True)
+[23:04:51] ✓ OrderExecutor başlatıldı (dry_run=True)
+[23:04:51] ✓ RiskManager başlatıldı
+[23:04:51] • Portföy dosyası bulunamadı, yeni oluşturuluyor...
+[23:04:51] ✓ ExecutionManager başlatıldı
+[23:04:51] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[23:04:51] ✓ Bakiye: $1000.00
+[23:04:51] • Açık Pozisyon: 0
+[23:04:51] • Toplam İşlem: 0 | Win Rate: 0.0%
+[23:04:51] → Toplam PnL: $0.00
+2025-12-17 23:04:51,216 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 23:04:51,217 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-17 23:04:51,217 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-17 23:04:51,218 - LoopController - INFO - Max Open Positions: 5
+2025-12-17 23:04:51,218 - LoopController - INFO - Max Loss Streak: 5
+2025-12-17 23:04:51,219 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-17 23:04:51,219 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 23:04:55,050 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[23:04:55]   ✓ Telegram bildirimi gönderildi
+[23:04:55] ✓ Sistem başlangıç bildirimi gönderildi
+2025-12-17 23:04:55,058 - LoopController - INFO - LoopController.run() started.
+2025-12-17 23:04:55,058 - LoopController - INFO - 
+⚡ Cycle Start: 23:04:55
+2025-12-17 23:05:05,517 - LoopController - INFO - 🌡️ Global Sentiment: F&G=16 (Extreme Fear)
+2025-12-17 23:05:05,518 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($750,000)
+2025-12-17 23:05:20,981 - LoopController - INFO - 📢 Reddit Summary: The overall market sentiment is predominantly bearish, marked by widespread frustration, declining interest, and a perception of a market slump, though underlying development and institutional adoption continue in specific areas.

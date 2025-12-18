@@ -1,0 +1,32 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[00:36:02] • News LLM analysis is DISABLED
+[00:36:02] • [GLOBAL RISK] Daily Loss Limit = 6.0%
+[00:36:02] • [GLOBAL RISK] Max Open Positions = 6
+[00:36:02] • [GLOBAL RISK] Max Consecutive Losses = 5
+[00:36:02] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[00:36:02] ✓ ExchangeRouter başlatıldı
+[00:36:02] ✓ MarketDataEngine başlatıldı
+[00:36:02] ✓ StrategyEngine başlatıldı (LLM=True)
+[00:36:02] ✓ OrderExecutor başlatıldı (dry_run=True)
+[00:36:02] ✓ RiskManager başlatıldı
+[00:36:02] • Portföy dosyası bulunamadı, yeni oluşturuluyor...
+[00:36:02] ✓ ExecutionManager başlatıldı
+[00:36:02] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[00:36:02] ✓ Bakiye: $1000.00
+[00:36:02] • Açık Pozisyon: 0
+[00:36:02] • Toplam İşlem: 0 | Win Rate: 0.0%
+[00:36:02] → Toplam PnL: $0.00

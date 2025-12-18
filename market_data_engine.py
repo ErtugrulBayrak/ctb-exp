@@ -48,10 +48,7 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s'))
-        logger.addHandler(handler)
+    # Handler ekleme main.py tarafından yapılır - duplikasyonu önle
 
 # pandas_ta import
 try:
@@ -336,7 +333,7 @@ Output ONLY valid JSON with this structure:
             logger.warning(f"[MarketDataEngine] Global news summary error: {e}")
             return None
 
-    def get_crypto_reddit_summary(self, watchlist: List[str]) -> Optional[Dict[str, Any]]:
+    async def get_crypto_reddit_summary(self, watchlist: List[str]) -> Optional[Dict[str, Any]]:
         """
         Get a cached LLM-analyzed Reddit summary with coin-specific impacts.
         
@@ -367,7 +364,7 @@ Output ONLY valid JSON with this structure:
                 return self._reddit_llm_cache
         
         # Fetch raw Reddit posts
-        reddit_data = self._fetch_reddit_raw()
+        reddit_data = await self._fetch_reddit_raw()
         if not reddit_data or not reddit_data.get("posts"):
             return None
         
@@ -931,7 +928,8 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         result = {
             "timestamp": datetime.now().isoformat(),
             "fear_greed": self._fetch_fear_and_greed(),
-            "reddit": self._fetch_reddit_raw() if include_reddit else None,
+            # Reddit is fetched separately via async get_crypto_reddit_summary
+            "reddit": None,
             # Skip RSS if news LLM is disabled (no point fetching if not analyzed)
             "rss_news": self._fetch_rss_raw() if (include_rss and SETTINGS.USE_NEWS_LLM) else None,
             # Derived signals
@@ -1029,8 +1027,8 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         
         return cached
     
-    def _fetch_reddit_raw(self) -> Optional[Dict[str, Any]]:
-        """Reddit raw post verisi çek (AI analizi yok)."""
+    async def _fetch_reddit_raw(self) -> Optional[Dict[str, Any]]:
+        """Reddit raw post verisi çek (AI analizi yok) - Async versiyonu."""
         # Check dedicated cache
         cached = self._reddit_cache.get()
         if cached is not None:
@@ -1042,12 +1040,9 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
             return {"posts": [], "signal": "UNAVAILABLE", "reason": "credentials_missing"}
         
         try:
-            import warnings
-            # PRAW async uyarısını bastır (asyncpraw geçişi yapılana kadar)
-            warnings.filterwarnings("ignore", message=".*asynchronous environment.*")
-            import praw
+            import asyncpraw
             
-            reddit = praw.Reddit(
+            reddit = asyncpraw.Reddit(
                 client_id=self._reddit_creds["client_id"],
                 client_secret=self._reddit_creds["client_secret"],
                 user_agent=self._reddit_creds["user_agent"],
@@ -1059,21 +1054,24 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
             cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
             
             posts = []
-            for sub_name in subreddits:
-                try:
-                    subreddit = reddit.subreddit(sub_name)
-                    for post in subreddit.hot(limit=10):
-                        post_time = datetime.fromtimestamp(post.created_utc, tz=timezone.utc)
-                        if post_time >= cutoff:
-                            posts.append({
-                                "subreddit": sub_name,
-                                "title": post.title,
-                                "score": post.score,
-                                "comments": post.num_comments,
-                                "created_utc": post.created_utc
-                            })
-                except Exception as e:
-                    logger.warning(f"[MarketDataEngine] Reddit {sub_name} hatası: {e}")
+            try:
+                for sub_name in subreddits:
+                    try:
+                        subreddit = await reddit.subreddit(sub_name)
+                        async for post in subreddit.hot(limit=10):
+                            post_time = datetime.fromtimestamp(post.created_utc, tz=timezone.utc)
+                            if post_time >= cutoff:
+                                posts.append({
+                                    "subreddit": sub_name,
+                                    "title": post.title,
+                                    "score": post.score,
+                                    "comments": post.num_comments,
+                                    "created_utc": post.created_utc
+                                })
+                    except Exception as e:
+                        logger.warning(f"[MarketDataEngine] Reddit {sub_name} hatası: {e}")
+            finally:
+                await reddit.close()
             
             result = {
                 "posts": posts[:30],  # Max 30 post
@@ -1086,7 +1084,7 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
             return result
             
         except ImportError:
-            return {"posts": [], "signal": "UNAVAILABLE", "reason": "praw_not_installed"}
+            return {"posts": [], "signal": "UNAVAILABLE", "reason": "asyncpraw_not_installed"}
         except Exception as e:
             logger.error(f"[MarketDataEngine] Reddit hatası: {e}")
             return {"posts": [], "signal": "ERROR", "reason": str(e)}
@@ -1518,12 +1516,36 @@ Rules:
         # Fetch volume asynchronously
         vol_24h = await self.get_24h_volume_usd(symbol)
         
+        # Get technical snapshot first (contains calculated price from candles)
+        technical = await self.get_technical_snapshot(symbol_clean, df)
+        
+        # 3-tier price fetching:
+        # 1) WebSocket cache (fastest, ~100ms freshness)
+        # 2) REST API fallback (reliable, ~300ms)
+        # 3) Candle close price (last resort, up to 15min delay)
+        price = self.get_current_price(symbol)
+        
+        if price is None and self._router:
+            # Tier 2: Try REST API async fallback
+            try:
+                price = await self._router.get_price_async(symbol, fallback_rest=True, timeout_s=3.0)
+                if price is not None:
+                    logger.debug(f"[MarketDataEngine] Price from REST API for {symbol}: ${price:.2f}")
+            except Exception as e:
+                logger.warning(f"[MarketDataEngine] REST price fetch failed for {symbol}: {e}")
+        
+        if price is None:
+            # Tier 3: Use candle close price as last resort
+            price = technical.get("price")
+            if price is not None:
+                logger.debug(f"[MarketDataEngine] Price fallback for {symbol}: using candle close={price}")
+        
         return {
             "symbol": symbol_clean,
             "timestamp": datetime.now().isoformat(),
-            "price": self.get_current_price(symbol),
+            "price": price,
             "volume_24h": vol_24h,
-            "technical": await self.get_technical_snapshot(symbol_clean, df),
+            "technical": technical,
             "sentiment": self.get_sentiment_snapshot(),
             "onchain": self.get_onchain_snapshot(symbol_clean)
         }
