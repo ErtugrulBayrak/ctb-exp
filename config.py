@@ -117,11 +117,11 @@ class Settings:
     # AI AGENT EŞİKLERİ
     # ═══════════════════════════════════════════════════════════════════════════
     # Teknik analiz için minimum güven skoru (0-100)
-    AI_TECH_CONFIDENCE_THRESHOLD: int = 75
+    AI_TECH_CONFIDENCE_THRESHOLD: int = 70
     # Haber analizi için minimum güven skoru (0-100)
-    AI_NEWS_CONFIDENCE_THRESHOLD: int = 80
+    AI_NEWS_CONFIDENCE_THRESHOLD: int = 70
     # AI satış kararı için minimum güven skoru (0-100)
-    AI_SELL_CONFIDENCE_THRESHOLD: int = 70
+    AI_SELL_CONFIDENCE_THRESHOLD: int = 75
     # False ise, bot haber analizi için LLM çağrısı yapmaz
     USE_NEWS_LLM: bool = True
     
@@ -136,13 +136,13 @@ class Settings:
     
     # Strategy Engine Ağırlıkları
     # Ana karar ağırlıkları (toplam = 1.0)
-    STRATEGY_WEIGHT_MATH: float = 0.35  # Matematiksel skorlar (%35)
-    STRATEGY_WEIGHT_AI: float = 0.65    # LLM kararı (%65)
+    STRATEGY_WEIGHT_MATH: float = 0.60  # Matematiksel skorlar (%60 - teknik verilere öncelik)
+    STRATEGY_WEIGHT_AI: float = 0.40    # LLM kararı (%40 - AI halüsinasyonlarını azalt)
     
     # Math Layer alt ağırlıkları (toplam = 1.0)
-    MATH_WEIGHT_TECHNICAL: float = 0.70  # Teknik göstergeler
-    MATH_WEIGHT_ONCHAIN: float = 0.15    # On-chain veri
-    MATH_WEIGHT_FNG: float = 0.15        # Fear & Greed Index
+    MATH_WEIGHT_TECHNICAL: float = 0.80  # Teknik göstergeler
+    MATH_WEIGHT_ONCHAIN: float = 0.10    # On-chain veri
+    MATH_WEIGHT_FNG: float = 0.10        # Fear & Greed Index
     
     # Haber LLM Kontrolleri
     # NEWS_LLM_MODE: "off" = haber LLM'i asla çağırma
@@ -159,6 +159,9 @@ class Settings:
     )
     RSS_MAX_AGE_HOURS: int = 4  # Haberlerin max yaşı (saat)
     
+    # Ana döngü süresi (saniye) - her döngü arasında bekleme
+    LOOP_SECONDS: int = 900  # 15 dakika
+    
     # Cache TTL ayarları (saniye)
     CACHE_TTL_PRICE: float = 1.0  # Fiyat cache
     CACHE_TTL_TECH: float = 15.0  # Teknik göstergeler
@@ -174,21 +177,21 @@ class Settings:
     # Günlük maksimum kayıp yüzdesi - aşılırsa işlemler durur
     MAX_DAILY_LOSS_PCT: float = 8.0
     # Aynı anda açık tutulabilecek maksimum pozisyon sayısı
-    MAX_OPEN_POSITIONS: int = 10
+    MAX_OPEN_POSITIONS: int = 5
     # Ardışık zarar sayısı - aşılırsa cooldown başlar
     MAX_CONSECUTIVE_LOSSES: int = 5
     # Ardışık zarar sonrası bekleme süresi (dakika)
     COOLDOWN_MINUTES: int = 60
     
-    # ADX Eşikleri (Yarı-agresif varsayılanlar)
-    MIN_ADX_ENTRY: float = 22.0
+    # ADX Eşikleri (Dengeli - güçlü trend iste)
+    MIN_ADX_ENTRY: float = 20.0  # Düşürüldü - piyasa koşullarına daha uyumlu
     MIN_ADX_ENTRY_SOFT: float = 18.0
     SOFTEN_ADX_WHEN_CONF_GE: int = 75
     
     # Risk Manager Ayarları
     RISK_PER_TRADE: float = 0.02  # İşlem başına max risk (%2)
     MIN_VOLUME_GUARDRAIL: int = 1_000_000  # Min 24h volume ($1M)
-    FNG_EXTREME_FEAR: int = 20  # Bu değerin altında alım yapma
+    FNG_EXTREME_FEAR: int = 15  # Düşürüldü - extreme fear'da da işlem yapabilir
     
     # ═══════════════════════════════════════════════════════════════════════════
     # TRADING AYARLARI
@@ -215,7 +218,7 @@ class Settings:
     # Kâr Koruma Ayarları
     # Kârlı pozisyonların erken satılmasını engeller
     PROTECT_PROFITABLE_POSITIONS: bool = True
-    MIN_PROFIT_TO_PROTECT: float = 0.5  # %0.5 kâr varsa koru
+    MIN_PROFIT_TO_PROTECT: float = 1.5  # %0.5 kâr varsa koru
     AI_SELL_OVERRIDE_CONFIDENCE: int = 90  # AI bu güvenin üstündeyse kâr korumasını geç
     
     # Live Order Retry Ayarları

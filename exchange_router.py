@@ -36,10 +36,7 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s'))
-        logger.addHandler(handler)
+    # Handler ekleme main.py tarafından yapılır - duplikasyonu önle
 
 # Binance imports
 try:
@@ -102,7 +99,7 @@ class ExchangeRouter:
         # Price Cache
         self._price_cache: Dict[str, float] = {}
         self._price_lock = Lock()
-        self._cache_ttl = 5.0  # saniye
+        self._cache_ttl = 15.0  # saniye (15dk döngü için yeterli)
         self._price_timestamps: Dict[str, float] = {}
         
         # Order State Tracking
@@ -331,6 +328,32 @@ class ExchangeRouter:
             logger.error(f"[ExchangeRouter] 24h ticker fetch failed for {symbol}: {e}")
             return {}
 
+    async def _prefetch_prices(self) -> None:
+        """
+        Başlangıçta tüm sembollerin fiyatlarını REST API'den çek.
+        WebSocket henüz fiyat almamış olabilir, bu cache'i doldurur.
+        """
+        if not self._client:
+            return
+        
+        logger.info(f"[ExchangeRouter] 📥 Pre-fetching prices for {len(self._symbols)} symbols...")
+        
+        async def fetch_one(symbol: str) -> None:
+            try:
+                price = await self.get_price_async(symbol, fallback_rest=True, timeout_s=5.0)
+                if price and price > 0:
+                    logger.debug(f"[ExchangeRouter] Pre-fetched {symbol}: ${price:.2f}")
+            except Exception as e:
+                logger.warning(f"[ExchangeRouter] Pre-fetch failed for {symbol}: {e}")
+        
+        # Paralel çek
+        tasks = [fetch_one(symbol) for symbol in self._symbols]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Log sonuç
+        cached_count = len([s for s in self._symbols if self.get_price(s) is not None])
+        logger.info(f"[ExchangeRouter] ✅ Pre-fetched {cached_count}/{len(self._symbols)} prices")
+
     def add_price_callback(self, callback: Callable[[str, float], None]) -> None:
         """Fiyat güncellemesi callback'i ekle."""
         self._price_callbacks.append(callback)
@@ -495,6 +518,10 @@ class ExchangeRouter:
             
             # Bağlantı için bekle
             await asyncio.sleep(2)
+            
+            # Pre-fetch: Tüm sembollerin fiyatlarını REST API'den çek
+            # WebSocket henüz fiyat almamış olabilir, cache'i doldur
+            await self._prefetch_prices()
             
             # Heartbeat task başlat
             self._running = True
