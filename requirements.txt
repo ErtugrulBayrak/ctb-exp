@@ -18,7 +18,7 @@ google-generativeai>=0.3.0
 # Data & Analysis
 numpy>=1.24.0
 pandas>=2.0.0
-pandas-ta>=0.3.14b
+pandas-ta @ git+https://github.com/twopirllc/pandas-ta.git@main
 
 # Web Scraping & News
 feedparser>=6.0.0
