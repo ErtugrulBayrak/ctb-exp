@@ -182,9 +182,37 @@ if ENABLE_TERMINAL_LOG:
 
 
 # API Anahtarları (config.py'dan import edilir)
-from config import SETTINGS
+from config import SETTINGS, RUN_PROFILE, UNIVERSE_MODE, SYMBOLS, PAPER_START_EQUITY, PAPER_SANITY_MODE
 from order_executor import OrderExecutor
 from loop_controller import LoopController
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOOT BANNER - Tek satır özetli başlangıç bildirimi
+# ═══════════════════════════════════════════════════════════════════════════════
+def print_boot_banner():
+    """
+    Başlangıçta tek satır net banner yaz.
+    Format: [BOOT] profile=X live=X dangerous=X universe=N risk=X% max_pos=N daily_loss=X%
+    """
+    symbol_count = len(SYMBOLS) if UNIVERSE_MODE == "fixed_list" else len(SETTINGS.WATCHLIST)
+    risk_pct = SETTINGS.RISK_PER_TRADE * 100  # Convert back to percentage
+    
+    banner = (
+        f"[BOOT] profile={RUN_PROFILE} "
+        f"live={SETTINGS.LIVE_TRADING} "
+        f"dangerous={SETTINGS.ALLOW_DANGEROUS_ACTIONS} "
+        f"universe={symbol_count} "
+        f"risk={risk_pct:.1f}% "
+        f"max_pos={SETTINGS.MAX_OPEN_POSITIONS} "
+        f"daily_loss={SETTINGS.MAX_DAILY_LOSS_PCT:.1f}%"
+    )
+    print(banner, flush=True)
+    
+    # PAPER_SANITY_MODE uyarısı
+    if PAPER_SANITY_MODE and RUN_PROFILE == "paper":
+        print("⚠️  [SANITY MODE] MIN_ADX_ENTRY forced to 15 for paper test", flush=True)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MODULAR ARCHITECTURE IMPORTS
@@ -283,16 +311,21 @@ def ensure_safe_to_live():
 # Güvenlik kapısını çalıştır (modül yüklenirken)
 ensure_safe_to_live()
 
+# Boot banner'u yaz (profile ve ayarlar özeti)
+print_boot_banner()
+
 
 ISLENMIS_HABERLER_DOSYASI = "islenmis_haberler.txt"
 PORTFOLIO_DOSYASI = "portfolio.json"
 TRADE_LOG_DOSYASI = "trade_decisions_log.json"  # AI karar detayları için
-BASLANGIC_BAKIYE = SETTINGS.BASLANGIC_BAKIYE  # USDT - artık config'den
+# Paper mod için PAPER_START_EQUITY kullan, yoksa config'den BASLANGIC_BAKIYE
+BASLANGIC_BAKIYE = PAPER_START_EQUITY if RUN_PROFILE == "paper" else SETTINGS.BASLANGIC_BAKIYE
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HİBRİT TRADER KONFİGÜRASYONU (config.py'den okunuyor)
 # ─────────────────────────────────────────────────────────────────────────────
-WATCHLIST = list(SETTINGS.WATCHLIST)
+# UNIVERSE_MODE=fixed_list ise SYMBOLS kullan, değilse mevcut watchlist
+WATCHLIST = list(SYMBOLS) if UNIVERSE_MODE == "fixed_list" else list(SETTINGS.WATCHLIST)
 HABER_MAX_SAAT = getattr(SETTINGS, 'RSS_MAX_AGE_HOURS', 4)
 
 # Telegram Bildirim Ayarları (config.py'den)
@@ -369,14 +402,19 @@ def load_portfolio():
         return {"balance": BASLANGIC_BAKIYE, "positions": [], "history": []}
 
 def save_portfolio(portfolio):
-    """Portföyü JSON dosyasına kaydeder."""
+    """Portföyü JSON dosyasına atomik olarak kaydeder."""
     try:
-        with open(PORTFOLIO_DOSYASI, 'w', encoding='utf-8') as f:
-            json.dump(portfolio, f, indent=2, ensure_ascii=False)
-        return True
-    except Exception as e:
-        log(f"Portföy kaydetme hatası: {e}", "ERR")
-        return False
+        from utils.io import write_atomic_json
+        return write_atomic_json(PORTFOLIO_DOSYASI, portfolio)
+    except ImportError:
+        # Fallback if utils.io not available
+        try:
+            with open(PORTFOLIO_DOSYASI, 'w', encoding='utf-8') as f:
+                json.dump(portfolio, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            log(f"Portföy kaydetme hatası: {e}", "ERR")
+            return False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

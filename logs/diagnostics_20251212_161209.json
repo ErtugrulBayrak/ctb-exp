@@ -1,0 +1,195 @@
+{
+  "timestamp": "2025-12-12T16:12:09.344090",
+  "summary": {
+    "total_checks": 12,
+    "pass": 11,
+    "warn": 1,
+    "fail": 0,
+    "total_duration_ms": 30475.850000000002
+  },
+  "checks": [
+    {
+      "name": "CHECK_IMPORTS",
+      "status": "PASS",
+      "message": "All 7 modules imported",
+      "details": {
+        "imported": [
+          "requests",
+          "pandas",
+          "binance",
+          "feedparser",
+          "dateutil",
+          "newspaper",
+          "google.generativeai"
+        ],
+        "missing_required": [],
+        "missing_optional": []
+      },
+      "duration_ms": 2562.53
+    },
+    {
+      "name": "CHECK_ENV_KEYS",
+      "status": "PASS",
+      "message": "All API keys configured",
+      "details": {
+        "keys": {
+          "BINANCE_API_KEY": "cVDD...GoXO",
+          "BINANCE_SECRET_KEY": "Eo43...60Hc",
+          "GEMINI_API_KEY": "AIza...zhW8",
+          "TELEGRAM_BOT_TOKEN": "8420...8z_o",
+          "TELEGRAM_CHAT_ID": "7965...2622",
+          "ETHERSCAN_API_KEY": "1V19...YR9R"
+        },
+        "missing_critical": [],
+        "missing_optional": [],
+        "live_trading": false
+      },
+      "duration_ms": 11.97
+    },
+    {
+      "name": "CHECK_LOGGER_MISUSE",
+      "status": "PASS",
+      "message": "No logger misuse in 12 files",
+      "details": {
+        "files_scanned": 12,
+        "violations_count": 0,
+        "violations": []
+      },
+      "duration_ms": 15.97
+    },
+    {
+      "name": "CHECK_FILE_IO",
+      "status": "PASS",
+      "message": "3 I/O checks passed",
+      "details": {
+        "checks_passed": [
+          "logs/ exists",
+          "logs/ writable",
+          "portfolio.json readable (3 keys)"
+        ],
+        "issues": []
+      },
+      "duration_ms": 1.05
+    },
+    {
+      "name": "CHECK_BINANCE_PUBLIC",
+      "status": "PASS",
+      "message": "Ping 251ms, drift 0.08s",
+      "details": {
+        "ping_ms": 250.88,
+        "server_time_ms": 1765545102185,
+        "local_time_ms": 1765545102265,
+        "drift_seconds": 0.08
+      },
+      "duration_ms": 809.98
+    },
+    {
+      "name": "CHECK_BINANCE_MARKET",
+      "status": "PASS",
+      "message": "All 2 symbols OK",
+      "details": {
+        "symbols_tested": {
+          "BTCUSDT": {
+            "price": 92344.19,
+            "kline_count": 200,
+            "df_rows": 200,
+            "last_close": 92344.19,
+            "numeric_ok": true
+          },
+          "ETHUSDT": {
+            "price": 3244.99,
+            "kline_count": 200,
+            "df_rows": 200,
+            "last_close": 3245.0,
+            "numeric_ok": true
+          }
+        },
+        "failures": []
+      },
+      "duration_ms": 1343.88
+    },
+    {
+      "name": "CHECK_EXCHANGE_ROUTER",
+      "status": "PASS",
+      "message": "Router OK, BTCUSDT=$92344.18",
+      "details": {
+        "test_symbol": "BTCUSDT",
+        "price": 92344.18
+      },
+      "duration_ms": 4309.89
+    },
+    {
+      "name": "CHECK_ETHERSCAN",
+      "status": "PASS",
+      "message": "API OK, 10000 txs returned",
+      "details": {
+        "api_status": "1",
+        "api_message": "OK",
+        "tx_count": 10000
+      },
+      "duration_ms": 3618.08
+    },
+    {
+      "name": "CHECK_RSS_NEWS",
+      "status": "PASS",
+      "message": "21 articles fetched",
+      "details": {
+        "article_count": 21,
+        "sample_titles": [
+          "UK MPs warn Bank of England stablecoin plans could",
+          "Bitcoin decouples from stocks in second half of 20",
+          "Phantom taps Kalshi to offer regulated prediction "
+        ]
+      },
+      "duration_ms": 2572.55
+    },
+    {
+      "name": "CHECK_ARTICLE_CONTENT",
+      "status": "PASS",
+      "message": "3/3 articles extracted (>=300 chars)",
+      "details": {
+        "tested": 3,
+        "successful": 3,
+        "results": [
+          {
+            "url": "https://cointelegraph.com/news/uk-lawmakers-bank-o",
+            "chars": 4202,
+            "ok": true
+          },
+          {
+            "url": "https://cointelegraph.com/news/bitcoin-decouples-s",
+            "chars": 7000,
+            "ok": true
+          },
+          {
+            "url": "https://cointelegraph.com/news/phantom-kalshi-pred",
+            "chars": 2857,
+            "ok": true
+          }
+        ]
+      },
+      "duration_ms": 6950.05
+    },
+    {
+      "name": "CHECK_LLM_NEWS",
+      "status": "WARN",
+      "message": "LLM returned None (USE_NEWS_LLM disabled or parse error)",
+      "details": {
+        "raw_result": null
+      },
+      "duration_ms": 4243.06
+    },
+    {
+      "name": "CHECK_LLM_STRATEGY",
+      "status": "PASS",
+      "message": "Strategy OK (HOLD, conf=61)",
+      "details": {
+        "action": "HOLD",
+        "confidence": 61.0,
+        "reason": "LLM Rejected: LLM fallback",
+        "missing_keys": []
+      },
+      "duration_ms": 4036.84
+    }
+  ]
+}

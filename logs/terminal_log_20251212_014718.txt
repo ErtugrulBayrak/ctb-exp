@@ -1,0 +1,46 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[01:47:20] • News LLM analysis is ENABLED
+[01:47:20] • [GLOBAL RISK] Daily Loss Limit = 6.0%
+[01:47:20] • [GLOBAL RISK] Max Open Positions = 6
+[01:47:20] • [GLOBAL RISK] Max Consecutive Losses = 5
+[01:47:20] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[01:47:20] ✓ ExchangeRouter başlatıldı
+[01:47:20] ✓ MarketDataEngine başlatıldı
+[01:47:20] ✓ StrategyEngine başlatıldı
+[01:47:20] ✓ OrderExecutor başlatıldı (dry_run=True)
+[01:47:20] ✓ RiskManager başlatıldı
+[01:47:20] ✓ ExecutionManager başlatıldı
+[01:47:20] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[01:47:20] ✓ Bakiye: $1000.00
+[01:47:20] • Açık Pozisyon: 0
+[01:47:20] • Toplam İşlem: 0 | Win Rate: 0.0%
+[01:47:20] → Toplam PnL: $0.00
+[01:47:22] ✓ 🆕 SANAL ALIM (AI TEKNİK TETİKLİ): BTCUSDT @ $92233.1300
+[01:47:22]   →    Miktar: 0.001084 | Değer: $99.98
+[01:47:22]   →    SL: $91218.4700 | TP: $93755.1100
+[01:47:22]   → 📝 Trade log kaydedildi: BUY BTCUSDT
+[01:47:24]   ✓ Telegram bildirimi gönderildi
+[01:47:24] ✓ 🆕 SANAL ALIM (AI TEKNİK TETİKLİ): BNBUSDT @ $884.1900
+[01:47:24]   →    Miktar: 0.101790 | Değer: $90.00
+[01:47:24]   →    SL: $876.8800 | TP: $895.1500
+[01:47:24]   → 📝 Trade log kaydedildi: BUY BNBUSDT
+[01:47:25]   ✓ Telegram bildirimi gönderildi
+[01:47:25] ✓ 🆕 SANAL ALIM (AI TEKNİK TETİKLİ): LINKUSDT @ $14.0600
+[01:47:25]   →    Miktar: 5.761149 | Değer: $81.00
+[01:47:25]   →    SL: $13.8200 | TP: $14.4100
+[01:47:25]   → 📝 Trade log kaydedildi: BUY LINKUSDT
+[01:47:26]   ✓ Telegram bildirimi gönderildi

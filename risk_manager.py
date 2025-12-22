@@ -21,6 +21,11 @@ except ImportError:
 class RiskManager:
     """
     Risk yönetimi ve pozisyon boyutlandırma sınıfı.
+    
+    V1 Eklentileri:
+    - Volatilite hedeflemeli pozisyon boyutlandırma
+    - Ardışık stop takibi ve cooldown
+    - V1 strateji modu için özel parametreler
     """
     
     def __init__(
@@ -41,7 +46,25 @@ class RiskManager:
         self._risk_per_trade = self.config.get("risk_per_trade") or getattr(SETTINGS, 'RISK_PER_TRADE', 0.02)
         self._initial_balance = initial_balance
         
-        logger.debug(f"RiskManager başlatıldı: ADX={self._min_adx}, Volume=${self._min_volume/1e6:.1f}M, Risk={self._risk_per_trade*100:.1f}%")
+        # V1 Parametreleri
+        self._strategy_mode = getattr(SETTINGS, 'STRATEGY_MODE', 'LEGACY')
+        self._risk_per_trade_v1 = getattr(SETTINGS, 'RISK_PER_TRADE_V1', 1.0) / 100.0  # %1 = 0.01
+        self._target_atr_pct = getattr(SETTINGS, 'TARGET_ATR_PCT', 1.0)
+        self._min_vol_scale = getattr(SETTINGS, 'MIN_VOL_SCALE', 0.5)
+        self._max_vol_scale = getattr(SETTINGS, 'MAX_VOL_SCALE', 1.5)
+        
+        # Ardışık stop takibi
+        self._max_consecutive_stops = getattr(SETTINGS, 'MAX_CONSECUTIVE_STOPS', 3)
+        self._consecutive_stops_cooldown = getattr(SETTINGS, 'CONSECUTIVE_STOPS_EXTRA_COOLDOWN', 30)
+        self._consecutive_stop_count = 0
+        self._last_stop_time = None
+        self._in_cooldown = False
+        self._cooldown_end_time = None
+        
+        logger.debug(
+            f"RiskManager başlatıldı: ADX={self._min_adx}, Volume=${self._min_volume/1e6:.1f}M, "
+            f"Risk={self._risk_per_trade*100:.1f}%, Mode={self._strategy_mode}"
+        )
 
     def evaluate_entry_risk(
         self,
@@ -253,18 +276,37 @@ class RiskManager:
             "take_profit": round(price + tp_distance, 2)
         }
 
-    def _calculate_quantity(self, balance: float, price: float, stop_loss: float) -> float:
-        """Risk tabanlı pozisyon boyutu (StrategyEngine'den taşındı)."""
+    def _calculate_quantity(
+        self,
+        balance: float,
+        price: float,
+        stop_loss: float,
+        atr: float = None
+    ) -> float:
+        """
+        Risk tabanlı pozisyon boyutu.
+        
+        V1 modunda volatilite hedeflemeli ölçekleme uygulanır:
+        - atr_pct = atr / price * 100
+        - vol_scale = clamp(TARGET_ATR_PCT / atr_pct, MIN_VOL_SCALE, MAX_VOL_SCALE)
+        - qty *= vol_scale
+        """
         if balance <= 0:
             return 0.0
+        
+        # V1 modunda risk yüzdesini kullan
+        if self._strategy_mode == "REGIME_SWING_TREND_V1":
+            risk_pct = self._risk_per_trade_v1
+        else:
+            risk_pct = self._risk_per_trade
 
         if not stop_loss or stop_loss >= price:
-            # Fallback: bakiyenin %2'si
-            trade_amount = balance * self._risk_per_trade
+            # Fallback: bakiyenin risk%'si
+            trade_amount = balance * risk_pct
             return round(trade_amount / price, 6)
         
         # Risk amount (Para bazında risk)
-        risk_amount = balance * self._risk_per_trade
+        risk_amount = balance * risk_pct
         
         # Risk per unit (Birim başına risk)
         risk_per_unit = price - stop_loss
@@ -272,13 +314,89 @@ class RiskManager:
         if risk_per_unit > 0:
             quantity = risk_amount / risk_per_unit
             
+            # V1: Volatilite hedeflemeli ölçekleme
+            if self._strategy_mode == "REGIME_SWING_TREND_V1" and atr and atr > 0:
+                atr_pct = (atr / price) * 100
+                if atr_pct > 0:
+                    vol_scale = self._target_atr_pct / atr_pct
+                    vol_scale = max(self._min_vol_scale, min(self._max_vol_scale, vol_scale))
+                    quantity *= vol_scale
+                    logger.debug(
+                        f"[V1 VOL_SCALE] ATR%={atr_pct:.2f}, "
+                        f"Scale={vol_scale:.2f}, Qty adjusted"
+                    )
+            
             # Max Cap: Bakiyenin %10'u (Likidite/Slipaj koruması)
             max_quantity = (balance * 0.10) / price
             
             return round(min(quantity, max_quantity), 6)
             
         # Fallback
-        return round((balance * self._risk_per_trade) / price, 6)
+        return round((balance * risk_pct) / price, 6)
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # V1: Ardışık Stop Yönetimi
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    def register_stop_hit(self) -> bool:
+        """
+        Stop loss tetiklendiğinde çağır.
+        
+        Returns:
+            True: Cooldown başladı
+            False: Cooldown başlamadı
+        """
+        import time as t
+        
+        self._consecutive_stop_count += 1
+        self._last_stop_time = t.time()
+        
+        logger.info(
+            f"[RISK] Stop #{ self._consecutive_stop_count} / {self._max_consecutive_stops}"
+        )
+        
+        if self._consecutive_stop_count >= self._max_consecutive_stops:
+            self._in_cooldown = True
+            cooldown_minutes = getattr(SETTINGS, 'COOLDOWN_MINUTES', 60) + self._consecutive_stops_cooldown
+            self._cooldown_end_time = t.time() + (cooldown_minutes * 60)
+            logger.warning(
+                f"[RISK] ⚠️ MAX CONSECUTIVE STOPS reached! "
+                f"Cooldown for {cooldown_minutes} minutes"
+            )
+            return True
+        
+        return False
+    
+    def register_win(self):
+        """Kazançlı trade sonrası ardışık stop sayacını sıfırla."""
+        if self._consecutive_stop_count > 0:
+            logger.info(f"[RISK] Consecutive stops reset (was {self._consecutive_stop_count})")
+        self._consecutive_stop_count = 0
+    
+    def is_in_cooldown(self) -> tuple:
+        """
+        Cooldown durumunu kontrol et.
+        
+        Returns:
+            Tuple[bool, str]: (in_cooldown, reason)
+        """
+        import time as t
+        
+        if not self._in_cooldown:
+            return False, ""
+        
+        if t.time() >= self._cooldown_end_time:
+            self._in_cooldown = False
+            self._consecutive_stop_count = 0
+            logger.info("[RISK] Cooldown ended, trading resumed")
+            return False, ""
+        
+        remaining = int((self._cooldown_end_time - t.time()) / 60)
+        return True, f"Cooldown active ({remaining} min remaining)"
+    
+    def get_consecutive_stops(self) -> int:
+        """Ardışık stop sayısını döndür."""
+        return self._consecutive_stop_count
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

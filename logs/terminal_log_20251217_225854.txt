@@ -1,0 +1,78 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[22:58:56] • News LLM analysis is ENABLED
+[22:58:56] • [GLOBAL RISK] Daily Loss Limit = 8.0%
+[22:58:56] • [GLOBAL RISK] Max Open Positions = 5
+[22:58:56] • [GLOBAL RISK] Max Consecutive Losses = 5
+[22:58:56] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[22:58:56] ✓ ExchangeRouter başlatıldı
+[22:58:56] ✓ MarketDataEngine başlatıldı
+[22:58:56] ✓ StrategyEngine başlatıldı (LLM=True)
+[22:58:56] ✓ OrderExecutor başlatıldı (dry_run=True)
+[22:58:56] ✓ RiskManager başlatıldı
+[22:58:56] • Portföy dosyası bulunamadı, yeni oluşturuluyor...
+[22:58:56] ✓ ExecutionManager başlatıldı
+[22:58:56] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[22:58:56] ✓ Bakiye: $1000.00
+[22:58:56] • Açık Pozisyon: 0
+[22:58:56] • Toplam İşlem: 0 | Win Rate: 0.0%
+[22:58:56] → Toplam PnL: $0.00
+2025-12-17 22:58:56,706 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 22:58:56,706 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-17 22:58:56,707 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-17 22:58:56,707 - LoopController - INFO - Max Open Positions: 5
+2025-12-17 22:58:56,707 - LoopController - INFO - Max Loss Streak: 5
+2025-12-17 22:58:56,707 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-17 22:58:56,707 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 22:58:58,035 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[22:58:58]   ✓ Telegram bildirimi gönderildi
+[22:58:58] ✓ Sistem başlangıç bildirimi gönderildi
+2025-12-17 22:58:58,037 - LoopController - INFO - LoopController.run() started.
+2025-12-17 22:58:58,038 - LoopController - INFO - 
+⚡ Cycle Start: 22:58:58
+2025-12-17 22:59:07,674 - LoopController - INFO - 🌡️ Global Sentiment: F&G=16 (Extreme Fear)
+2025-12-17 22:59:07,674 - LoopController - INFO - 🐋 Global On-Chain: LIGHT_SELL_PRESSURE ($3,000,000)
+2025-12-17 22:59:25,850 - LoopController - INFO - 📢 Reddit Summary: The overall market mood is cautious to bearish, characterized by widespread frustration over a perceived 'market slump' and price volatility, although community engagement remains high and some contrarian optimism exists.
+2025-12-17 23:00:39,333 - LoopController - INFO - 📰 Analyzed 10 new articles
+2025-12-17 23:00:39,334 - LoopController - INFO - 📥 Collecting snapshots for 7 symbols...
+2025-12-17 23:00:45,780 - LoopController - INFO - 💡 Strategy Signal (BTCUSDT): BUY (Conf: 66.0%) [src=HYBRID]
+[23:00:45] ✓ 🆕 SANAL ALIM (AI TEKNİK TETİKLİ): BTCUSDT @ $85980.0100
+[23:00:45]   →    Miktar: 0.001163 | Değer: $99.99
+[23:00:45]   →    SL: $84954.2100 | TP: $87518.7000
+[23:00:45]   → 📝 Trade log kaydedildi: BUY BTCUSDT
+2025-12-17 23:00:47,049 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[23:00:47]   ✓ Telegram bildirimi gönderildi
+2025-12-17 23:00:47,052 - LoopController - INFO -   ✅ BUY Executed for BTCUSDT
+2025-12-17 23:00:51,482 - LoopController - INFO - 💡 Strategy Signal (ETHUSDT): BUY (Conf: 68.4%) [src=HYBRID]
+[23:00:51] ✓ 🆕 SANAL ALIM (AI TEKNİK TETİKLİ): ETHUSDT @ $2818.9200
+[23:00:51]   →    Miktar: 0.031927 | Değer: $90.00
+[23:00:51]   →    SL: $2773.5600 | TP: $2886.9600
+[23:00:51]   → 📝 Trade log kaydedildi: BUY ETHUSDT
+2025-12-17 23:00:52,740 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[23:00:52]   ✓ Telegram bildirimi gönderildi
+2025-12-17 23:00:52,743 - LoopController - INFO -   ✅ BUY Executed for ETHUSDT
+2025-12-17 23:01:03,738 - LoopController - INFO - 💡 Strategy Signal (BNBUSDT): BUY (Conf: 68.4%) [src=HYBRID]
+[23:01:03] ✓ 🆕 SANAL ALIM (AI TEKNİK TETİKLİ): BNBUSDT @ $840.6200
+[23:01:03]   →    Miktar: 0.096358 | Değer: $81.00
+[23:01:03]   →    SL: $831.8000 | TP: $853.8500
+[23:01:03]   → 📝 Trade log kaydedildi: BUY BNBUSDT
+2025-12-17 23:01:05,287 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[23:01:05]   ✓ Telegram bildirimi gönderildi
+2025-12-17 23:01:05,291 - LoopController - INFO -   ✅ BUY Executed for BNBUSDT
+2025-12-17 23:01:22,718 - LoopController - INFO - 💰 Balance: $729 | Open: 3
+2025-12-17 23:01:22,719 - LoopController - INFO - 💤 Sleeping for 755.3s...
+2025-12-17 23:02:31,686 - LoopController - INFO - LoopController cancelled.
+2025-12-17 23:02:31,688 - LoopController - INFO - 🐕 Watchdog task stopped.

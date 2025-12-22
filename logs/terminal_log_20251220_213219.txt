@@ -1,0 +1,207 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[BOOT] profile=paper live=False dangerous=False universe=5 risk=0.5% max_pos=2 daily_loss=1.0%
+[21:32:24] • News LLM analysis is ENABLED
+[21:32:24] • [GLOBAL RISK] Daily Loss Limit = 1.0%
+[21:32:24] • [GLOBAL RISK] Max Open Positions = 2
+[21:32:24] • [GLOBAL RISK] Max Consecutive Losses = 5
+[21:32:24] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[21:32:24] ✓ ExchangeRouter başlatıldı
+[21:32:24] ✓ MarketDataEngine başlatıldı
+[21:32:24] ✓ StrategyEngine başlatıldı (LLM=False)
+[21:32:24] ✓ OrderExecutor başlatıldı (dry_run=True)
+[21:32:24] ✓ RiskManager başlatıldı
+[21:32:24] ✓ ExecutionManager başlatıldı
+[21:32:24] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[21:32:24] ✓ Bakiye: $1000.00
+[21:32:24] • Açık Pozisyon: 0
+[21:32:24] • Toplam İşlem: 0 | Win Rate: 0.0%
+[21:32:24] → Toplam PnL: $0.00
+2025-12-20 21:32:24,775 - LoopController - INFO - ✅ V1 Strategy components initialized
+2025-12-20 21:32:24,775 - LoopController - INFO - ════════════════════════════════════════
+2025-12-20 21:32:24,775 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-20 21:32:24,775 - LoopController - INFO - Strategy Mode: REGIME_SWING_TREND_V1
+2025-12-20 21:32:24,775 - LoopController - INFO - Daily Loss Limit: 1.0%
+2025-12-20 21:32:24,775 - LoopController - INFO - Max Open Positions: 2
+2025-12-20 21:32:24,775 - LoopController - INFO - Max Loss Streak: 5
+2025-12-20 21:32:24,776 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-20 21:32:24,776 - LoopController - INFO - V1 Risk Per Trade: 1.0%
+2025-12-20 21:32:24,776 - LoopController - INFO - V1 Partial TP: True
+2025-12-20 21:32:24,776 - LoopController - INFO - V1 Trailing: True
+2025-12-20 21:32:24,776 - LoopController - INFO - ════════════════════════════════════════
+2025-12-20 21:32:26,237 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[21:32:26]   ✓ Telegram bildirimi gönderildi
+[21:32:26] ✓ Sistem başlangıç bildirimi gönderildi
+2025-12-20 21:32:26,240 - LoopController - INFO - LoopController.run() started.
+2025-12-20 21:32:26,240 - LoopController - INFO - 
+⚡ Cycle Start: 21:32:26
+2025-12-20 21:32:36,149 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 21:32:36,149 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 21:32:48,667 - LoopController - INFO - 📢 Reddit Summary: The market shows strong bullish sentiment for Bitcoin driven by adoption and accumulation, alongside skepticism for altcoins and cautiousness due to macroeconomic factors.
+2025-12-20 21:33:48,935 - LoopController - INFO - 📰 Analyzed 10 new articles
+2025-12-20 21:33:48,935 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 21:33:52,510 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 21:33:52,547 - LoopController - INFO - 💤 Sleeping for 813.7s...
+2025-12-20 21:47:26,291 - LoopController - INFO - 
+⚡ Cycle Start: 21:47:26
+2025-12-20 21:47:34,049 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 21:47:34,049 - LoopController - INFO - 🐋 Global On-Chain: STRONG_SELL_PRESSURE ($10,000,000)
+2025-12-20 21:47:34,049 - LoopController - INFO - 📢 Reddit Summary: The market shows strong bullish sentiment for Bitcoin driven by adoption and accumulation, alongside skepticism for altcoins and cautiousness due to macroeconomic factors.
+2025-12-20 21:47:34,779 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 21:47:38,369 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 21:47:38,369 - LoopController - INFO - 💤 Sleeping for 887.9s...
+2025-12-20 22:02:26,296 - LoopController - INFO - 
+⚡ Cycle Start: 22:02:26
+2025-12-20 22:02:34,048 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 22:02:34,048 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 22:02:46,670 - LoopController - INFO - 📢 Reddit Summary: Reddit shows a mixed market sentiment, with strong bullish conviction and accumulation for Bitcoin, tempered by macroeconomic concerns, regulatory slowdowns, and significant bearish sentiment towards altcoins.
+2025-12-20 22:02:58,653 - LoopController - INFO - 📰 Analyzed 2 new articles
+2025-12-20 22:02:58,653 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 22:03:02,263 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 22:03:02,264 - LoopController - INFO - 💤 Sleeping for 864.0s...
+2025-12-20 22:17:26,306 - LoopController - INFO - 
+⚡ Cycle Start: 22:17:26
+2025-12-20 22:17:33,854 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 22:17:33,854 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 22:17:33,855 - LoopController - INFO - 📢 Reddit Summary: Reddit shows a mixed market sentiment, with strong bullish conviction and accumulation for Bitcoin, tempered by macroeconomic concerns, regulatory slowdowns, and significant bearish sentiment towards altcoins.
+2025-12-20 22:17:33,855 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 22:17:38,743 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 22:17:38,743 - LoopController - INFO - 💤 Sleeping for 887.6s...
+2025-12-20 22:32:26,311 - LoopController - INFO - 
+⚡ Cycle Start: 22:32:26
+2025-12-20 22:32:36,131 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 22:32:36,132 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 22:32:49,929 - LoopController - INFO - 📢 Reddit Summary: The Reddit crypto community shows a complex mix of bullish optimism regarding Bitcoin's adoption and innovation, tempered by significant macroeconomic concerns, regulatory hurdles, and strong bearish sentiment for the broader altcoin market.
+2025-12-20 22:32:54,491 - LoopController - INFO - 📰 Analyzed 1 new articles
+2025-12-20 22:32:54,492 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 22:32:59,965 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 22:32:59,965 - LoopController - INFO - 💤 Sleeping for 866.3s...
+2025-12-20 22:47:26,323 - LoopController - INFO - 
+⚡ Cycle Start: 22:47:26
+2025-12-20 22:47:34,393 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 22:47:34,393 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 22:47:34,394 - LoopController - INFO - 📢 Reddit Summary: The Reddit crypto community shows a complex mix of bullish optimism regarding Bitcoin's adoption and innovation, tempered by significant macroeconomic concerns, regulatory hurdles, and strong bearish sentiment for the broader altcoin market.
+2025-12-20 22:47:35,026 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 22:47:38,591 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 22:47:38,591 - LoopController - INFO - 💤 Sleeping for 887.7s...
+2025-12-20 23:02:26,324 - LoopController - INFO - 
+⚡ Cycle Start: 23:02:26
+2025-12-20 23:02:34,277 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 23:02:34,277 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 23:02:50,458 - LoopController - INFO - 📢 Reddit Summary: The overall market sentiment is cautiously optimistic, marked by strong community belief and adoption narratives for Bitcoin, alongside significant institutional accumulation for Ethereum, though tempered by macroeconomic concerns and security incident reports.
+2025-12-20 23:02:57,749 - LoopController - INFO - 📰 Analyzed 1 new articles
+2025-12-20 23:02:57,750 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 23:03:01,315 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 23:03:01,315 - LoopController - INFO - 💤 Sleeping for 865.0s...
+2025-12-20 23:17:26,214 - LoopController - INFO - 
+⚡ Cycle Start: 23:17:26
+2025-12-20 23:17:35,627 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 23:17:35,627 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 23:17:43,350 - LoopController - INFO - 📢 Reddit Summary: Strong optimism and anticipation for a bull run, especially for Bitcoin, coupled with discussions around adoption and some individual cautionary tales and security concerns.
+2025-12-20 23:17:43,351 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 23:17:46,921 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 23:17:46,922 - LoopController - INFO - 💤 Sleeping for 879.3s...
+2025-12-20 23:32:26,091 - LoopController - INFO - 
+⚡ Cycle Start: 23:32:26
+2025-12-20 23:32:34,592 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 23:32:34,592 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 23:32:34,592 - LoopController - INFO - 📢 Reddit Summary: Strong optimism and anticipation for a bull run, especially for Bitcoin, coupled with discussions around adoption and some individual cautionary tales and security concerns.
+2025-12-20 23:32:41,420 - LoopController - INFO - 📰 Analyzed 2 new articles
+2025-12-20 23:32:41,420 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 23:32:45,430 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 23:32:45,431 - LoopController - INFO - 💤 Sleeping for 880.7s...
+2025-12-20 23:47:26,005 - LoopController - INFO - 
+⚡ Cycle Start: 23:47:26
+2025-12-20 23:47:34,935 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-20 23:47:34,935 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-20 23:47:50,930 - LoopController - INFO - 📢 Reddit Summary: Reddit's crypto market sentiment is notably mixed, exhibiting strong bullish excitement for potential bull runs and institutional adoption, yet tempered by significant caution due to macro economic shifts, security incidents, and regulatory hurdles.
+2025-12-20 23:47:51,719 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-20 23:47:55,302 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-20 23:47:55,302 - LoopController - INFO - 💤 Sleeping for 870.7s...
+2025-12-21 00:02:25,940 - LoopController - INFO - 
+⚡ Cycle Start: 00:02:25
+2025-12-21 00:02:34,179 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 00:02:34,180 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-21 00:02:34,181 - LoopController - INFO - 📢 Reddit Summary: Reddit's crypto market sentiment is notably mixed, exhibiting strong bullish excitement for potential bull runs and institutional adoption, yet tempered by significant caution due to macro economic shifts, security incidents, and regulatory hurdles.
+2025-12-21 00:02:34,181 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 00:02:40,112 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 00:02:40,113 - LoopController - INFO - 💤 Sleeping for 885.8s...
+2025-12-21 00:17:25,884 - LoopController - INFO - 
+⚡ Cycle Start: 00:17:25
+2025-12-21 00:17:34,799 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 00:17:34,800 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-21 00:17:47,014 - LoopController - INFO - 📢 Reddit Summary: Reddit sentiment indicates a mix of strong bullish enthusiasm for crypto's potential, particularly Bitcoin, alongside significant caution regarding macroeconomic impacts and regulatory hurdles.
+2025-12-21 00:17:47,014 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 00:17:52,979 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 00:17:52,980 - LoopController - INFO - 💤 Sleeping for 872.9s...
+2025-12-21 00:32:25,853 - LoopController - INFO - 
+⚡ Cycle Start: 00:32:25
+2025-12-21 00:32:33,086 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 00:32:33,087 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-21 00:32:33,087 - LoopController - INFO - 📢 Reddit Summary: Reddit sentiment indicates a mix of strong bullish enthusiasm for crypto's potential, particularly Bitcoin, alongside significant caution regarding macroeconomic impacts and regulatory hurdles.
+2025-12-21 00:32:39,162 - LoopController - INFO - 📰 Analyzed 1 new articles
+2025-12-21 00:32:39,163 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 00:32:42,733 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 00:32:42,733 - LoopController - INFO - 💤 Sleeping for 883.1s...
+2025-12-21 00:47:25,832 - LoopController - INFO - 
+⚡ Cycle Start: 00:47:25
+2025-12-21 00:47:33,147 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 00:47:33,147 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-21 00:47:45,744 - LoopController - INFO - 📢 Reddit Summary: Reddit sentiment presents a mixed picture, showing strong bullish anticipation for Bitcoin from many, alongside significant macroeconomic concerns and some market disappointment.
+2025-12-21 00:47:50,264 - LoopController - INFO - 📰 Analyzed 1 new articles
+2025-12-21 00:47:50,264 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 00:47:53,874 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 00:47:53,874 - LoopController - INFO - 💤 Sleeping for 872.0s...
+2025-12-21 01:02:25,815 - LoopController - INFO - 
+⚡ Cycle Start: 01:02:25
+2025-12-21 01:02:32,893 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 01:02:32,893 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-21 01:02:32,894 - LoopController - INFO - 📢 Reddit Summary: Reddit sentiment presents a mixed picture, showing strong bullish anticipation for Bitcoin from many, alongside significant macroeconomic concerns and some market disappointment.
+2025-12-21 01:02:32,894 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 01:02:36,472 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 01:02:36,473 - LoopController - INFO - 💤 Sleeping for 889.3s...
+2025-12-21 01:17:25,813 - LoopController - INFO - 
+⚡ Cycle Start: 01:17:25
+2025-12-21 01:17:34,190 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 01:17:34,191 - LoopController - INFO - 🐋 Global On-Chain: LIGHT_SELL_PRESSURE ($1,134,547)
+2025-12-21 01:17:48,192 - LoopController - INFO - 📢 Reddit Summary: Despite some macroeconomic concerns and scam reports, the overall Reddit sentiment leans bullish, particularly for Bitcoin, fueled by anticipated market surges and increasing grassroots enthusiasm.
+2025-12-21 01:17:48,193 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 01:17:51,825 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 01:17:51,825 - LoopController - INFO - 💤 Sleeping for 874.0s...
+2025-12-21 01:32:25,816 - LoopController - INFO - 
+⚡ Cycle Start: 01:32:25
+2025-12-21 01:32:34,434 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 01:32:34,435 - LoopController - INFO - 🐋 Global On-Chain: MODERATE_SELL_PRESSURE ($8,367,606)
+2025-12-21 01:32:41,999 - LoopController - INFO - 📢 Reddit Summary: The overall market sentiment is a cautious mix, balancing macroeconomic concerns and lingering scam/regulatory issues with strong bullish undertones for Bitcoin and growing institutional interest in the broader Ethereum ecosystem.
+2025-12-21 01:32:42,630 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 01:32:46,249 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 01:32:46,249 - LoopController - INFO - 💤 Sleeping for 879.6s...
+2025-12-21 01:47:25,808 - LoopController - INFO - 
+⚡ Cycle Start: 01:47:25
+2025-12-21 01:47:32,959 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 01:47:32,959 - LoopController - INFO - 🐋 Global On-Chain: LIGHT_SELL_PRESSURE ($1,992,346)
+2025-12-21 01:47:32,960 - LoopController - INFO - 📢 Reddit Summary: The overall market sentiment is a cautious mix, balancing macroeconomic concerns and lingering scam/regulatory issues with strong bullish undertones for Bitcoin and growing institutional interest in the broader Ethereum ecosystem.
+2025-12-21 01:47:32,961 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 01:47:36,557 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 01:47:36,558 - LoopController - INFO - 💤 Sleeping for 889.3s...
+2025-12-21 02:02:25,808 - LoopController - INFO - 
+⚡ Cycle Start: 02:02:25
+2025-12-21 02:02:33,518 - LoopController - INFO - 🌡️ Global Sentiment: F&G=20 (Extreme Fear)
+2025-12-21 02:02:33,518 - LoopController - INFO - 🐋 Global On-Chain: LIGHT_SELL_PRESSURE ($1,236,470)
+2025-12-21 02:02:47,204 - LoopController - INFO - 📢 Reddit Summary: The overall market mood on Reddit is a mix of strong Bitcoin bullish enthusiasm and significant macro-economic caution, alongside concerns about scams.
+2025-12-21 02:02:47,204 - LoopController - INFO - 📥 Collecting snapshots for 5 symbols...
+2025-12-21 02:02:51,245 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-21 02:02:51,245 - LoopController - INFO - 💤 Sleeping for 874.6s...

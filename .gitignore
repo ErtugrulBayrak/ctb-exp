@@ -26,8 +26,8 @@ wheels/
 *.egg
 
 # Logs
-# logs/
-# *.log
+ logs/
+ *.log
 
 # Virtual Environment
 venv/
@@ -44,3 +44,4 @@ env/
 portfolio.json
 islenmis_haberler.txt
 trade_decisions_log.json
+trade_log.json

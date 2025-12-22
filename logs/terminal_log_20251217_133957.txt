@@ -1,0 +1,73 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[13:40:08] • News LLM analysis is ENABLED
+[13:40:08] • [GLOBAL RISK] Daily Loss Limit = 8.0%
+[13:40:08] • [GLOBAL RISK] Max Open Positions = 5
+[13:40:08] • [GLOBAL RISK] Max Consecutive Losses = 5
+[13:40:08] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[13:40:09] ✓ ExchangeRouter başlatıldı
+[13:40:09] ✓ MarketDataEngine başlatıldı
+[13:40:09] ✓ StrategyEngine başlatıldı (LLM=True)
+[13:40:09] ✓ OrderExecutor başlatıldı (dry_run=True)
+[13:40:09] ✓ RiskManager başlatıldı
+[13:40:09] • Portföy dosyası bulunamadı, yeni oluşturuluyor...
+[13:40:09] ✓ ExecutionManager başlatıldı
+[13:40:09] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[13:40:09] ✓ Bakiye: $1000.00
+[13:40:09] • Açık Pozisyon: 0
+[13:40:09] • Toplam İşlem: 0 | Win Rate: 0.0%
+[13:40:09] → Toplam PnL: $0.00
+2025-12-17 13:40:09,504 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 13:40:09,504 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 13:40:09,505 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-17 13:40:09,505 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-17 13:40:09,506 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-17 13:40:09,506 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-17 13:40:09,507 - LoopController - INFO - Max Open Positions: 5
+2025-12-17 13:40:09,507 - LoopController - INFO - Max Open Positions: 5
+2025-12-17 13:40:09,508 - LoopController - INFO - Max Loss Streak: 5
+2025-12-17 13:40:09,508 - LoopController - INFO - Max Loss Streak: 5
+2025-12-17 13:40:09,509 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-17 13:40:09,509 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-17 13:40:09,510 - LoopController - INFO - ════════════════════════════════════════
+2025-12-17 13:40:09,510 - LoopController - INFO - ════════════════════════════════════════
+[13:40:09] ⚠ Başlangıç bildirimi gönderilemedi: 'Settings' object has no attribute 'LOOP_SECONDS'
+2025-12-17 13:40:09,511 - LoopController - INFO - LoopController.run() started.
+2025-12-17 13:40:09,511 - LoopController - INFO - LoopController.run() started.
+2025-12-17 13:40:09,512 - LoopController - INFO - 
+⚡ Cycle Start: 13:40:09
+2025-12-17 13:40:09,512 - LoopController - INFO - 
+⚡ Cycle Start: 13:40:09
+2025-12-17 13:40:10,697 - praw - WARNING - It appears that you are using PRAW in an asynchronous environment.
+It is strongly recommended to use Async PRAW: https://asyncpraw.readthedocs.io.
+See https://praw.readthedocs.io/en/latest/getting_started/multiple_instances.html#discord-bots-and-asynchronous-environments for more info.
+
+2025-12-17 13:40:12,380 - praw - WARNING - It appears that you are using PRAW in an asynchronous environment.
+It is strongly recommended to use Async PRAW: https://asyncpraw.readthedocs.io.
+See https://praw.readthedocs.io/en/latest/getting_started/multiple_instances.html#discord-bots-and-asynchronous-environments for more info.
+
+2025-12-17 13:40:13,324 - praw - WARNING - It appears that you are using PRAW in an asynchronous environment.
+It is strongly recommended to use Async PRAW: https://asyncpraw.readthedocs.io.
+See https://praw.readthedocs.io/en/latest/getting_started/multiple_instances.html#discord-bots-and-asynchronous-environments for more info.
+
+2025-12-17 13:40:29,987 - LoopController - INFO - 🌡️ Global Sentiment: F&G=16 (Extreme Fear)
+2025-12-17 13:40:29,987 - LoopController - INFO - 🌡️ Global Sentiment: F&G=16 (Extreme Fear)
+2025-12-17 13:40:29,988 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-17 13:40:29,988 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-17 13:40:42,863 - LoopController - INFO - 🐕 Watchdog task stopped.
+2025-12-17 13:40:42,863 - LoopController - INFO - 🐕 Watchdog task stopped.
+
+Program sonlandırıldı.

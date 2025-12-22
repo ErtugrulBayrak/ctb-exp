@@ -1,0 +1,58 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[23:42:36] • News LLM analysis is ENABLED
+[23:42:36] • [GLOBAL RISK] Daily Loss Limit = 8.0%
+[23:42:36] • [GLOBAL RISK] Max Open Positions = 5
+[23:42:36] • [GLOBAL RISK] Max Consecutive Losses = 5
+[23:42:36] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[23:42:36] ✓ ExchangeRouter başlatıldı
+[23:42:36] ✓ MarketDataEngine başlatıldı
+[23:42:36] ✓ StrategyEngine başlatıldı (LLM=False)
+[23:42:36] ✓ OrderExecutor başlatıldı (dry_run=True)
+[23:42:36] ✓ RiskManager başlatıldı
+[23:42:36] ✓ ExecutionManager başlatıldı
+[23:42:36] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[23:42:36] ✓ Bakiye: $1000.00
+[23:42:36] • Açık Pozisyon: 0
+[23:42:36] • Toplam İşlem: 0 | Win Rate: 0.0%
+[23:42:36] → Toplam PnL: $0.00
+2025-12-18 23:42:36,694 - LoopController - INFO - ✅ V1 Strategy components initialized
+2025-12-18 23:42:36,695 - LoopController - INFO - ════════════════════════════════════════
+2025-12-18 23:42:36,695 - LoopController - INFO - 🚀 LOOP CONTROLLER STARTUP
+2025-12-18 23:42:36,695 - LoopController - INFO - Strategy Mode: REGIME_SWING_TREND_V1
+2025-12-18 23:42:36,695 - LoopController - INFO - Daily Loss Limit: 8.0%
+2025-12-18 23:42:36,696 - LoopController - INFO - Max Open Positions: 5
+2025-12-18 23:42:36,696 - LoopController - INFO - Max Loss Streak: 5
+2025-12-18 23:42:36,696 - LoopController - INFO - Cooldown Minutes: 60
+2025-12-18 23:42:36,696 - LoopController - INFO - V1 Risk Per Trade: 1.0%
+2025-12-18 23:42:36,697 - LoopController - INFO - V1 Partial TP: True
+2025-12-18 23:42:36,697 - LoopController - INFO - V1 Trailing: True
+2025-12-18 23:42:36,697 - LoopController - INFO - ════════════════════════════════════════
+2025-12-18 23:42:38,465 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8420610160:AAH0AsElcbB7DH66BmzRP_hg1z1b0Uz8z_o/sendMessage "HTTP/1.1 200 OK"
+[23:42:38]   ✓ Telegram bildirimi gönderildi
+[23:42:38] ✓ Sistem başlangıç bildirimi gönderildi
+2025-12-18 23:42:38,468 - LoopController - INFO - LoopController.run() started.
+2025-12-18 23:42:38,468 - LoopController - INFO - 
+⚡ Cycle Start: 23:42:38
+2025-12-18 23:42:48,532 - LoopController - INFO - 🌡️ Global Sentiment: F&G=17 (Extreme Fear)
+2025-12-18 23:42:48,533 - LoopController - INFO - 🐋 Global On-Chain: NEUTRAL ($0)
+2025-12-18 23:43:05,081 - LoopController - INFO - 📢 Reddit Summary: Overall market sentiment is cautiously optimistic, marked by reports of real-world profit-taking, increasing utility adoption (crypto-backed loans), and significant institutional interest (Bitcoin ETFs), though tempered by ongoing concerns about major hacks and the lingering shadow of past industry scandals.
+2025-12-18 23:44:10,618 - LoopController - INFO - 📰 Analyzed 10 new articles
+2025-12-18 23:44:10,619 - LoopController - INFO - 📥 Collecting snapshots for 7 symbols...
+2025-12-18 23:44:15,367 - LoopController - INFO - 💰 Balance: $1000 | Open: 0
+2025-12-18 23:44:15,368 - LoopController - INFO - 💤 Sleeping for 803.1s...
+2025-12-18 23:45:39,062 - LoopController - INFO - LoopController cancelled.
+2025-12-18 23:45:39,064 - LoopController - INFO - 🐕 Watchdog task stopped.

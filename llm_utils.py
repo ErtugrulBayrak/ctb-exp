@@ -271,6 +271,65 @@ Original request:
 
 Output ONLY the JSON:"""
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# RISK VETO VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def evaluate_risk_veto(text_bundle: str) -> Dict[str, Any]:
+    """
+    Parse and validate risk veto LLM response.
+    
+    Expected schema:
+    {"veto": bool, "confidence": int(0-100), "reason": str, "tags": [str]}
+    
+    Args:
+        text_bundle: Raw LLM response text
+        
+    Returns:
+        Dict with keys: veto, confidence, reason, tags
+        Parse fail → veto=False (safe fallback)
+    """
+    # Safe fallback result
+    fallback = {
+        "veto": False,
+        "confidence": 0,
+        "reason": "PARSE_FAIL",
+        "tags": ["error"]
+    }
+    
+    if not text_bundle:
+        return {**fallback, "reason": "EMPTY_INPUT"}
+    
+    # Parse JSON
+    parsed, error = safe_json_loads(text_bundle)
+    
+    if error or not parsed:
+        return {**fallback, "reason": f"JSON_ERROR: {error}"}
+    
+    if not isinstance(parsed, dict):
+        return {**fallback, "reason": "NOT_DICT"}
+    
+    # Extract and validate fields
+    try:
+        veto = bool(parsed.get("veto", False))
+        confidence = max(0, min(100, int(parsed.get("confidence", 0))))
+        reason = str(parsed.get("reason", ""))[:100]
+        
+        tags = parsed.get("tags", [])
+        if not isinstance(tags, list):
+            tags = []
+        tags = [str(t)[:20] for t in tags[:5]]
+        
+        return {
+            "veto": veto,
+            "confidence": confidence,
+            "reason": reason,
+            "tags": tags
+        }
+        
+    except Exception as e:
+        return {**fallback, "reason": f"VALIDATION_ERROR: {str(e)[:50]}"}
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TEST / DEMO

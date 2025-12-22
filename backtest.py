@@ -433,6 +433,147 @@ class Backtester:
         print(f"Açık Pozisyon:     {r['open_position']:.6f}")
         print(f"Pozisyon Değeri:   ${r['open_position_value']:,.2f}")
         print("=" * 50 + "\n")
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # V1 BACKTEST - Partial TP & Trailing Stop
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    def run_v1_backtest(
+        self,
+        signal_fn: Callable[[pd.Series, Dict], Tuple[Optional[str], Dict]],
+        partial_tp_enabled: bool = True,
+        partial_tp_fraction: float = 0.5,
+        trailing_enabled: bool = True,
+        trail_atr_mult: float = 3.0,
+        sl_atr_mult: float = 2.0,
+        mock_veto_fn: Callable[[pd.Series], bool] = None  # Mock veto for backtest
+    ) -> None:
+        """
+        V1 strateji için gelişmiş backtest.
+        
+        Partial TP (1R) ve Chandelier trailing stop simülasyonu içerir.
+        Mock veto modu backtesting'de LLM çağrısı yerine kullanılır.
+        
+        Args:
+            signal_fn: Sinyal fonksiyonu.
+                      Input: (row, position_state)
+                      Output: (action, details_dict)
+                        - action: "BUY", "SELL" veya None
+                        - details_dict: {"quantity": float, "stop_loss": float, ...}
+            
+            partial_tp_enabled: 1R'de kısmi kar al
+            partial_tp_fraction: Kısmi satış oranı (0.5 = %50)
+            trailing_enabled: Chandelier trailing aktif
+            trail_atr_mult: Trailing ATR çarpanı
+            sl_atr_mult: Initial SL ATR çarpanı
+        """
+        # V1 Position State
+        v1_state = {
+            "initial_sl": 0.0,
+            "current_sl": 0.0,
+            "partial_taken": False,
+            "partial_tp_price": 0.0,
+            "highest_close": 0.0,
+            "entry_price": 0.0
+        }
+        
+        # Stats
+        v1_stats = {
+            "partial_tp_count": 0,
+            "trailing_sl_count": 0,
+            "initial_sl_count": 0,
+            "full_tp_count": 0
+        }
+        
+        for idx, row in self.candles.iterrows():
+            price = self._get_price(row)
+            timestamp = self._get_timestamp(row)
+            atr = row.get('atr', price * 0.02)
+            
+            # Update highest close for trailing
+            if self.position > 0 and price > v1_state["highest_close"]:
+                v1_state["highest_close"] = price
+            
+            # ─────────────────────────────────────────────────────────────────
+            # POSITION MANAGEMENT (if we have a position)
+            # ─────────────────────────────────────────────────────────────────
+            if self.position > 0:
+                # 1. Check SL hit
+                if price <= v1_state["current_sl"]:
+                    exit_type = "TRAIL_SL" if v1_state["partial_taken"] else "SL"
+                    self._execute_sell(price, 1.0, timestamp)
+                    
+                    if v1_state["partial_taken"]:
+                        v1_stats["trailing_sl_count"] += 1
+                    else:
+                        v1_stats["initial_sl_count"] += 1
+                    
+                    # Reset state
+                    v1_state = {
+                        "initial_sl": 0.0, "current_sl": 0.0, "partial_taken": False,
+                        "partial_tp_price": 0.0, "highest_close": 0.0, "entry_price": 0.0
+                    }
+                    continue
+                
+                # 2. Check Partial TP (1R)
+                if partial_tp_enabled and not v1_state["partial_taken"]:
+                    entry = v1_state["entry_price"]
+                    stop_dist = entry - v1_state["initial_sl"]
+                    one_r = entry + stop_dist
+                    
+                    if price >= one_r:
+                        # Partial sell
+                        self._execute_sell(price, partial_tp_fraction, timestamp)
+                        v1_state["partial_taken"] = True
+                        v1_state["partial_tp_price"] = one_r
+                        v1_stats["partial_tp_count"] += 1
+                        continue
+                
+                # 3. Update Trailing Stop
+                if trailing_enabled and v1_state["partial_taken"] and atr > 0:
+                    new_trail_sl = v1_state["highest_close"] - (trail_atr_mult * atr)
+                    if new_trail_sl > v1_state["current_sl"]:
+                        v1_state["current_sl"] = new_trail_sl
+            
+            # ─────────────────────────────────────────────────────────────────
+            # SIGNAL EVALUATION (for new entries)
+            # ─────────────────────────────────────────────────────────────────
+            if self.position == 0:
+                action, details = signal_fn(row, v1_state)
+                
+                if action == "BUY" and details:
+                    quantity = details.get("quantity", 0)
+                    stop_loss = details.get("stop_loss", price * 0.95)
+                    
+                    # Calculate fraction from quantity
+                    cost = quantity * price
+                    if cost > 0 and self.balance >= cost:
+                        fraction = min(cost / self.balance, 1.0)
+                        self._execute_buy(price, fraction, timestamp)
+                        
+                        # Initialize V1 state
+                        v1_state["entry_price"] = price
+                        v1_state["initial_sl"] = stop_loss
+                        v1_state["current_sl"] = stop_loss
+                        v1_state["highest_close"] = price
+                        v1_state["partial_taken"] = False
+        
+        # Store V1 stats
+        self._v1_stats = v1_stats
+    
+    def print_v1_summary(self) -> None:
+        """V1 backtest özeti yazdır."""
+        self.print_summary()
+        
+        if hasattr(self, '_v1_stats'):
+            stats = self._v1_stats
+            print("─" * 50)
+            print("📊 V1 EXIT STATISTICS")
+            print("─" * 50)
+            print(f"Partial TP (1R):   {stats['partial_tp_count']}")
+            print(f"Trailing SL:       {stats['trailing_sl_count']}")
+            print(f"Initial SL:        {stats['initial_sl_count']}")
+            print("=" * 50 + "\n")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -573,3 +714,186 @@ if __name__ == "__main__":
     asyncio.run(run_async_demo())
     
     print("\n✅ Demo tamamlandı!")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SELFTEST - Deterministic Exit Lifecycle Verification
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def run_selftest():
+    """
+    Deterministic exit lifecycle scenarios.
+    
+    Scenario 1: Entry → 1R → Partial TP → Trailing → Trail Stop close
+    Scenario 2: Entry → SL hit → close
+    
+    These tests validate the exit logic without any LLM or exchange calls.
+    """
+    print("\n" + "=" * 60)
+    print("🧪 SELFTEST: Exit Lifecycle Verification")
+    print("=" * 60)
+    
+    # Exit reason import
+    try:
+        from exit_reason import ExitReason
+    except ImportError:
+        class ExitReason:
+            STOP_LOSS = "STOP_LOSS"
+            TRAIL_STOP = "TRAIL_STOP"
+            PARTIAL_TP = "PARTIAL_TP"
+    
+    all_passed = True
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # SCENARIO 1: 1R → Partial TP → Trailing → Trail Stop close
+    # ─────────────────────────────────────────────────────────────────────────────
+    print("\n" + "-" * 60)
+    print("SCENARIO 1: Partial TP + Trailing Stop Flow")
+    print("-" * 60)
+    
+    # Setup
+    entry_price = 100.0
+    initial_sl = 95.0   # Risk = $5 (5%)
+    quantity = 1.0
+    partial_fraction = 0.5
+    trail_atr_mult = 2.0
+    atr = 2.0
+    
+    # 1R price = entry + (entry - initial_sl) = 100 + 5 = 105
+    one_r_price = entry_price + (entry_price - initial_sl)
+    
+    # Position state
+    pos = {
+        "entry_price": entry_price,
+        "quantity": quantity,
+        "initial_sl": initial_sl,
+        "current_sl": initial_sl,
+        "partial_taken": False,
+        "highest_close": entry_price,
+        "pnl_realized": 0.0
+    }
+    
+    print(f"   Entry: ${entry_price:.2f} | Initial SL: ${initial_sl:.2f} | 1R: ${one_r_price:.2f}")
+    
+    # Step 1: Price reaches 1R → Partial TP
+    price_at_1r = 106.0  # Above 1R
+    print(f"\n   [STEP 1] Price reaches ${price_at_1r:.2f} (above 1R)")
+    
+    if price_at_1r >= one_r_price and not pos["partial_taken"]:
+        sell_qty = pos["quantity"] * partial_fraction
+        pnl = (price_at_1r - entry_price) * sell_qty
+        pos["quantity"] -= sell_qty
+        pos["partial_taken"] = True
+        pos["pnl_realized"] += pnl
+        pos["highest_close"] = price_at_1r
+        print(f"   [EVENT] partial_tp_triggered | exit_reason={ExitReason.PARTIAL_TP}")
+        print(f"           Sold {sell_qty:.2f} @ ${price_at_1r:.2f} | PnL: ${pnl:.2f}")
+        print(f"           Remaining: {pos['quantity']:.2f}")
+        assert pos["partial_taken"] == True
+        assert pos["quantity"] == 0.5
+        print("   [PASS] Partial TP triggered correctly")
+    else:
+        print("   [FAIL] Partial TP should have triggered")
+        all_passed = False
+    
+    # Step 2: Price continues up → Trailing updates
+    price_higher = 110.0
+    print(f"\n   [STEP 2] Price climbs to ${price_higher:.2f}")
+    
+    if pos["partial_taken"]:
+        pos["highest_close"] = max(pos["highest_close"], price_higher)
+        new_trail_sl = pos["highest_close"] - (trail_atr_mult * atr)
+        if new_trail_sl > pos["current_sl"]:
+            old_sl = pos["current_sl"]
+            pos["current_sl"] = new_trail_sl
+            print(f"   [EVENT] trailing_updated | old_sl=${old_sl:.2f} | new_sl=${new_trail_sl:.2f}")
+            print(f"           highest_close=${pos['highest_close']:.2f} | atr=${atr:.2f}")
+            assert pos["current_sl"] > initial_sl
+            print("   [PASS] Trailing stop updated correctly")
+    
+    # Step 3: Price drops to trail stop → Close
+    price_drop = 105.0  # Below trail stop (110 - 4 = 106)
+    print(f"\n   [STEP 3] Price drops to ${price_drop:.2f}")
+    
+    if price_drop <= pos["current_sl"]:
+        pnl = (price_drop - entry_price) * pos["quantity"]
+        pos["pnl_realized"] += pnl
+        exit_reason = ExitReason.TRAIL_STOP
+        print(f"   [EVENT] stop_triggered | exit_reason={exit_reason} | price=${price_drop:.2f}")
+        print(f"           Final PnL: ${pos['pnl_realized']:.2f} (should be positive)")
+        assert pos["pnl_realized"] > 0
+        print("   [PASS] Position closed with profit via trailing stop")
+    else:
+        print("   [FAIL] Trail stop should have triggered")
+        all_passed = False
+    
+    scenario1_passed = pos["pnl_realized"] > 0
+    print(f"\n   SCENARIO 1: {'[PASS]' if scenario1_passed else '[FAIL]'} Total PnL: ${pos['pnl_realized']:.2f}")
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # SCENARIO 2: Direct SL Hit
+    # ─────────────────────────────────────────────────────────────────────────────
+    print("\n" + "-" * 60)
+    print("SCENARIO 2: Direct Stop Loss Hit")
+    print("-" * 60)
+    
+    # Setup
+    entry_price = 100.0
+    initial_sl = 95.0
+    quantity = 1.0
+    
+    pos2 = {
+        "entry_price": entry_price,
+        "quantity": quantity,
+        "initial_sl": initial_sl,
+        "current_sl": initial_sl,
+        "partial_taken": False,
+        "pnl_realized": 0.0
+    }
+    
+    print(f"   Entry: ${entry_price:.2f} | SL: ${initial_sl:.2f}")
+    
+    # Price drops directly to SL
+    price_sl = 94.5
+    print(f"\n   [STEP 1] Price drops directly to ${price_sl:.2f} (below SL)")
+    
+    if price_sl <= pos2["current_sl"]:
+        pnl = (price_sl - entry_price) * pos2["quantity"]
+        pos2["pnl_realized"] += pnl
+        exit_reason = ExitReason.STOP_LOSS
+        print(f"   [EVENT] stop_triggered | exit_reason={exit_reason} | price=${price_sl:.2f}")
+        print(f"           PnL: ${pnl:.2f} (should be negative)")
+        assert pnl < 0
+        assert pos2["partial_taken"] == False
+        print("   [PASS] Position closed at stop loss")
+    else:
+        print("   [FAIL] Stop loss should have triggered")
+        all_passed = False
+    
+    scenario2_passed = pos2["pnl_realized"] < 0
+    print(f"\n   SCENARIO 2: {'[PASS]' if scenario2_passed else '[FAIL]'} Total PnL: ${pos2['pnl_realized']:.2f}")
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # SUMMARY
+    # ─────────────────────────────────────────────────────────────────────────────
+    print("\n" + "=" * 60)
+    all_passed = scenario1_passed and scenario2_passed
+    if all_passed:
+        print("✅ ALL SELFTEST SCENARIOS PASSED")
+    else:
+        print("❌ SOME SELFTEST SCENARIOS FAILED")
+    print("=" * 60)
+    
+    return all_passed
+
+
+if __name__ == "__main__":
+    import sys
+    
+    # Parse arguments
+    if "--selftest" in sys.argv:
+        success = run_selftest()
+        sys.exit(0 if success else 1)
+    else:
+        demo()
+

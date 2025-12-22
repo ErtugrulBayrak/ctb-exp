@@ -1,0 +1,32 @@
+============================================================
+🟢 PAPER TRADING MODU (Simülasyon)
+============================================================
+💰 Sanal bakiye ile güvenli simülasyon yapılıyor.
+📊 Gerçek piyasa verisi kullanılıyor, işlemler sanal.
+============================================================
+[00:45:23] • News LLM analysis is ENABLED
+[00:45:23] • [GLOBAL RISK] Daily Loss Limit = 6.0%
+[00:45:23] • [GLOBAL RISK] Max Open Positions = 6
+[00:45:23] • [GLOBAL RISK] Max Consecutive Losses = 5
+[00:45:23] • [GLOBAL RISK] Cooldown = 60 minutes
+✅ Binance API bağlantısı başarılı.
+
+──────────────────────────────────────────────────
+🔧 MODÜLER MIMARI BAŞLATILIYOR
+──────────────────────────────────────────────────
+[00:45:23] ✓ ExchangeRouter başlatıldı
+[00:45:23] ✓ MarketDataEngine başlatıldı
+[00:45:23] ✓ StrategyEngine başlatıldı
+[00:45:23] ✓ OrderExecutor başlatıldı (dry_run=True)
+[00:45:23] ✓ ExecutionManager başlatıldı
+[00:45:23] ✓ PositionManager başlatıldı
+
+──────────────────────────────────────────────────
+💰 PAPER TRADING PORTFÖYÜ YÜKLENDI
+──────────────────────────────────────────────────
+[00:45:23] ✓ Bakiye: $1000.00
+[00:45:23] • Açık Pozisyon: 0
+[00:45:23] • Toplam İşlem: 0 | Win Rate: 0.0%
+[00:45:23] → Toplam PnL: $0.00
+
+❌ KRİTİK HATA: LoopController.__init__() got an unexpected keyword argument 'binance_client'
