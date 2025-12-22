@@ -24,6 +24,7 @@ pandas-ta-classic @ git+https://github.com/xgboosted/pandas-ta-classic.git
 feedparser>=6.0.0
 newspaper3k>=0.2.8
 lxml>=4.9.0
+lxml_html_clean>=0.1.0
 
 # Reddit API (Async)
 asyncpraw>=7.7.0
