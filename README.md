@@ -1,5 +1,4 @@
-# NewsToMe - AI-Powered Crypto Trading Bot
-logs/terminal_log_YYYYMMDD_HHMMSS.txt
+# CTB-EXP - AI-Powered Crypto Trading Bot
 
 Hybrid algorithmic trading bot that combines AI analysis, technical indicators, on-chain data, and sentiment analysis for cryptocurrency trading decisions.
 
@@ -36,7 +35,7 @@ cp .env.example .env
 
 ### 4. Run in Simulation Mode (Recommended)
 ```bash
-python scraper-v90.py
+python main.py
 ```
 This runs in **paper trading mode** with a virtual $1,000 balance.
 
@@ -47,7 +46,7 @@ LIVE_TRADING=1
 ALLOW_DANGEROUS_ACTIONS=1
 ```
 ```bash
-python scraper-v90.py
+python main.py
 ```
 
 ## ⚠️ Important Warnings
@@ -64,15 +63,43 @@ python scraper-v90.py
 ## 📁 Project Structure
 
 ```
-├── scraper-v90.py      # Main trading bot
-├── config.py           # Configuration management
-├── order_executor.py   # Order execution (live/dry run)
-├── trade_logger.py     # Centralized logging
-├── backtest.py         # Backtesting framework
-├── .env                # Environment variables (DO NOT COMMIT)
-├── requirements.txt    # Python dependencies
-└── logs/
-    └── trader.log      # Rotating log file
+├── main.py                 # Entry point - bot initialization
+├── config.py               # Configuration & settings management
+├── loop_controller.py      # Main trading loop orchestration
+├── market_data_engine.py   # Market data fetching & aggregation
+├── strategy_engine.py      # AI-powered trading decision engine
+├── execution_manager.py    # Trade execution flow management
+├── position_manager.py     # Open positions & portfolio tracking
+├── risk_manager.py         # Risk controls & kill switches
+├── order_executor.py       # Order execution (live/paper)
+├── order_ledger.py         # Order history tracking
+├── alert_manager.py        # Telegram alert system
+├── summary_reporter.py     # Performance reporting
+├── trade_logger.py         # Centralized logging
+├── llm_utils.py            # LLM response parsing utilities
+├── metrics.py              # Performance metrics tracking
+├── backtest.py             # Backtesting framework
+├── exchange_router.py      # Exchange API routing
+├── exit_reason.py          # Exit reason definitions
+│
+├── strategies/             # Trading strategies
+│   ├── swing_trend_v1.py   # Main swing trading strategy
+│   ├── regime_filter.py    # Market regime detection
+│   └── news_veto.py        # News-based trade veto system
+│
+├── utils/                  # Utility modules
+│   └── io.py               # Safe I/O operations
+│
+├── data/                   # Runtime data files
+│   └── summary_state.json  # Bot state persistence
+│
+├── logs/                   # Log files
+│   └── trader.log          # Rotating log file
+│
+├── .env                    # Environment variables (DO NOT COMMIT)
+├── .env.example            # Example environment file
+├── portfolio.json          # Virtual portfolio state
+└── requirements.txt        # Python dependencies
 ```
 
 ## 🔧 Configuration
@@ -101,11 +128,22 @@ AI_SELL_CONFIDENCE_THRESHOLD=70
 
 - **AI-Powered Decisions**: Google Gemini analyzes market conditions
 - **Multi-Source Data**: Technical analysis, on-chain data, news, Reddit sentiment
-- **Risk Management**: Automatic SL/TP, position sizing, trend filters
-- **Profit Protection**: Prevents AI from selling profitable positions prematurely
-- **Telegram Alerts**: Real-time notifications for trades
+- **Risk Management**: Automatic SL/TP, position sizing, daily loss limits
+- **Alert System**: Real-time Telegram notifications for critical events
+- **Regime Detection**: ADX-based market regime filtering
+- **News Veto**: LLM-powered news analysis to block risky trades
 - **Paper Trading**: Test strategies without real money
 - **Backtesting**: Historical strategy validation
+
+## 🧪 Testing
+
+```bash
+# Run backtests
+python backtest.py
+
+# Run debug suite
+python debug_suite.py
+```
 
 ## 📝 License
 MIT License - Use at your own risk.
