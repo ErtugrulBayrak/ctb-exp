@@ -50,9 +50,9 @@ except ImportError:
     logger.setLevel(logging.INFO)
     # Handler ekleme main.py tarafından yapılır - duplikasyonu önle
 
-# pandas_ta import
+# pandas_ta_classic import (fork of pandas_ta with better compatibility)
 try:
-    import pandas_ta as ta
+    import pandas_ta_classic as ta
     PANDAS_TA_AVAILABLE = True
 except ImportError:
     PANDAS_TA_AVAILABLE = False
