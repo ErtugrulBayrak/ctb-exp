@@ -206,6 +206,193 @@ class MarketDataEngine:
             "article_failures": 0,
             "article_latency_ema_ms": 0.0,
         }
+        
+        # V1 Multi-Timeframe Cache (symbol -> {1h: data, 15m: data})
+        self._v1_tf_cache: Dict[str, CachedData] = {}
+        self._v1_tf_ttl = 300  # 5 minutes
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # V1 MULTI-TIMEFRAME INDICATORS
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    async def get_v1_timeframe_data(self, symbol: str) -> Dict[str, Any]:
+        """
+        V1 strateji için çoklu zaman dilimi göstergeleri hesapla.
+        
+        1h Timeframe:
+        - EMA20, EMA50, EMA50_prev (slope için)
+        - ADX, ATR
+        
+        15m Timeframe:
+        - Close, HighestHigh(20), HighestClose(20)
+        - ATR (trailing için)
+        
+        Args:
+            symbol: Coin sembolü
+        
+        Returns:
+            {"1h": {...}, "15m": {...}}
+        """
+        if self.offline_mode:
+            return self._get_v1_offline_data()
+        
+        symbol = symbol.upper().replace("USDT", "")
+        cache_key = symbol
+        
+        # Check cache
+        with self._cache_lock:
+            if cache_key in self._v1_tf_cache:
+                cached = self._v1_tf_cache[cache_key].get()
+                if cached is not None:
+                    return cached
+        
+        result = {"1h": {}, "15m": {}}
+        
+        try:
+            # Fetch 1h candles
+            df_1h = await self._fetch_candles(symbol, interval="1h")
+            if df_1h is not None and len(df_1h) >= 50:
+                result["1h"] = self._compute_v1_1h_indicators(df_1h)
+            
+            # Fetch 15m candles
+            df_15m = await self._fetch_candles(symbol, interval="15m")
+            if df_15m is not None and len(df_15m) >= 20:
+                result["15m"] = self._compute_v1_15m_indicators(df_15m)
+            
+        except Exception as e:
+            logger.warning(f"[V1 TF] Error fetching timeframe data for {symbol}: {e}")
+        
+        # Update cache
+        with self._cache_lock:
+            if cache_key not in self._v1_tf_cache:
+                self._v1_tf_cache[cache_key] = CachedData(ttl_seconds=self._v1_tf_ttl)
+            self._v1_tf_cache[cache_key].set(result)
+        
+        return result
+    
+    def _compute_v1_1h_indicators(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """1h timeframe için V1 göstergelerini hesapla."""
+        result = {}
+        
+        if not PANDAS_TA_AVAILABLE or df is None or df.empty:
+            return result
+        
+        try:
+            # EMA20, EMA50
+            ema20 = df.ta.ema(length=20)
+            ema50 = df.ta.ema(length=50)
+            
+            if ema20 is not None and not ema20.empty:
+                result["ema20"] = float(ema20.iloc[-1]) if not pd.isna(ema20.iloc[-1]) else None
+            
+            if ema50 is not None and not ema50.empty:
+                result["ema50"] = float(ema50.iloc[-1]) if not pd.isna(ema50.iloc[-1]) else None
+                # EMA50 prev (5 bars ago for slope)
+                if len(ema50) > 5:
+                    result["ema50_prev"] = float(ema50.iloc[-6]) if not pd.isna(ema50.iloc[-6]) else None
+            
+            # ADX
+            adx_df = df.ta.adx(length=14)
+            if adx_df is not None and not adx_df.empty:
+                result["adx"] = float(adx_df.iloc[-1, 0]) if not pd.isna(adx_df.iloc[-1, 0]) else None
+            
+            # ATR
+            atr = df.ta.atr(length=14)
+            if atr is not None and not atr.empty:
+                result["atr"] = float(atr.iloc[-1]) if not pd.isna(atr.iloc[-1]) else None
+            
+            # Close price
+            result["close"] = float(df["close"].iloc[-1])
+            
+            # Last closed bar timestamp (for deterministic signal_id)
+            if "open_time" in df.columns:
+                # Use second to last bar (the last fully closed bar)
+                if len(df) >= 2:
+                    result["last_closed_ts"] = int(df["open_time"].iloc[-2])
+                else:
+                    result["last_closed_ts"] = int(df["open_time"].iloc[-1])
+            elif df.index.name == "timestamp" or hasattr(df.index, 'timestamp'):
+                if len(df) >= 2:
+                    result["last_closed_ts"] = int(df.index[-2].timestamp() * 1000) if hasattr(df.index[-2], 'timestamp') else 0
+                else:
+                    result["last_closed_ts"] = 0
+            else:
+                result["last_closed_ts"] = 0
+            
+        except Exception as e:
+            logger.warning(f"[V1 1h] Indicator error: {e}")
+        
+        return result
+    
+    def _compute_v1_15m_indicators(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """15m timeframe için V1 göstergelerini hesapla."""
+        result = {}
+        
+        if df is None or df.empty:
+            return result
+        
+        try:
+            lookback = 20
+            
+            # Son close
+            result["close"] = float(df["close"].iloc[-1])
+            
+            # HighestHigh (son 20 bar)
+            if len(df) >= lookback:
+                result["highest_high"] = float(df["high"].tail(lookback).max())
+                result["highest_close"] = float(df["close"].tail(lookback).max())
+            
+            # Trailing için HighestClose (22 bar)
+            trail_lookback = 22
+            if len(df) >= trail_lookback:
+                result["highest_close_trail"] = float(df["close"].tail(trail_lookback).max())
+            
+            # ATR for trailing
+            if PANDAS_TA_AVAILABLE:
+                atr = df.ta.atr(length=14)
+                if atr is not None and not atr.empty:
+                    result["atr"] = float(atr.iloc[-1]) if not pd.isna(atr.iloc[-1]) else None
+            
+            # Last closed bar timestamp (for deterministic signal_id)
+            if "open_time" in df.columns:
+                # Use second to last bar (the last fully closed bar)
+                if len(df) >= 2:
+                    result["last_closed_ts"] = int(df["open_time"].iloc[-2])
+                else:
+                    result["last_closed_ts"] = int(df["open_time"].iloc[-1])
+            elif df.index.name == "timestamp" or hasattr(df.index, 'timestamp'):
+                if len(df) >= 2:
+                    result["last_closed_ts"] = int(df.index[-2].timestamp() * 1000) if hasattr(df.index[-2], 'timestamp') else 0
+                else:
+                    result["last_closed_ts"] = 0
+            else:
+                result["last_closed_ts"] = 0
+            
+        except Exception as e:
+            logger.warning(f"[V1 15m] Indicator error: {e}")
+        
+        return result
+    
+    def _get_v1_offline_data(self) -> Dict[str, Any]:
+        """Offline mod için V1 veri yapısı."""
+        row = self.offline_row
+        return {
+            "1h": {
+                "ema20": row.get("ema20"),
+                "ema50": row.get("ema50") or row.get("ema_50"),
+                "ema50_prev": row.get("ema50_prev"),
+                "adx": row.get("adx"),
+                "atr": row.get("atr"),
+                "close": row.get("close")
+            },
+            "15m": {
+                "close": row.get("close"),
+                "highest_high": row.get("highest_high"),
+                "highest_close": row.get("highest_close"),
+                "highest_close_trail": row.get("highest_close_trail"),
+                "atr": row.get("atr")
+            }
+        }
     
     def get_llm_metrics(self) -> Dict[str, Any]:
         """LLM metriklerini döndür."""

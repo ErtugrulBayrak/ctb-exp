@@ -18,6 +18,14 @@ import asyncio
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime
 
+# Production-grade imports
+try:
+    from order_ledger import get_ledger
+    from metrics import increment as metrics_increment
+except ImportError:
+    get_ledger = None
+    metrics_increment = lambda *a, **k: None
+
 # Config import
 try:
     from config import SETTINGS
@@ -180,7 +188,8 @@ class ExecutionManager:
         self,
         position_id: str,
         exit_price: float,
-        reason: str = "Manuel"
+        reason: str = "Manuel",
+        partial_qty: float = None
     ) -> Tuple[bool, float, Optional[Dict]]:
         """
         Pozisyonu kapatır, bakiyeyi günceller ve geçmişe ekler.
@@ -188,7 +197,8 @@ class ExecutionManager:
         Args:
             position_id: Pozisyon ID
             exit_price: Çıkış fiyatı
-            reason: "SL", "TP", "AI-SELL", "Manuel"
+            reason: "SL", "TP", "AI-SELL", "PARTIAL_TP", "TRAIL_SL", "Manuel"
+            partial_qty: Kısmi satış miktarı (None = tamamını kapat)
         
         Returns: (success, profit_loss, closed_position)
         """
@@ -205,35 +215,79 @@ class ExecutionManager:
         if position_to_close is None:
             return False, 0, None
         
-        # Kar/zarar hesapla
         entry_price = position_to_close["entry_price"]
-        quantity = position_to_close["quantity"]
-        exit_value = exit_price * quantity
-        entry_value = position_to_close["trade_cost"]
-        profit_loss = exit_value - entry_value
-        profit_pct = ((exit_price - entry_price) / entry_price) * 100
+        full_quantity = position_to_close["quantity"]
         
-        # Geçmiş kaydı oluştur
-        closed_trade = {
-            **position_to_close,
-            "exit_price": exit_price,
-            "exit_time": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "profit_loss": profit_loss,
-            "profit_pct": profit_pct,
-            "exit_reason": reason
-        }
+        # Kısmi satış kontrolü
+        if partial_qty and partial_qty < full_quantity:
+            # Kısmi satış - pozisyonu güncelle, geçmişe ekle
+            sell_quantity = partial_qty
+            remaining_quantity = full_quantity - partial_qty
+            
+            exit_value = exit_price * sell_quantity
+            entry_value = entry_price * sell_quantity
+            profit_loss = exit_value - entry_value
+            profit_pct = ((exit_price - entry_price) / entry_price) * 100
+            
+            # Partial trade kaydı
+            partial_trade = {
+                **position_to_close,
+                "quantity": sell_quantity,
+                "trade_cost": entry_price * sell_quantity,
+                "exit_price": exit_price,
+                "exit_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "profit_loss": profit_loss,
+                "profit_pct": profit_pct,
+                "exit_reason": reason,
+                "is_partial": True,
+                "remaining_qty": remaining_quantity
+            }
+            
+            # Bakiyeyi güncelle
+            self.portfolio["balance"] += exit_value
+            
+            # Pozisyonu güncelle (kalan miktar)
+            # NOT: Pozisyon listede kalır, sadece miktarı azalır
+            self.portfolio["positions"][position_index]["quantity"] = remaining_quantity
+            self.portfolio["positions"][position_index]["trade_cost"] = entry_price * remaining_quantity
+            
+            # Geçmişe partial trade ekle
+            self.portfolio["history"].append(partial_trade)
+            
+            if self._save_portfolio:
+                self._save_portfolio(self.portfolio)
+            
+            return True, profit_loss, partial_trade
         
-        # Bakiyeyi güncelle
-        self.portfolio["balance"] += exit_value
-        
-        # Pozisyonu kaldır ve geçmişe ekle
-        del self.portfolio["positions"][position_index]
-        self.portfolio["history"].append(closed_trade)
-        
-        if self._save_portfolio:
-            self._save_portfolio(self.portfolio)
-        
-        return True, profit_loss, closed_trade
+        else:
+            # Tam kapanış - mevcut davranış
+            quantity = full_quantity
+            exit_value = exit_price * quantity
+            entry_value = position_to_close["trade_cost"]
+            profit_loss = exit_value - entry_value
+            profit_pct = ((exit_price - entry_price) / entry_price) * 100
+            
+            # Geçmiş kaydı oluştur
+            closed_trade = {
+                **position_to_close,
+                "exit_price": exit_price,
+                "exit_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "profit_loss": profit_loss,
+                "profit_pct": profit_pct,
+                "exit_reason": reason
+            }
+            
+            # Bakiyeyi güncelle
+            self.portfolio["balance"] += exit_value
+            
+            # Pozisyonu kaldır ve geçmişe ekle
+            del self.portfolio["positions"][position_index]
+            self.portfolio["history"].append(closed_trade)
+            
+            if self._save_portfolio:
+                self._save_portfolio(self.portfolio)
+            
+            return True, profit_loss, closed_trade
     
     # ═══════════════════════════════════════════════════════════════════════════
     # TRADE LOGGING
@@ -343,6 +397,18 @@ class ExecutionManager:
             if pos.get("symbol") == symbol:
                 return False, f"{symbol} için zaten açık pozisyon var"
         
+        # ═══════════════════════════════════════════════════════════════════════
+        # ORDER LEDGER IDEMPOTENCY CHECK
+        # ═══════════════════════════════════════════════════════════════════════
+        signal_id = decision_result.get("signal_id", "")
+        if signal_id and get_ledger:
+            ledger = get_ledger()
+            blocked, reason = ledger.is_blocked(signal_id)
+            if blocked:
+                metrics_increment("order_ledger_block_count")
+                self._log(f"[ORDER_LEDGER] {symbol}: Entry blocked | signal_id={signal_id} | blocked_by_order_ledger=True | reason={reason}", "WARN")
+                return False, f"Order ledger block: {reason}"
+        
         # StrategyEngine'den gelen değerleri kullan
         stop_loss = decision_result.get("stop_loss")
         take_profit = decision_result.get("take_profit")
@@ -372,6 +438,18 @@ class ExecutionManager:
             ai_confidence=ai_confidence,
             ai_reasoning=ai_reasoning
         )
+        
+        # Record in order ledger after successful open
+        if success and signal_id and get_ledger:
+            ledger = get_ledger()
+            ledger.record(
+                signal_id=signal_id,
+                symbol=symbol,
+                side="BUY",
+                status="filled",
+                filled_qty=quantity,
+                avg_price=current_price
+            )
         
         if success:
             position = result
@@ -432,6 +510,14 @@ class ExecutionManager:
                         else:
                             self._log(f"❌ CANLI EMİR TÜM DENEMELER BAŞARISIZ: {e}", "ERR")
                             self._stats["live_orders_failed"] += 1
+                            # Emit ORDER_REJECTED alert
+                            try:
+                                from alert_manager import get_alert_manager, AlertLevel, AlertCode
+                                get_alert_manager().emit(
+                                    AlertCode.ORDER_REJECTED, AlertLevel.CRITICAL,
+                                    "Live order failed after retries", symbol=symbol, error=str(e)[:50]
+                                )
+                            except: pass
             
             self._stats["buys_executed"] += 1
             return True, position

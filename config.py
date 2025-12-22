@@ -79,6 +79,76 @@ def _get_env_float(key: str, default: float) -> float:
         return default
 
 
+def _get_env_str(key: str, default: str) -> str:
+    """Ortam değişkenini string olarak al."""
+    return os.getenv(key, default)
+
+
+def _parse_symbols_env() -> tuple:
+    """Parse SYMBOLS from env (comma-separated) or use default."""
+    env_val = os.getenv("SYMBOLS", "")
+    if env_val:
+        return tuple(s.strip().upper() for s in env_val.split(",") if s.strip())
+    return ("BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RUN PROFILE - Çalışma Modu Presetleri
+# ═══════════════════════════════════════════════════════════════════════════════
+# Options: "paper" (varsayılan), "live", "backtest"
+RUN_PROFILE: str = _get_env_str("RUN_PROFILE", "paper").lower()
+
+# Profile-based default değerler
+# Env var set edilmişse env kullan, değilse profile default kullan
+_PAPER_DEFAULTS = {
+    "LIVE_TRADING": False,
+    "ALLOW_DANGEROUS_ACTIONS": False,
+    "RISK_PER_TRADE": 0.5,  # %0.5 - düşük risk
+    "MAX_OPEN_POSITIONS": 2,
+    "MAX_DAILY_LOSS_PCT": 1.0,
+    "ALERTS_ENABLED": True,
+    "ALERT_SEND_TELEGRAM": True,
+    "SUMMARY_SEND_TELEGRAM": True,
+    "HOURLY_SUMMARY_ENABLED": False,
+    "ALERT_LEVEL_MIN": "WARN",
+    "TELEGRAM_TRADE_NOTIFICATIONS": False,  # Spam önleme
+}
+
+_LIVE_DEFAULTS = {
+    "LIVE_TRADING": True,  # Requires ALLOW_DANGEROUS_ACTIONS=True to work
+    "RISK_PER_TRADE": 2.0,
+    "MAX_OPEN_POSITIONS": 5,
+    "MAX_DAILY_LOSS_PCT": 8.0,
+    "ALERTS_ENABLED": True,
+    "ALERT_SEND_TELEGRAM": True,
+    "SUMMARY_SEND_TELEGRAM": True,
+    "HOURLY_SUMMARY_ENABLED": False,
+    "ALERT_LEVEL_MIN": "INFO",
+    "TELEGRAM_TRADE_NOTIFICATIONS": True,
+}
+
+def _get_profile_default(key: str, fallback):
+    """Get profile-based default, env var takes priority."""
+    if RUN_PROFILE == "paper":
+        return _PAPER_DEFAULTS.get(key, fallback)
+    elif RUN_PROFILE == "live":
+        return _LIVE_DEFAULTS.get(key, fallback)
+    return fallback
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UNIVERSE MODE - Sembol Evreni Kısıtlaması
+# ═══════════════════════════════════════════════════════════════════════════════
+UNIVERSE_MODE: str = _get_env_str("UNIVERSE_MODE", "fixed_list")
+SYMBOLS: tuple = _parse_symbols_env()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PAPER TRADING - Başlangıç ve Test Ayarları
+# ═══════════════════════════════════════════════════════════════════════════════
+PAPER_START_EQUITY: float = _get_env_float("PAPER_START_EQUITY", 1000.0)
+PAPER_SANITY_MODE: bool = _get_env_bool("PAPER_SANITY_MODE", False)
+
+
 @dataclass(frozen=True)
 class Settings:
     """
@@ -87,12 +157,13 @@ class Settings:
     """
     
     # ═══════════════════════════════════════════════════════════════════════════
-    # İŞLEM MODU
+    # İŞLEM MODU (Profile-based defaults)
     # ═══════════════════════════════════════════════════════════════════════════
     # True = Gerçek para ile işlem yapar (ÇOK DİKKATLİ KULLANIN!)
-    LIVE_TRADING: bool = False
+    # Paper profile: False, Live profile: True (requires ALLOW_DANGEROUS_ACTIONS)
+    LIVE_TRADING: bool = _get_env_bool("LIVE_TRADING", _get_profile_default("LIVE_TRADING", False))
     # True = LIVE_TRADING aktifken işleme izin verir (güvenlik kilidi)
-    ALLOW_DANGEROUS_ACTIONS: bool = False
+    ALLOW_DANGEROUS_ACTIONS: bool = _get_env_bool("ALLOW_DANGEROUS_ACTIONS", _get_profile_default("ALLOW_DANGEROUS_ACTIONS", False))
     
     # ═══════════════════════════════════════════════════════════════════════════
     # API ANAHTARLARI (Zorunlu - .env'den okunmalı)
@@ -126,10 +197,9 @@ class Settings:
     USE_NEWS_LLM: bool = True
     
     # Strateji LLM Kontrolleri
-    # USE_STRATEGY_LLM: False ise, strateji kararları sadece kurallara dayalıdır (Gemini çağrısı yok)
-    USE_STRATEGY_LLM: bool = True
-    # STRATEGY_LLM_MODE: "only_on_signal" = RULES BUY/SELL derse LLM çağır
-    #                    "always" = her döngüde her sembol için LLM çağır (pahalı)
+    # USE_STRATEGY_LLM: False = strateji kararları sadece kurallara dayalı (Gemini sinyal üretimi YOK)
+    USE_STRATEGY_LLM: bool = False  # ⚠️ LLM sinyal üretimi KAPALI - sadece Risk Veto aktif
+    # STRATEGY_LLM_MODE: "only_on_signal" veya "always" - USE_STRATEGY_LLM=False ise yoksayılır
     STRATEGY_LLM_MODE: str = "always"
     # STRATEGY_LLM_MIN_RULES_CONF: Kurallar güveni bu eşiğin üzerindeyse LLM çağır
     STRATEGY_LLM_MIN_RULES_CONF: int = 65
@@ -173,11 +243,13 @@ class Settings:
     API_TIMEOUT_FNG: int = 15  # Fear & Greed API
     API_TIMEOUT_ETHERSCAN: int = 10  # Etherscan API
     
-    # Global Risk Kontrolleri
+    # Global Risk Kontrolleri (Profile-based defaults)
     # Günlük maksimum kayıp yüzdesi - aşılırsa işlemler durur
-    MAX_DAILY_LOSS_PCT: float = 8.0
+    # Paper: 1.0%, Live: 8.0%
+    MAX_DAILY_LOSS_PCT: float = _get_env_float("MAX_DAILY_LOSS_PCT", _get_profile_default("MAX_DAILY_LOSS_PCT", 8.0))
     # Aynı anda açık tutulabilecek maksimum pozisyon sayısı
-    MAX_OPEN_POSITIONS: int = 5
+    # Paper: 2, Live: 5
+    MAX_OPEN_POSITIONS: int = _get_env_int("MAX_OPEN_POSITIONS", _get_profile_default("MAX_OPEN_POSITIONS", 5))
     # Ardışık zarar sayısı - aşılırsa cooldown başlar
     MAX_CONSECUTIVE_LOSSES: int = 5
     # Ardışık zarar sonrası bekleme süresi (dakika)
@@ -188,8 +260,9 @@ class Settings:
     MIN_ADX_ENTRY_SOFT: float = 18.0
     SOFTEN_ADX_WHEN_CONF_GE: int = 75
     
-    # Risk Manager Ayarları
-    RISK_PER_TRADE: float = 0.02  # İşlem başına max risk (%2)
+    # Risk Manager Ayarları (Profile-based)
+    # Paper: 0.5%, Live: 2.0%
+    RISK_PER_TRADE: float = _get_env_float("RISK_PER_TRADE", _get_profile_default("RISK_PER_TRADE", 2.0)) / 100.0  # İşlem başına max risk
     MIN_VOLUME_GUARDRAIL: int = 1_000_000  # Min 24h volume ($1M)
     FNG_EXTREME_FEAR: int = 15  # Düşürüldü - extreme fear'da da işlem yapabilir
     
@@ -251,16 +324,169 @@ class Settings:
     LOG_BACKUP_COUNT: int = 5  # Eski log dosyası sayısı
     
     # ═══════════════════════════════════════════════════════════════════════════
-    # TELEGRAM BİLDİRİM AYARLARI
+    # V1 STRATEJİ AYARLARI - Rejim Filtreli Swing Trend
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Strateji modu: "REGIME_SWING_TREND_V1" = V1 stratejisi, "LEGACY" = eski strateji
+    STRATEGY_MODE: str = "REGIME_SWING_TREND_V1"
+    # Ana sinyal zaman dilimi (trend yapısı, EMA, ADX için)
+    SIGNAL_TIMEFRAME: str = "1h"
+    # Tetikleme zaman dilimi (breakout teyidi için)
+    TRIGGER_TIMEFRAME: str = "15m"
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Rejim Filtresi (trade sayısını düşürmek için zorunlu)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Minimum volatilite: ATR(14) / price * 100
+    MIN_ATR_PCT: float = 0.3
+    # Maximum volatilite (aşırı volatilite filtresi)
+    MAX_ATR_PCT: float = 3.0
+    # Hacim filtresi için lookback (son N mumun ortalaması)
+    MIN_VOLUME_LOOKBACK: int = 10
+    # Hacim çarpanı: current_volume >= avg_volume * MIN_VOLUME_MULT için geçer
+    MIN_VOLUME_MULT: float = 0.8
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Entry/Exit Ayarları
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Stop loss ATR çarpanı: SL = entry - SL_ATR_MULT * ATR(14)
+    SL_ATR_MULT: float = 1.5
+    # Kısmi kâr alma aktif mi?
+    PARTIAL_TP_ENABLED: bool = True
+    # 1R'de pozisyonun ne kadarı satılacak (0.0-1.0)
+    PARTIAL_TP_FRACTION: float = 0.5
+    # Trailing stop aktif mi?
+    TRAILING_ENABLED: bool = True
+    # Trailing için HighestClose lookback
+    TRAIL_LOOKBACK: int = 22
+    # Trailing stop ATR çarpanı: trail = HighestClose - TRAIL_ATR_MULT * ATR
+    TRAIL_ATR_MULT: float = 3.0
+    # EMA50 slope hesabı için lookback (kaç bar öncesiyle karşılaştır)
+    EMA_SLOPE_LOOKBACK: int = 5
+    # Breakout için lookback (HighestHigh/HighestClose)
+    BREAKOUT_LOOKBACK: int = 20
+    # Trigger timeframe (sinyal tetikleme için kullanılan ana timeframe)
+    TRIGGER_TIMEFRAME: str = "15m"
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # V1 Risk / Pozisyon Boyutlandırma
+    # ─────────────────────────────────────────────────────────────────────────────
+    # V1 için işlem başına risk yüzdesi (daha konservatif)
+    RISK_PER_TRADE_V1: float = 1.0  # %1 - güvenli varsayılan
+    # Volatilite hedefleme: pozisyon boyutunu ATR'ye göre ayarla
+    TARGET_ATR_PCT: float = 1.0
+    # Volatilite ölçeği sınırları
+    MIN_VOL_SCALE: float = 0.5
+    MAX_VOL_SCALE: float = 1.5
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # V1 Execution Ayarları
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Emir yürütme modu: "LIMIT_THEN_MARKET" veya "MARKET_ONLY"
+    ENTRY_EXECUTION_MODE: str = "LIMIT_THEN_MARKET"
+    # LIMIT emir timeout süresi (saniye) - dolmazsa MARKET'e geç
+    LIMIT_TIMEOUT_SEC: int = 45
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # V1 LLM Kontrolleri - Risk Veto Only
+    # ─────────────────────────────────────────────────────────────────────────────
+    # V1'de strateji LLM skorlaması kapalı (deterministik kurallar kullanılır)
+    USE_STRATEGY_LLM_V1: bool = False
+    # Haber/olay bazlı risk veto aktif mi?
+    USE_NEWS_LLM_VETO: bool = True
+    # Veto için minimum güven skoru (0-100)
+    NEWS_VETO_MIN_CONF: int = 70
+    # Veto cache süresi (dakika) - aynı coin için tekrar LLM çağırma
+    NEWS_VETO_CACHE_MINUTES: int = 10
+    # Veto durumunda stop'u sıkılaştır mı?
+    NEWS_VETO_TIGHTEN_STOP: bool = False
+    # Veto sıkılaştırma çarpanı (SL mesafesini bu oranla çarp)
+    NEWS_VETO_TIGHTEN_MULT: float = 0.7
+    # Risk keyword prefilter - bu kelimeler yoksa LLM çağırma
+    RISK_VETO_KEYWORDS: tuple = (
+        "hack", "hacked", "exploit", "exploited", "breach",
+        "delist", "delisting", "delisted",
+        "withdraw", "withdrawal", "paused", "suspended", "frozen",
+        "sec", "regulatory", "investigation", "lawsuit", "sued",
+        "rug", "rugpull", "scam", "fraud",
+        "crash", "collapse", "insolvent", "bankrupt",
+        "vulnerability", "critical", "emergency", "halt"
+    )
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # V1 Güvenlik Kontrolleri
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Ardışık stop sayısı limiti - aşılırsa cooldown başlar
+    MAX_CONSECUTIVE_STOPS: int = 3
+    # Ardışık stop sonrası ek cooldown (dakika) - COOLDOWN_MINUTES'e eklenir
+    CONSECUTIVE_STOPS_EXTRA_COOLDOWN: int = 30
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # ORDER LEDGER & IDEMPOTENCY (Production-grade)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Order ledger aktif mi? (signal_id idempotency kontrolü)
+    ORDER_LEDGER_ENABLED: bool = True
+    # Canceled/rejected signaller için yeniden deneme izni
+    ALLOW_RETRY_SAME_SIGNAL: bool = False
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # LLM RATE LIMITING
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Saat başına maksimum LLM çağrısı (veto + diğer)
+    MAX_LLM_CALLS_PER_HOUR: int = 10
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # METRICS & TELEMETRY
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Kaç döngüde bir metrik özeti loglansın
+    METRICS_LOG_EVERY_N_CYCLES: int = 20
+    # Günlük metrikler dosyaya kaydedilsin mi
+    METRICS_PERSIST_DAILY: bool = True
+    
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TELEGRAM BİLDİRİM AYARLARI (Profile-based)
     # ═══════════════════════════════════════════════════════════════════════════
     # Trade işlemleri için bildirim gönder (BUY/SELL)
-    TELEGRAM_NOTIFY_TRADES: bool = True
+    # Paper: False (spam önleme), Live: True
+    TELEGRAM_NOTIFY_TRADES: bool = _get_env_bool("TELEGRAM_NOTIFY_TRADES", _get_profile_default("TELEGRAM_TRADE_NOTIFICATIONS", True))
     # Reddit sentiment analizi için bildirim gönder
     TELEGRAM_NOTIFY_REDDIT: bool = False
     # On-chain whale hareketleri için bildirim gönder
     TELEGRAM_NOTIFY_ONCHAIN: bool = False
     # Önemli haberler için bildirim gönder
     TELEGRAM_NOTIFY_IMPORTANT_NEWS: bool = False
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # SUMMARY REPORTER (Periyodik Özet Raporlama)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Günlük özet rapor aktif mi
+    DAILY_SUMMARY_ENABLED: bool = True
+    # Günlük rapor saati (Europe/Istanbul)
+    DAILY_SUMMARY_TIME: str = "23:59"
+    # Saatlik özet rapor aktif mi (Paper: False, Live: user-defined)
+    HOURLY_SUMMARY_ENABLED: bool = _get_env_bool("HOURLY_SUMMARY_ENABLED", _get_profile_default("HOURLY_SUMMARY_ENABLED", False))
+    # Özet raporları Telegram'a gönder (Paper: True, Live: True)
+    SUMMARY_SEND_TELEGRAM: bool = _get_env_bool("SUMMARY_SEND_TELEGRAM", _get_profile_default("SUMMARY_SEND_TELEGRAM", False))
+    # Özet için özel Telegram chat_id (None = mevcut TELEGRAM_CHAT_ID kullan)
+    SUMMARY_TELEGRAM_CHAT_ID: str = None
+    # Son rapor zamanını dosyaya kaydet (restart koruması)
+    SUMMARY_PERSIST_STATE: bool = True
+    
+    # ─────────────────────────────────────────────────────────────────────────────
+    # ALERT MANAGER (Kritik Olay Bildirimleri)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Alert sistemi aktif mi
+    ALERTS_ENABLED: bool = _get_env_bool("ALERTS_ENABLED", _get_profile_default("ALERTS_ENABLED", True))
+    # Alert'leri Telegram'a gönder (Paper: True, Live: True)
+    ALERT_SEND_TELEGRAM: bool = _get_env_bool("ALERT_SEND_TELEGRAM", _get_profile_default("ALERT_SEND_TELEGRAM", False))
+    # Alert için özel Telegram chat_id (None = mevcut kullan)
+    ALERT_TELEGRAM_CHAT_ID: str = None
+    # Aynı alert kodu için tekrar bildirimi engelle (dakika)
+    ALERT_THROTTLE_MINUTES: int = 30
+    # Throttle state'i dosyaya kaydet (restart koruması)
+    ALERT_PERSIST_STATE: bool = True
+    # Minimum alert seviyesi (INFO/WARN/CRITICAL)
+    # Paper: WARN (INFO spam önleme), Live: INFO
+    ALERT_LEVEL_MIN: str = _get_env_str("ALERT_LEVEL_MIN", _get_profile_default("ALERT_LEVEL_MIN", "INFO"))
     
     def is_configured(self) -> bool:
         """Zorunlu API anahtarlarının ayarlanıp ayarlanmadığını kontrol eder."""

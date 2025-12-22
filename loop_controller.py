@@ -6,9 +6,11 @@ from typing import List, Dict, Any, Optional
 
 # Import modules (assuming they are in the python path)
 try:
-    from config import SETTINGS
+    from config import SETTINGS, RUN_PROFILE, PAPER_SANITY_MODE
 except ImportError:
     # Fallback if config is missing (should not happen in production)
+    RUN_PROFILE = "paper"
+    PAPER_SANITY_MODE = False
     class SETTINGS:
         WATCHLIST = ['BTC', 'ETH']
         LOOP_SECONDS = 900
@@ -18,13 +20,25 @@ except ImportError:
         MAX_CONSECUTIVE_LOSSES = 4
         COOLDOWN_MINUTES = 60
         BASLANGIC_BAKIYE = 1000
+        STRATEGY_MODE = "LEGACY"
+
+# V1 Strategy Imports
+try:
+    from strategies.regime_filter import RegimeFilter
+    from strategies.swing_trend_v1 import SwingTrendV1
+    from strategies.news_veto import NewsVeto
+    V1_AVAILABLE = True
+except ImportError:
+    V1_AVAILABLE = False
+    RegimeFilter = None
+    SwingTrendV1 = None
+    NewsVeto = None
 
 # Setup Logger
 # NOTE: Handler ekleme işlemi main.py'deki merkezi TeeHandler tarafından yapılıyor
 # Bu dosyada handler eklemek duplikasyona neden olur
 logger = logging.getLogger("LoopController")
 logger.setLevel(logging.INFO)
-
 
 class LoopController:
     """
@@ -34,6 +48,8 @@ class LoopController:
     3. Analyze opportunities (Strategy + Risk).
     4. Execute trades.
     5. Sleep.
+    
+    V1 Mode: Uses RegimeFilter, SwingTrendV1, and NewsVeto for deterministic signals.
     """
 
     def __init__(
@@ -61,6 +77,25 @@ class LoopController:
         self.loop_duration = getattr(SETTINGS, "LOOP_SECONDS", 900)
         self.cooldown_until = 0.0
         
+        # V1 Strategy Mode
+        self._strategy_mode = getattr(SETTINGS, "STRATEGY_MODE", "LEGACY")
+        self._v1_strategy = None
+        self._v1_regime_filter = None
+        self._v1_news_veto = None
+        
+        if self._strategy_mode == "REGIME_SWING_TREND_V1" and V1_AVAILABLE:
+            self._v1_regime_filter = RegimeFilter()
+            self._v1_strategy = SwingTrendV1()
+            self._v1_news_veto = NewsVeto()
+            logger.info("✅ V1 Strategy components initialized")
+            
+            # PAPER_SANITY_MODE: ADX eşiğini düşür (hızlı test için)
+            if RUN_PROFILE == "paper" and PAPER_SANITY_MODE:
+                # RegimeFilter'daki ADX eşiğini override et
+                if hasattr(self._v1_regime_filter, 'min_adx'):
+                    self._v1_regime_filter.min_adx = 15.0
+                logger.warning("⚠️ [SANITY MODE] MIN_ADX_ENTRY forced to 15 for paper test")
+        
         # Alarm tracking - config'den oku
         self._alarm_thresholds = {
             "consecutive_parse_fail": getattr(SETTINGS, 'ALARM_PARSE_FAIL_THRESHOLD', 15),
@@ -81,11 +116,17 @@ class LoopController:
         """Log the global risk limits at startup."""
         logger.info("════════════════════════════════════════")
         logger.info("🚀 LOOP CONTROLLER STARTUP")
+        logger.info(f"Strategy Mode: {self._strategy_mode}")
         logger.info(f"Daily Loss Limit: {SETTINGS.MAX_DAILY_LOSS_PCT}%")
         logger.info(f"Max Open Positions: {SETTINGS.MAX_OPEN_POSITIONS}")
         logger.info(f"Max Loss Streak: {SETTINGS.MAX_CONSECUTIVE_LOSSES}")
         logger.info(f"Cooldown Minutes: {SETTINGS.COOLDOWN_MINUTES}")
+        if self._strategy_mode == "REGIME_SWING_TREND_V1":
+            logger.info(f"V1 Risk Per Trade: {getattr(SETTINGS, 'RISK_PER_TRADE_V1', 1.0)}%")
+            logger.info(f"V1 Partial TP: {getattr(SETTINGS, 'PARTIAL_TP_ENABLED', True)}")
+            logger.info(f"V1 Trailing: {getattr(SETTINGS, 'TRAILING_ENABLED', True)}")
         logger.info("════════════════════════════════════════")
+
 
     async def _check_alarms(self, strategy_metrics: Dict, news_metrics: Dict):
         """
@@ -194,6 +235,31 @@ class LoopController:
 
                     # Check for alarm conditions
                     await self._check_alarms(sm, nm)
+
+                    # Summary Reporter - günlük/saatlik özet raporlama
+                    try:
+                        from summary_reporter import get_reporter
+                        reporter = get_reporter()
+                        await reporter.maybe_report(
+                            portfolio=self.execution_manager.portfolio,
+                            telegram_fn=self.telegram_fn,
+                            telegram_config=self.telegram_config
+                        )
+                    except ImportError:
+                        pass
+                    except Exception as e:
+                        logger.warning(f"[SUMMARY] Report error: {e}")
+
+                    # Alert Manager - kritik olay bildirimleri
+                    try:
+                        from alert_manager import get_alert_manager
+                        am = get_alert_manager()
+                        am.set_telegram_config(self.telegram_fn, self.telegram_config)
+                        await am.poll(portfolio=self.execution_manager.portfolio)
+                    except ImportError:
+                        pass
+                    except Exception as e:
+                        logger.debug(f"[ALERT] Poll error: {e}")
 
                     logger.info(f"💤 Sleeping for {sleep_time:.1f}s...")
                     await asyncio.sleep(sleep_time)
@@ -312,7 +378,14 @@ class LoopController:
             else:
                 snapshot["coin_news_str"] = ""
 
-
+            # V1: Fetch multi-timeframe data if in V1 mode
+            if self._strategy_mode == "REGIME_SWING_TREND_V1":
+                try:
+                    tf_data = await self.market_data_engine.get_v1_timeframe_data(symbol)
+                    snapshot["tf"] = tf_data
+                except Exception as e:
+                    logger.warning(f"[V1] TF data fetch error for {symbol}: {e}")
+                    snapshot["tf"] = {"1h": {}, "15m": {}}
 
             # Check for Sell logic (always allowed)
             await self.process_sell_logic(symbol, snapshot)
@@ -391,22 +464,140 @@ class LoopController:
 
     async def process_buy_logic(self, symbol: str, snapshot: Dict[str, Any]):
         """Evaluate and execute BUY opportunities."""
+        # V1 Strategy Mode - deterministik kurallar
+        if self._strategy_mode == "REGIME_SWING_TREND_V1" and self._v1_strategy:
+            await self._process_buy_v1(symbol, snapshot)
+        else:
+            await self._process_buy_legacy(symbol, snapshot)
+    
+    async def _process_buy_v1(self, symbol: str, snapshot: Dict[str, Any]):
+        """V1 Buy Logic - Regime Filter + Swing Trend + News Veto."""
+        try:
+            portfolio = self.execution_manager.portfolio
+            balance = portfolio.get("balance", 0)
+            
+            # 1. V1 Strategy Entry Evaluation
+            signal = self._v1_strategy.evaluate_entry(snapshot, balance)
+            
+            if signal.action != "BUY":
+                # Log blocking reason for debugging
+                if signal.metadata.get("blocked_by_regime"):
+                    logger.debug(f"[V1] {symbol}: Regime block - {signal.reason}")
+                return
+            
+            logger.info(f"💡 V1 Signal ({symbol}): BUY (Conf: {signal.confidence}%) | {signal.reason}")
+            
+            # 2. News/Reddit Veto Check (LLM-based)
+            veto_checked = False
+            veto_result = None
+            if self._v1_news_veto and getattr(SETTINGS, 'USE_NEWS_LLM_VETO', True):
+                # Bundle haber + reddit
+                news_summary = snapshot.get("coin_news_str", "")
+                reddit_data = snapshot.get("reddit_summary", {})
+                reddit_str = reddit_data.get("coin_specific_impacts", {}).get(
+                    symbol.replace("USDT", ""), ""
+                ) if isinstance(reddit_data, dict) else ""
+                
+                veto_result = self._v1_news_veto.check_veto(
+                    symbol, 
+                    news_summary=news_summary,
+                    reddit_summary=reddit_str
+                )
+                veto_checked = True
+                
+                if veto_result.veto:
+                    logger.warning(
+                        f"🚫 V1 News Veto ({symbol}): {veto_result.reason} "
+                        f"(Conf: {veto_result.confidence}%) | Tags: {veto_result.tags}"
+                    )
+                    # Log blocked_by_news_veto
+                    logger.info(
+                        f"[VETO_LOG] symbol={symbol} blocked_by_news_veto=True "
+                        f"veto_confidence={veto_result.confidence} "
+                        f"veto_reason={veto_result.reason} veto_tags={veto_result.tags}"
+                    )
+                    return
+                else:
+                    logger.debug(f"[VETO] {symbol}: No veto - {veto_result.reason}")
+            
+            # 3. Cooldown Check (Risk Manager)
+            in_cooldown, cooldown_reason = self.risk_manager.is_in_cooldown()
+            if in_cooldown:
+                logger.info(f"❄️ V1 {symbol}: {cooldown_reason}")
+                return
+            
+            # 4. Build decision result for ExecutionManager
+            current_price = snapshot.get("price", 0)
+            if not current_price:
+                current_price = snapshot.get("technical", {}).get("price", 0)
+            
+            if not current_price:
+                logger.warning(f"🚫 V1 BUY Failed: No valid price for {symbol}")
+                return
+            
+            decision_result = {
+                "action": "BUY",
+                "confidence": signal.confidence,
+                "reason": signal.reason,
+                "stop_loss": signal.stop_loss,
+                "take_profit": signal.take_profit,
+                "quantity": signal.quantity,
+                "allowed": True,
+                "metadata": signal.metadata
+            }
+            
+            # 5. Execute Buy
+            success, result = await self.execution_manager.execute_buy_flow(
+                symbol=symbol,
+                current_price=current_price,
+                decision_result=decision_result,
+                trade_reason="V1-SWING",
+                trigger_info=signal.reason,
+                market_snapshot=snapshot
+            )
+            
+            if success:
+                # Add V1 position fields
+                position = result
+                v1_fields = self._v1_strategy.calculate_position_fields(
+                    entry_price=current_price,
+                    quantity=signal.quantity,
+                    atr=snapshot.get("tf", {}).get("1h", {}).get("atr", current_price * 0.02)
+                )
+                
+                # Update position with V1 fields
+                for pos in portfolio.get("positions", []):
+                    if pos.get("id") == position.get("id"):
+                        pos.update(v1_fields)
+                        break
+                
+                if self.execution_manager._save_portfolio:
+                    self.execution_manager._save_portfolio(portfolio)
+                
+                logger.info(f"  ✅ V1 BUY Executed for {symbol} | SL=${signal.stop_loss:.2f} TP=${signal.take_profit:.2f}")
+            else:
+                logger.error(f"  ❌ V1 Buy Failed: {result}")
+        
+        except Exception as e:
+            logger.error(f"⚠️ V1 Buy Logic Error ({symbol}): {e}")
+            traceback.print_exc()
+    
+    async def _process_buy_legacy(self, symbol: str, snapshot: Dict[str, Any]):
+        """Legacy Buy Logic - LLM-based strategy."""
         try:
             # 1. Strategy Evaluation
-            # evaluate_opportunity -> "BUY", "SELL", "HOLD"
             decision = await self.strategy_engine.evaluate_opportunity(snapshot)
             
             action = decision.get("action")
             confidence = decision.get("confidence", 0)
             
             if action != "BUY":
-                return # Only interested in BUY here
+                return
 
             src = decision.get("metadata", {}).get("source", "UNKNOWN")
             logger.info(f"💡 Strategy Signal ({symbol}): BUY (Conf: {confidence}%) [src={src}]")
 
-            # 2. Risk Management (Evaluate Entry)
-            # Fetch Portfolio for sizing
+            # 2. Risk Management
             portfolio = self.execution_manager.portfolio
             
             risk_decision = self.risk_manager.evaluate_entry_risk(
@@ -419,16 +610,14 @@ class LoopController:
                 logger.info(f"  🛡️ Risk Manager blocked BUY: {risk_decision.get('reason')}")
                 return
 
-            # 3. Execution using execute_buy_flow
-            # risk_decision contains 'quantity', 'stop_loss', 'take_profit'
+            # 3. Execution
             current_price = snapshot.get("price")
             if not current_price:
-                 # Fallback to technical price if available (e.g. calculated from candles)
-                 current_price = snapshot.get("technical", {}).get("price")
+                current_price = snapshot.get("technical", {}).get("price")
             
             if not current_price:
-                 logger.warning(f"🚫 BUY Failed: No valid price for {symbol}")
-                 return
+                logger.warning(f"🚫 BUY Failed: No valid price for {symbol}")
+                return
             
             success, result = await self.execution_manager.execute_buy_flow(
                 symbol=symbol,
@@ -439,14 +628,13 @@ class LoopController:
             
             if success:
                 logger.info(f"  ✅ BUY Executed for {symbol}")
-                # Log success to PositionManager implicit in execute_buy_flow? 
-                # Ideally execution flow updates position manager.
             else:
                 logger.error(f"  ❌ Buy Failed: {result}")
 
         except Exception as e:
             logger.error(f"⚠️ Buy Logic Error ({symbol}): {e}")
             traceback.print_exc()
+
 
     async def process_sell_logic(self, symbol: str, snapshot: Dict[str, Any]):
         """Evaluate AI Sell logic (Technical/Profit Protection)."""
@@ -531,11 +719,27 @@ class LoopController:
             
             loss_limit = -(SETTINGS.MAX_DAILY_LOSS_PCT / 100.0) * balance
             if today_pnl <= loss_limit:
+                 # Emit CRITICAL alert
+                 try:
+                     from alert_manager import get_alert_manager, AlertLevel, AlertCode
+                     get_alert_manager().emit(
+                         AlertCode.DAILY_LOSS_LIMIT_HIT, AlertLevel.CRITICAL,
+                         "Daily loss limit reached", pnl=f"${today_pnl:.2f}", limit=f"${loss_limit:.2f}"
+                     )
+                 except: pass
                  return False, f"Daily Loss Limit Hit (${today_pnl:.2f} <= ${loss_limit:.2f})"
         
         # 2. Max Open Positions
         open_count = self.position_manager.get_open_position_count()
         if open_count >= SETTINGS.MAX_OPEN_POSITIONS:
+            # Emit WARN alert (throttled)
+            try:
+                from alert_manager import get_alert_manager, AlertLevel, AlertCode
+                get_alert_manager().emit(
+                    AlertCode.MAX_OPEN_POSITIONS_REACHED, AlertLevel.WARN,
+                    "Max open positions reached", count=open_count, max=SETTINGS.MAX_OPEN_POSITIONS
+                )
+            except: pass
             return False, f"Max Positions Reached ({open_count}/{SETTINGS.MAX_OPEN_POSITIONS})"
 
         # 3. Consecutive Losses

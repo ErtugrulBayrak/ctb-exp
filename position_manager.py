@@ -4,6 +4,15 @@ import asyncio
 from datetime import datetime
 from trade_logger import logger
 
+# Exit reason enum
+try:
+    from exit_reason import ExitReason
+except ImportError:
+    class ExitReason:
+        STOP_LOSS = "STOP_LOSS"
+        TRAIL_STOP = "TRAIL_STOP"
+        PARTIAL_TP = "PARTIAL_TP"
+
 # Config import (retry ayarları için)
 try:
     from config import SETTINGS
@@ -382,6 +391,203 @@ class PositionManager:
                                         self.portfolio["history"][-1]["live_sell_error"] = str(e)
                                         if self.save_portfolio_fn:
                                             self.save_portfolio_fn(self.portfolio)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # V1: Watchdog - Partial TP ve Trailing Stop 
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    async def v1_watchdog_check(self, live_trading_enabled: bool = False):
+        """
+        V1 stratejisi için gelişmiş watchdog kontrolü.
+        
+        Kontroller:
+        1. SL tetiklendi mi?
+        2. Partial TP (1R) tetiklendi mi?
+        3. Trailing stop güncellenmeli mi?
+        4. Trailing stop tetiklendi mi?
+        """
+        positions = self.get_open_positions()
+        if not positions:
+            return
+        
+        partial_tp_enabled = getattr(SETTINGS, 'PARTIAL_TP_ENABLED', True)
+        partial_tp_fraction = getattr(SETTINGS, 'PARTIAL_TP_FRACTION', 0.5)
+        trailing_enabled = getattr(SETTINGS, 'TRAILING_ENABLED', True)
+        trail_atr_mult = getattr(SETTINGS, 'TRAIL_ATR_MULT', 3.0)
+        
+        bot_token = self.telegram_config.get("bot_token")
+        chat_id = self.telegram_config.get("chat_id")
+        
+        for position in positions[:]:
+            symbol = position.get("symbol")
+            position_id = position.get("id")
+            entry_price = position.get("entry_price", 0)
+            quantity = position.get("quantity", 0)
+            
+            # V1 alanları
+            current_sl = position.get("current_sl", position.get("stop_loss", 0))
+            initial_sl = position.get("initial_sl", current_sl)
+            partial_taken = position.get("partial_taken", False)
+            partial_tp_price = position.get("partial_tp_price", 0)
+            
+            # Güncel fiyat ve ATR
+            current_price = self.market_data_engine.get_current_price(symbol)
+            if not current_price:
+                continue
+            
+            # Snapshot'tan ATR al (trailing için)
+            try:
+                snapshot = self.market_data_engine.build_snapshot(symbol)
+                tf_1h = snapshot.get("tf", {}).get("1h", {})
+                atr = tf_1h.get("atr", snapshot.get("technical", {}).get("atr", 0))
+                highest_close = tf_1h.get("highest_close_trail", current_price)
+            except:
+                atr = 0
+                highest_close = current_price
+            
+            # ─────────────────────────────────────────────────────────────────────
+            # 1. SL Kontrolü
+            # ─────────────────────────────────────────────────────────────────────
+            if current_price <= current_sl:
+                # Standardized watchdog event log
+                exit_reason = ExitReason.TRAIL_STOP if partial_taken else ExitReason.STOP_LOSS
+                logger.info(
+                    f"[WATCHDOG] {symbol} | event=stop_triggered | "
+                    f"exit_reason={exit_reason} | price=${current_price:.4f} | "
+                    f"sl=${current_sl:.4f} | partial_taken={partial_taken}"
+                )
+                
+                success, pnl, closed = self.execution_manager.close_position(
+                    position_id, current_price, str(exit_reason)
+                )
+                
+                if success:
+                    self.register_trade_result(pnl)
+                    logger.info(f"🛑 {exit_reason}: {symbol} kapatıldı | PnL: ${pnl:.2f}")
+                    
+                    if self.telegram_fn and bot_token and chat_id:
+                        await self._send_close_notification(
+                            bot_token, chat_id, symbol, entry_price, 
+                            current_price, pnl, exit_reason
+                        )
+                continue
+            
+            # ─────────────────────────────────────────────────────────────────────
+            # 2. Partial TP Kontrolü (1R)
+            # ─────────────────────────────────────────────────────────────────────
+            if partial_tp_enabled and not partial_taken and entry_price > 0 and initial_sl > 0:
+                # 1R hesapla
+                stop_distance = entry_price - initial_sl
+                one_r_price = entry_price + stop_distance
+                
+                if partial_tp_price <= 0:
+                    partial_tp_price = one_r_price
+                
+                if current_price >= one_r_price:
+                    sell_qty = quantity * partial_tp_fraction
+                    remaining_qty = quantity - sell_qty
+                    
+                    # Standardized watchdog event log
+                    logger.info(
+                        f"[WATCHDOG] {symbol} | event=partial_tp_triggered | "
+                        f"exit_reason={ExitReason.PARTIAL_TP} | price=${current_price:.4f} | "
+                        f"1R=${one_r_price:.4f} | sell_qty={sell_qty:.6f}"
+                    )
+                    
+                    # Kısmi satış yap
+                    success, pnl, _ = self.execution_manager.close_position(
+                        position_id, current_price, str(ExitReason.PARTIAL_TP),
+                        partial_qty=sell_qty
+                    )
+                    
+                    if success:
+                        # Pozisyon güncelle - partial_taken=True
+                        for pos in self.portfolio.get("positions", []):
+                            if pos.get("id") == position_id:
+                                pos["partial_taken"] = True
+                                pos["partial_tp_price"] = one_r_price
+                                pos["quantity"] = remaining_qty
+                                pos["highest_close_since_entry"] = current_price
+                                break
+                        
+                        if self.save_portfolio_fn:
+                            self.save_portfolio_fn(self.portfolio)
+                        
+                        logger.info(
+                            f"✅ Partial TP: {symbol} {sell_qty:.6f} satıldı @ ${current_price:.4f} | "
+                            f"Kalan: {remaining_qty:.6f}"
+                        )
+                        
+                        if self.telegram_fn and bot_token and chat_id:
+                            mesaj = (
+                                f"📊 <b>PARTIAL TP (1R)</b>\n\n"
+                                f"<b>Coin:</b> {symbol}\n"
+                                f"<b>Satılan:</b> {sell_qty:.6f} @ ${current_price:.4f}\n"
+                                f"<b>Kalan:</b> {remaining_qty:.6f}\n"
+                                f"<b>PnL:</b> ${pnl:.2f}\n\n"
+                                f"🔄 Trailing stop aktif edildi"
+                            )
+                            try:
+                                await self.telegram_fn(bot_token, chat_id, mesaj)
+                            except Exception as e:
+                                logger.error(f"Telegram hatası: {e}")
+                    continue
+            
+            # ─────────────────────────────────────────────────────────────────────
+            # 3. Trailing Stop Güncelleme
+            # ─────────────────────────────────────────────────────────────────────
+            if trailing_enabled and partial_taken and atr > 0:
+                # Highest close güncelle
+                highest_close_saved = position.get("highest_close_since_entry", entry_price)
+                if current_price > highest_close_saved:
+                    highest_close_saved = current_price
+                
+                # Chandelier trailing: HighestClose - TRAIL_ATR_MULT * ATR
+                new_trail_sl = highest_close_saved - (trail_atr_mult * atr)
+                
+                # Trailing sadece yukarı güncellenir
+                if new_trail_sl > current_sl:
+                    old_sl = current_sl
+                    
+                    # Standardized watchdog event log
+                    logger.info(
+                        f"[WATCHDOG] {symbol} | event=trailing_updated | "
+                        f"old_sl=${old_sl:.4f} | new_sl=${new_trail_sl:.4f} | "
+                        f"highest_close=${highest_close_saved:.4f} | atr=${atr:.4f}"
+                    )
+                    
+                    # Pozisyon güncelle
+                    for pos in self.portfolio.get("positions", []):
+                        if pos.get("id") == position_id:
+                            pos["current_sl"] = new_trail_sl
+                            pos["highest_close_since_entry"] = highest_close_saved
+                            pos["last_trailing_update_ts"] = int(time.time())
+                            break
+                    
+                    if self.save_portfolio_fn:
+                        self.save_portfolio_fn(self.portfolio)
+    
+    async def _send_close_notification(
+        self, bot_token, chat_id, symbol, entry_price, 
+        exit_price, pnl, reason
+    ):
+        """Telegram kapatma bildirimi gönder."""
+        profit_pct = ((exit_price / entry_price) - 1) * 100 if entry_price else 0
+        emoji = "💰" if pnl > 0 else "🛑"
+        
+        mesaj = (
+            f"{emoji} <b>{reason}</b>\n\n"
+            f"<b>Coin:</b> {symbol}\n"
+            f"<b>Giriş:</b> ${entry_price:.4f}\n"
+            f"<b>Çıkış:</b> ${exit_price:.4f}\n"
+            f"<b>PnL:</b> ${pnl:.2f} ({profit_pct:.1f}%)\n\n"
+            f"💰 Bakiye: ${self.portfolio['balance']:.2f}"
+        )
+        
+        try:
+            await self.telegram_fn(bot_token, chat_id, mesaj)
+        except Exception as e:
+            logger.error(f"Telegram hatası: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
