@@ -258,7 +258,7 @@ class Settings:
     COOLDOWN_MINUTES: int = 60
     
     # ADX Eşikleri (Dengeli - güçlü trend iste)
-    MIN_ADX_ENTRY: float = 20.0  # Düşürüldü - piyasa koşullarına daha uyumlu
+    MIN_ADX_ENTRY: float = 18.5  # Düşürüldü - piyasa koşullarına daha uyumlu
     MIN_ADX_ENTRY_SOFT: float = 18.0
     SOFTEN_ADX_WHEN_CONF_GE: int = 75
     
