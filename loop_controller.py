@@ -324,14 +324,15 @@ class LoopController:
         except Exception as e:
             logger.warning(f"⚠️ Failed to fetch global news summary: {e}")
 
-        # 4c. Fetch Reddit LLM Summary (TTL cached)
+        # 4c. Fetch Reddit LLM Summary (TTL cached) - if enabled
         reddit_summary = None
-        try:
-            reddit_summary = await self.market_data_engine.get_crypto_reddit_summary(self.watchlist)
-            if reddit_summary:
-                logger.info(f"📢 Reddit Summary: {reddit_summary.get('general_impact', 'N/A')}")
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to fetch Reddit summary: {e}")
+        if getattr(SETTINGS, 'REDDIT_ENABLED', False):
+            try:
+                reddit_summary = await self.market_data_engine.get_crypto_reddit_summary(self.watchlist)
+                if reddit_summary:
+                    logger.info(f"📢 Reddit Summary: {reddit_summary.get('general_impact', 'N/A')}")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to fetch Reddit summary: {e}")
 
         # 4d. Run News Analysis Pipeline (Per-Article LLM Analysis)
         new_articles_count = 0
