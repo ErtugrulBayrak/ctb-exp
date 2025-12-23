@@ -491,7 +491,7 @@ async def ana_dongu():
                 "user_agent": REDDIT_USER_AGENT,
                 "username": REDDIT_USERNAME,
                 "password": REDDIT_PASSWORD
-            }
+            } if SETTINGS.REDDIT_ENABLED else None
         )
         log("MarketDataEngine başlatıldı", "OK")
         

@@ -175,6 +175,8 @@ class Settings:
     TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
     
     # Reddit API (sentiment analizi için)
+    # REDDIT_ENABLED: Reddit entegrasyonu aktif mi? (API erişimi yoksa False yapın)
+    REDDIT_ENABLED: bool = _get_env_bool("REDDIT_ENABLED", False)
     REDDIT_CLIENT_ID: str = os.getenv("REDDIT_CLIENT_ID", "")
     REDDIT_CLIENT_SECRET: str = os.getenv("REDDIT_CLIENT_SECRET", "")
     REDDIT_USER_AGENT: str = os.getenv("REDDIT_USER_AGENT", "CryptoBot/1.0")
