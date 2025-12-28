@@ -25,9 +25,7 @@ wheels/
 .installed.cfg
 *.egg
 
-# Logs
- logs/
- *.log
+
 
 # Virtual Environment
 venv/
@@ -40,8 +38,14 @@ env/
 *.swp
 *.swo
 
+#BUNLARI UNUTTMAAA!!!
+
 # Data files (keep structure but ignore content)
 portfolio.json
 islenmis_haberler.txt
 trade_decisions_log.json
 trade_log.json
+
+# Logs
+logs/
+*.log
