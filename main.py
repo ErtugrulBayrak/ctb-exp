@@ -194,6 +194,8 @@ def print_boot_banner():
     """
     Başlangıçta tek satır net banner yaz.
     Format: [BOOT] profile=X live=X dangerous=X universe=N risk=X% max_pos=N daily_loss=X%
+    
+    Ek olarak tüm efektif parametreleri ve Git commit hash'ini logla.
     """
     symbol_count = len(SYMBOLS) if UNIVERSE_MODE == "fixed_list" else len(SETTINGS.WATCHLIST)
     risk_pct = SETTINGS.RISK_PER_TRADE * 100  # Convert back to percentage
@@ -212,6 +214,70 @@ def print_boot_banner():
     # PAPER_SANITY_MODE uyarısı
     if PAPER_SANITY_MODE and RUN_PROFILE == "paper":
         print("⚠️  [SANITY MODE] MIN_ADX_ENTRY forced to 15 for paper test", flush=True)
+    
+    # ──────────────── CONFIG DUMP ────────────────
+    # Tüm efektif parametreleri tek bir blok halinde logla
+    config_dump = {
+        "ADX_ENTRY": getattr(SETTINGS, 'MIN_ADX_ENTRY', 'N/A'),
+        "ADX_SOFT": getattr(SETTINGS, 'MIN_ADX_ENTRY_SOFT', 'N/A'),
+        "ATR_PCT": f"{getattr(SETTINGS, 'MIN_ATR_PCT', 0)}-{getattr(SETTINGS, 'MAX_ATR_PCT', 0)}",
+        "VOLUME_MULT": getattr(SETTINGS, 'MIN_VOLUME_MULT', 'N/A'),
+        "RISK_PER_TRADE": f"{risk_pct:.1f}%",
+        "MAX_DAILY_LOSS": f"{SETTINGS.MAX_DAILY_LOSS_PCT:.1f}%",
+        "MAX_POSITIONS": SETTINGS.MAX_OPEN_POSITIONS,
+        "MAX_CONSEC_LOSSES": getattr(SETTINGS, 'MAX_CONSECUTIVE_LOSSES', 'N/A'),
+        "COOLDOWN_MIN": getattr(SETTINGS, 'COOLDOWN_MINUTES', 'N/A'),
+        "LOOP_SEC": SETTINGS.LOOP_SECONDS,
+        "STRATEGY_MODE": getattr(SETTINGS, 'STRATEGY_MODE', 'LEGACY'),
+        "USE_NEWS_LLM": getattr(SETTINGS, 'USE_NEWS_LLM', False),
+        "REDDIT_ENABLED": getattr(SETTINGS, 'REDDIT_ENABLED', False)
+    }
+    print(f"[CONFIG] {config_dump}", flush=True)
+    
+    # ──────────────── ENVIRONMENT SNAPSHOT ────────────────
+    try:
+        import platform
+        py_version = platform.python_version()
+        os_info = f"{platform.system()}/{platform.release()}"
+        
+        # Binance client version (if available)
+        try:
+            import binance
+            binance_ver = getattr(binance, '__version__', 'unknown')
+        except ImportError:
+            binance_ver = 'N/A'
+        
+        env_info = f"py={py_version} os={os_info} binance={binance_ver}"
+        print(f"[ENV] {env_info}", flush=True)
+    except Exception:
+        pass
+    
+    # ──────────────── API KEY STATUS (REDACTED) ────────────────
+    def redact_key(key):
+        """Mask API key: show first 4 and last 4 chars only."""
+        if not key or len(str(key)) < 10:
+            return "NOT_SET"
+        s = str(key)
+        return f"{s[:4]}****{s[-4:]}"
+    
+    api_status = {
+        "BINANCE": redact_key(SETTINGS.BINANCE_API_KEY),
+        "GEMINI": redact_key(SETTINGS.GEMINI_API_KEY),
+        "TELEGRAM": "SET" if SETTINGS.TELEGRAM_BOT_TOKEN else "NOT_SET"
+    }
+    print(f"[API_STATUS] {api_status}", flush=True)
+    
+    # ──────────────── GIT VERSION ────────────────
+    try:
+        import subprocess
+        git_hash = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stderr=subprocess.DEVNULL,
+            cwd=os.path.dirname(os.path.abspath(__file__))
+        ).decode().strip()
+        print(f"[VERSION] git={git_hash}", flush=True)
+    except Exception:
+        print("[VERSION] git=unknown", flush=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -25,8 +25,10 @@ Kullanım:
 
 import asyncio
 import time
+import random
+from enum import Enum
 from datetime import datetime
-from typing import Any, Dict, Optional, Set, Callable
+from typing import Any, Dict, List, Optional, Set, Callable, Tuple
 from threading import Thread, Lock
 
 # Merkezi logger'ı import et
@@ -42,11 +44,23 @@ except ImportError:
 try:
     from binance.client import Client
     from binance import ThreadedWebsocketManager
+    from binance.exceptions import BinanceAPIException
     BINANCE_AVAILABLE = True
 except ImportError:
     BINANCE_AVAILABLE = False
     Client = None
     ThreadedWebsocketManager = None
+    BinanceAPIException = Exception  # Fallback
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CIRCUIT BREAKER STATE
+# ═══════════════════════════════════════════════════════════════════════════════
+class CircuitState(Enum):
+    """Circuit breaker states."""
+    CLOSED = "CLOSED"        # Normal operation - requests allowed
+    OPEN = "OPEN"            # Degraded - requests blocked, cooldown active
+    HALF_OPEN = "HALF_OPEN"  # Testing - single request allowed to test recovery
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -120,6 +134,17 @@ class ExchangeRouter:
         
         # Callbacks
         self._price_callbacks: list[Callable[[str, float], None]] = []
+        
+        # ──────────────── CIRCUIT BREAKER ────────────────
+        self._circuit_state = CircuitState.CLOSED
+        self._error_window: List[Tuple[float, str]] = []  # (timestamp, error_type)
+        self._circuit_opened_at: float = 0.0
+        self._circuit_lock = Lock()
+        
+        # Circuit breaker thresholds
+        self.CIRCUIT_THRESHOLD = 5      # errors in window to trip
+        self.CIRCUIT_WINDOW = 60        # rolling window in seconds
+        self.CIRCUIT_COOLDOWN = 300     # cooldown in seconds (5 min)
     
     # ─────────────────────────────────────────────────────────────────────────
     # PROPERTIES
@@ -141,6 +166,118 @@ class ExchangeRouter:
             return float('inf')
         return time.time() - self._last_heartbeat
     
+    # ─────────────────────────────────────────────────────────────────────────
+    # CIRCUIT BREAKER METHODS
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    # Error weights - rate limit is more serious
+    ERROR_WEIGHTS = {
+        "TIMEOUT": 1,
+        "CONNECTION": 1,
+        "SERVER_ERROR": 1,
+        "RATE_LIMIT": 2,  # More aggressive for rate limits
+    }
+    
+    def get_circuit_state(self) -> str:
+        """Get current circuit breaker state as string."""
+        return self._circuit_state.value
+    
+    def get_circuit_stats(self) -> Dict[str, Any]:
+        """
+        Get circuit breaker statistics for telemetry.
+        
+        Returns:
+            Dict with state, error count, score, and cooldown info
+        """
+        with self._circuit_lock:
+            now = time.time()
+            
+            # Clean old errors
+            active_errors = [e for e in self._error_window if now - e[0] < self.CIRCUIT_WINDOW]
+            
+            # Calculate weighted score
+            score = sum(self.ERROR_WEIGHTS.get(e[1], 1) for e in active_errors)
+            
+            stats = {
+                "state": self._circuit_state.value,
+                "errors_60s": len(active_errors),
+                "error_score": score,
+                "threshold": self.CIRCUIT_THRESHOLD,
+            }
+            
+            if self._circuit_state == CircuitState.OPEN:
+                elapsed = now - self._circuit_opened_at
+                stats["open_remaining_s"] = max(0, int(self.CIRCUIT_COOLDOWN - elapsed))
+            
+            return stats
+    
+    def _record_circuit_error(self, error_type: str) -> None:
+        """
+        Record an error for circuit breaker tracking (weighted).
+        If weighted score exceeds threshold, opens the circuit.
+        
+        Args:
+            error_type: Type of error (TIMEOUT, CONNECTION, RATE_LIMIT, etc.)
+        """
+        with self._circuit_lock:
+            now = time.time()
+            self._error_window.append((now, error_type))
+            
+            # Clean old errors outside window
+            self._error_window = [
+                e for e in self._error_window 
+                if now - e[0] < self.CIRCUIT_WINDOW
+            ]
+            
+            # Calculate weighted score
+            score = sum(self.ERROR_WEIGHTS.get(e[1], 1) for e in self._error_window)
+            
+            # Check if we should trip the circuit (using weighted score)
+            if score >= self.CIRCUIT_THRESHOLD:
+                if self._circuit_state != CircuitState.OPEN:
+                    self._circuit_state = CircuitState.OPEN
+                    self._circuit_opened_at = now
+                    logger.warning(
+                        f"[CIRCUIT] State → OPEN | score={score}/{self.CIRCUIT_THRESHOLD} "
+                        f"| errors={len(self._error_window)} | cooldown={self.CIRCUIT_COOLDOWN}s "
+                        f"| recent={[e[1] for e in self._error_window[-3:]]}"
+                    )
+    
+    def _check_circuit_allows(self) -> Tuple[bool, str]:
+        """
+        Check if circuit allows a request.
+        
+        Returns:
+            (allowed, reason) - whether request is allowed and why
+        """
+        with self._circuit_lock:
+            if self._circuit_state == CircuitState.CLOSED:
+                return True, "CLOSED"
+            
+            now = time.time()
+            
+            if self._circuit_state == CircuitState.OPEN:
+                elapsed = now - self._circuit_opened_at
+                if elapsed >= self.CIRCUIT_COOLDOWN:
+                    # Transition to HALF_OPEN for testing
+                    self._circuit_state = CircuitState.HALF_OPEN
+                    logger.info(f"[CIRCUIT] State → HALF_OPEN | testing recovery after {elapsed:.0f}s cooldown")
+                    return True, "HALF_OPEN"
+                else:
+                    remaining = self.CIRCUIT_COOLDOWN - elapsed
+                    return False, f"OPEN ({remaining:.0f}s remaining)"
+            
+            # HALF_OPEN allows one request
+            return True, "HALF_OPEN"
+    
+    def _on_circuit_success(self) -> None:
+        """Called when a request succeeds. Closes circuit if in HALF_OPEN."""
+        with self._circuit_lock:
+            if self._circuit_state == CircuitState.HALF_OPEN:
+                self._circuit_state = CircuitState.CLOSED
+                self._error_window.clear()
+                logger.info("[CIRCUIT] State → CLOSED | recovery successful")
+
     # ─────────────────────────────────────────────────────────────────────────
     # CLIENT ACCESS
     # ─────────────────────────────────────────────────────────────────────────
@@ -310,23 +447,109 @@ class ExchangeRouter:
             logger.warning(f"[ExchangeRouter] get_price_async REST failed for {symbol}: {e}")
             return None
     
-    async def fetch_24h_ticker(self, symbol: str) -> Dict[str, Any]:
+    async def fetch_24h_ticker(self, symbol: str, max_retries: int = 3) -> Dict[str, Any]:
         """
         Returns Binance 24h ticker stats for the symbol.
         Used for accurate USD volume: quoteVolume.
+        
+        Implements retry logic with exponential backoff + jitter for transient errors.
+        Integrated with circuit breaker for resilience.
+        
+        Error classification:
+        - Timeout/Connection → retry with backoff, record circuit error
+        - 4xx (bad request) → break immediately
+        - 429 (rate limit) → retry with longer cooldown, record circuit error
         """
         if not self._client:
             return {}
-            
-        try:
-            loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(
-                None, 
-                lambda: self._client.get_ticker(symbol=symbol.upper())
-            )
-        except Exception as e:
-            logger.error(f"[ExchangeRouter] 24h ticker fetch failed for {symbol}: {e}")
+        
+        # ──────────────── CIRCUIT BREAKER CHECK ────────────────
+        allowed, reason = self._check_circuit_allows()
+        if not allowed:
+            logger.debug(f"[ExchangeRouter] 24h ticker {symbol} blocked by circuit: {reason}")
             return {}
+        
+        for attempt in range(max_retries):
+            try:
+                loop = asyncio.get_running_loop()
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        None, 
+                        lambda: self._client.get_ticker(symbol=symbol.upper())
+                    ),
+                    timeout=10.0  # 10 seconds timeout
+                )
+                
+                # Success - notify circuit breaker
+                self._on_circuit_success()
+                return result
+                
+            except asyncio.TimeoutError:
+                # Record error for circuit breaker
+                self._record_circuit_error("TIMEOUT")
+                
+                # Exponential backoff with ±20% jitter
+                base_wait = (2 ** attempt) * 1.0  # 1s, 2s, 4s
+                wait_time = base_wait * (0.8 + random.random() * 0.4)
+                logger.warning(
+                    f"[ExchangeRouter] 24h ticker timeout {symbol}, "
+                    f"retry {attempt+1}/{max_retries} after {wait_time:.1f}s"
+                )
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(wait_time)
+                    
+            except (ConnectionError, OSError) as e:
+                # Record error for circuit breaker
+                self._record_circuit_error("CONNECTION")
+                
+                base_wait = (2 ** attempt) * 1.0
+                wait_time = base_wait * (0.8 + random.random() * 0.4)
+                logger.warning(
+                    f"[ExchangeRouter] 24h ticker connection error {symbol}: {e}, "
+                    f"retry {attempt+1}/{max_retries} after {wait_time:.1f}s"
+                )
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(wait_time)
+                    
+            except BinanceAPIException as e:
+                # Error classification based on status code
+                if e.status_code == 429:
+                    # Rate limit - record as circuit error
+                    self._record_circuit_error("RATE_LIMIT")
+                    
+                    # Rate limit - longer cooldown
+                    wait_time = 30.0 * (0.8 + random.random() * 0.4)
+                    logger.warning(
+                        f"[ExchangeRouter] 24h ticker RATE LIMITED {symbol}, "
+                        f"cooling down for {wait_time:.1f}s"
+                    )
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(wait_time)
+                elif 400 <= e.status_code < 500:
+                    # 4xx client error - don't retry, don't record as circuit error
+                    logger.error(
+                        f"[ExchangeRouter] 24h ticker client error {symbol}: "
+                        f"{e.status_code} {e.message} - not retrying"
+                    )
+                    break
+                else:
+                    # 5xx server error - retry and record circuit error
+                    self._record_circuit_error("SERVER_ERROR")
+                    
+                    base_wait = (2 ** attempt) * 1.0
+                    wait_time = base_wait * (0.8 + random.random() * 0.4)
+                    logger.warning(
+                        f"[ExchangeRouter] 24h ticker server error {symbol}: {e}, "
+                        f"retry {attempt+1}/{max_retries} after {wait_time:.1f}s"
+                    )
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(wait_time)
+                        
+            except Exception as e:
+                logger.error(f"[ExchangeRouter] 24h ticker fetch failed for {symbol}: {e}")
+                break
+        
+        return {}
 
     async def _prefetch_prices(self) -> None:
         """

@@ -148,6 +148,28 @@ SYMBOLS: tuple = _parse_symbols_env()
 PAPER_START_EQUITY: float = _get_env_float("PAPER_START_EQUITY", 1000.0)
 PAPER_SANITY_MODE: bool = _get_env_bool("PAPER_SANITY_MODE", False)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# RELEASE MANAGEMENT MODES
+# ═══════════════════════════════════════════════════════════════════════════════
+# CANARY_MODE: Very limited trading for validation (1 symbol, 1 position, min risk)
+# SAFE_MODE: Data collection only, no actual trading (observe mode)
+
+CANARY_MODE: bool = _get_env_bool("CANARY_MODE", False)
+SAFE_MODE: bool = _get_env_bool("SAFE_MODE", False)
+
+# Apply canary mode overrides
+if CANARY_MODE:
+    SYMBOLS = (SYMBOLS[0],) if SYMBOLS else ("BTCUSDT",)  # Single symbol
+    _PAPER_DEFAULTS["MAX_OPEN_POSITIONS"] = 1
+    _PAPER_DEFAULTS["RISK_PER_TRADE"] = 0.25  # 0.25% - minimal risk
+    _LIVE_DEFAULTS["MAX_OPEN_POSITIONS"] = 1
+    _LIVE_DEFAULTS["RISK_PER_TRADE"] = 0.5  # 0.5% - minimal risk
+
+# Safe mode forces paper trading
+if SAFE_MODE:
+    _PAPER_DEFAULTS["LIVE_TRADING"] = False
+    _LIVE_DEFAULTS["LIVE_TRADING"] = False
+
 
 @dataclass(frozen=True)
 class Settings:

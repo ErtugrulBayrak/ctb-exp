@@ -2,12 +2,18 @@ import asyncio
 import time
 import logging
 import traceback
+import uuid
 from typing import List, Dict, Any, Optional
 
 # Import modules (assuming they are in the python path)
 try:
-    from config import SETTINGS, RUN_PROFILE, PAPER_SANITY_MODE
+    from config import SETTINGS, RUN_PROFILE, PAPER_SANITY_MODE, CANARY_MODE, SAFE_MODE
 except ImportError:
+    # Fallback if config is missing (should not happen in production)
+    RUN_PROFILE = "paper"
+    PAPER_SANITY_MODE = False
+    CANARY_MODE = False
+    SAFE_MODE = False
     # Fallback if config is missing (should not happen in production)
     RUN_PROFILE = "paper"
     PAPER_SANITY_MODE = False
@@ -76,6 +82,14 @@ class LoopController:
 
         self.loop_duration = getattr(SETTINGS, "LOOP_SECONDS", 900)
         self.cooldown_until = 0.0
+        
+        # ──────────────── RUN TRACKING ────────────────
+        self._run_id = uuid.uuid4().hex[:8]  # Short unique run identifier
+        self._cycle_id = 0
+        
+        # Freshness tracking for telemetry
+        self._max_candle_age_s = 0
+        self._max_ticker_age_s = 0
         
         # V1 Strategy Mode
         self._strategy_mode = getattr(SETTINGS, "STRATEGY_MODE", "LEGACY")
@@ -284,7 +298,20 @@ class LoopController:
 
     async def run_once(self):
         """Executes one 15-min cycle."""
+        cycle_start = time.time()
         logger.info(f"\n⚡ Cycle Start: {time.strftime('%H:%M:%S')}")
+        
+        # ──────────────── CYCLE STATS ────────────────
+        # Track blocking reasons and events throughout the cycle
+        self._cycle_stats = {
+            "regime_blocked": 0,
+            "news_veto": 0,
+            "cooldown": 0,
+            "data_stale": 0,
+            "snapshot_failed": 0,
+            "trade_attempt": 0,
+            "trade_success": 0
+        }
         
         # 1. Update Portfolio/Positions
         # If needed, execution_manager might sync with exchange here
@@ -316,6 +343,7 @@ class LoopController:
             
         except Exception as e:
             logger.error(f"⚠️ Failed to fetch global data: {e}")
+            self._cycle_stats["data_stale"] += 1
 
         # 4b. Fetch Global News Summary (TTL cached)
         global_news_summary = None
@@ -356,10 +384,12 @@ class LoopController:
         for symbol, result in zip(self.watchlist, results):
             if isinstance(result, Exception):
                 logger.error(f"❌ Snapshot failed for {symbol}: {result}")
+                self._cycle_stats["snapshot_failed"] += 1
                 continue
             
             snapshot = result
             if not snapshot:
+                self._cycle_stats["data_stale"] += 1
                 continue
 
             # Inject global news summary into snapshot (deprecated, kept for compatibility)
@@ -388,6 +418,47 @@ class LoopController:
                     logger.warning(f"[V1] TF data fetch error for {symbol}: {e}")
                     snapshot["tf"] = {"1h": {}, "15m": {}}
 
+            # ──────────────── DATA FRESHNESS GATE ────────────────
+            # Block trading if data is too old to prevent stale decisions
+            MAX_CANDLE_AGE_SECONDS = 180  # 3 minutes
+            MAX_TICKER_AGE_SECONDS = 60   # 1 minute
+            
+            now = time.time()
+            is_data_stale = False
+            stale_reason = None
+            
+            # Check candle freshness (from tf data timestamp if available)
+            candle_ts = snapshot.get("tf", {}).get("1h", {}).get("timestamp", 0)
+            candle_age = int(now - candle_ts) if candle_ts else 0
+            
+            # Track max age for telemetry
+            if candle_age > self._max_candle_age_s:
+                self._max_candle_age_s = candle_age
+            
+            if candle_ts and candle_age > MAX_CANDLE_AGE_SECONDS:
+                is_data_stale = True
+                stale_reason = f"candle_age={candle_age}s"
+                logger.warning(f"[FRESHNESS] {symbol}: {stale_reason} > {MAX_CANDLE_AGE_SECONDS}s")
+            
+            # Check ticker/price freshness
+            ticker_ts = snapshot.get("ticker_timestamp", 0)
+            ticker_age = int(now - ticker_ts) if ticker_ts else 0
+            
+            # Track max age for telemetry
+            if ticker_age > self._max_ticker_age_s:
+                self._max_ticker_age_s = ticker_age
+            
+            if ticker_ts and ticker_age > MAX_TICKER_AGE_SECONDS:
+                is_data_stale = True
+                stale_reason = f"ticker_age={ticker_age}s"
+                logger.warning(f"[FRESHNESS] {symbol}: {stale_reason} > {MAX_TICKER_AGE_SECONDS}s")
+            
+            if is_data_stale:
+                self._cycle_stats["data_stale"] += 1
+                # Still allow sell logic for exit management
+                await self.process_sell_logic(symbol, snapshot)
+                continue  # Skip buy logic for stale data
+
             # Check for Sell logic (always allowed)
             await self.process_sell_logic(symbol, snapshot)
             
@@ -398,6 +469,87 @@ class LoopController:
         # 7. Summary Log
         port_summary = self.position_manager.get_portfolio_summary()
         logger.info(f"💰 Balance: ${port_summary.get('balance'):.0f} | Open: {port_summary.get('open_positions')}")
+        
+        # 8. Cycle Summary - Enriched with blocking reasons and latency
+        cycle_latency_ms = int((time.time() - cycle_start) * 1000)
+        
+        # Build blocked_by list
+        blocked_by = []
+        if not can_buy:
+            blocked_by.append(f"SAFETY:{block_reason[:20]}" if block_reason else "SAFETY")
+        if self._cycle_stats["regime_blocked"] > 0:
+            blocked_by.append(f"REGIME:{self._cycle_stats['regime_blocked']}")
+        if self._cycle_stats["news_veto"] > 0:
+            blocked_by.append(f"NEWS_VETO:{self._cycle_stats['news_veto']}")
+        if self._cycle_stats["cooldown"] > 0:
+            blocked_by.append(f"COOLDOWN:{self._cycle_stats['cooldown']}")
+        if self._cycle_stats["data_stale"] > 0:
+            blocked_by.append(f"DATA_STALE:{self._cycle_stats['data_stale']}")
+        
+        # Get circuit breaker stats for telemetry
+        circuit_stats = {"state": "UNKNOWN", "errors_60s": 0}
+        if hasattr(self, 'exchange_router') and hasattr(self.exchange_router, 'get_circuit_stats'):
+            circuit_stats = self.exchange_router.get_circuit_stats()
+        
+        # Get daily PnL
+        daily_pnl = 0.0
+        if hasattr(self, 'execution_manager') and hasattr(self.execution_manager, 'get_today_pnl'):
+            daily_pnl = self.execution_manager.get_today_pnl()
+        
+        # Calculate PnL percentage
+        balance = port_summary.get('balance', 0)
+        initial_balance = getattr(SETTINGS, 'BASLANGIC_BAKIYE', 1000)
+        daily_pnl_pct = (daily_pnl / initial_balance * 100) if initial_balance > 0 else 0
+        
+        # Determine run mode
+        if SAFE_MODE:
+            run_mode = "SAFE"
+        elif CANARY_MODE:
+            run_mode = "CANARY"
+        else:
+            run_mode = "NORMAL"
+        
+        # Build structured blocked_by dict
+        blocked_by_dict = {}
+        if not can_buy and block_reason:
+            blocked_by_dict["SAFETY"] = 1
+        if self._cycle_stats["regime_blocked"] > 0:
+            blocked_by_dict["REGIME"] = self._cycle_stats["regime_blocked"]
+        if self._cycle_stats["news_veto"] > 0:
+            blocked_by_dict["NEWS_VETO"] = self._cycle_stats["news_veto"]
+        if self._cycle_stats["cooldown"] > 0:
+            blocked_by_dict["COOLDOWN"] = self._cycle_stats["cooldown"]
+        if self._cycle_stats["data_stale"] > 0:
+            blocked_by_dict["DATA_STALE"] = self._cycle_stats["data_stale"]
+        
+        # Increment cycle counter
+        self._cycle_id += 1
+        
+        # V2 Cycle Summary - structured for machine parsing
+        cycle_summary = {
+            "run_id": self._run_id,
+            "cycle_id": self._cycle_id,
+            "ts": time.strftime('%H:%M:%S'),
+            "mode": run_mode,
+            "symbols": len(self.watchlist),
+            "blocked_by": blocked_by_dict if blocked_by_dict else {},
+            "trades_open": self._cycle_stats['trade_success'],
+            "trades_attempt": self._cycle_stats['trade_attempt'],
+            "open_pos": port_summary.get('open_positions', 0),
+            "balance_usd": round(balance, 2),
+            "daily_pnl_usd": round(daily_pnl, 2),
+            "daily_pnl_pct": round(daily_pnl_pct, 2),
+            "max_candle_age_s": self._max_candle_age_s,
+            "max_ticker_age_s": self._max_ticker_age_s,
+            "api_state": circuit_stats.get("state", "UNKNOWN"),
+            "api_errors_60s": circuit_stats.get("errors_60s", 0),
+            "latency_ms": cycle_latency_ms
+        }
+        logger.info(f"[CYCLE_SUMMARY] {cycle_summary}")
+        
+        # Reset freshness tracking for next cycle
+        self._max_candle_age_s = 0
+        self._max_ticker_age_s = 0
 
 
 
@@ -481,9 +633,11 @@ class LoopController:
             signal = self._v1_strategy.evaluate_entry(snapshot, balance)
             
             if signal.action != "BUY":
-                # Log blocking reason for debugging
+                # Log blocking reason for debugging and increment stats
                 if signal.metadata.get("blocked_by_regime"):
                     logger.debug(f"[V1] {symbol}: Regime block - {signal.reason}")
+                    if hasattr(self, '_cycle_stats'):
+                        self._cycle_stats["regime_blocked"] += 1
                 return
             
             logger.info(f"💡 V1 Signal ({symbol}): BUY (Conf: {signal.confidence}%) | {signal.reason}")
@@ -517,6 +671,8 @@ class LoopController:
                         f"veto_confidence={veto_result.confidence} "
                         f"veto_reason={veto_result.reason} veto_tags={veto_result.tags}"
                     )
+                    if hasattr(self, '_cycle_stats'):
+                        self._cycle_stats["news_veto"] += 1
                     return
                 else:
                     logger.debug(f"[VETO] {symbol}: No veto - {veto_result.reason}")
@@ -525,6 +681,8 @@ class LoopController:
             in_cooldown, cooldown_reason = self.risk_manager.is_in_cooldown()
             if in_cooldown:
                 logger.info(f"❄️ V1 {symbol}: {cooldown_reason}")
+                if hasattr(self, '_cycle_stats'):
+                    self._cycle_stats["cooldown"] += 1
                 return
             
             # 4. Build decision result for ExecutionManager
@@ -534,6 +692,8 @@ class LoopController:
             
             if not current_price:
                 logger.warning(f"🚫 V1 BUY Failed: No valid price for {symbol}")
+                if hasattr(self, '_cycle_stats'):
+                    self._cycle_stats["data_stale"] += 1
                 return
             
             decision_result = {
@@ -547,7 +707,10 @@ class LoopController:
                 "metadata": signal.metadata
             }
             
-            # 5. Execute Buy
+            # 5. Execute Buy - Track attempt
+            if hasattr(self, '_cycle_stats'):
+                self._cycle_stats["trade_attempt"] += 1
+            
             success, result = await self.execution_manager.execute_buy_flow(
                 symbol=symbol,
                 current_price=current_price,
@@ -558,6 +721,10 @@ class LoopController:
             )
             
             if success:
+                # Track success
+                if hasattr(self, '_cycle_stats'):
+                    self._cycle_stats["trade_success"] += 1
+                
                 # Add V1 position fields
                 position = result
                 v1_fields = self._v1_strategy.calculate_position_fields(

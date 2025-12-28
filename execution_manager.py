@@ -15,6 +15,7 @@ import time
 import json
 import os
 import asyncio
+import hashlib
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime
 
@@ -123,6 +124,11 @@ class ExecutionManager:
             "live_orders_placed": 0,
             "live_orders_failed": 0
         }
+        
+        # ──────────────── IN-MEMORY INTENT TRACKING ────────────────
+        # Fallback idempotency when order_ledger is not available
+        self._recent_intents: Dict[str, float] = {}  # intent_id -> timestamp
+        self._intent_ttl = 900  # 15 minutes
     
     def _default_log(self, msg: str, level: str = "INFO", indent: int = 0):
         """Fallback log function."""
@@ -132,6 +138,43 @@ class ExecutionManager:
     def update_portfolio(self, portfolio: Dict[str, Any]):
         """Update portfolio reference (for loop refresh)."""
         self.portfolio = portfolio
+    
+    def _generate_intent_id(self, symbol: str, signal_ts: str = None) -> str:
+        """
+        Generate a unique intent ID for deduplication.
+        
+        Args:
+            symbol: Trading symbol
+            signal_ts: Signal timestamp (optional, uses current time if not provided)
+        
+        Returns:
+            12-character hash string
+        """
+        ts = signal_ts or time.strftime('%Y-%m-%d %H:%M')
+        raw = f"{symbol}:{ts}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:12]
+    
+    def _is_duplicate_intent(self, intent_id: str) -> bool:
+        """
+        Check if this intent was recently processed.
+        
+        Returns:
+            True if duplicate (should be blocked), False if new
+        """
+        now = time.time()
+        
+        # Clean expired intents
+        self._recent_intents = {
+            k: v for k, v in self._recent_intents.items() 
+            if now - v < self._intent_ttl
+        }
+        
+        if intent_id in self._recent_intents:
+            return True
+        
+        # Record this intent
+        self._recent_intents[intent_id] = now
+        return False
     
     # ═══════════════════════════════════════════════════════════════════════════
     # POSITION MANAGEMENT
@@ -408,6 +451,19 @@ class ExecutionManager:
                 metrics_increment("order_ledger_block_count")
                 self._log(f"[ORDER_LEDGER] {symbol}: Entry blocked | signal_id={signal_id} | blocked_by_order_ledger=True | reason={reason}", "WARN")
                 return False, f"Order ledger block: {reason}"
+        
+        # ═══════════════════════════════════════════════════════════════════════
+        # IN-MEMORY INTENT DEDUPLICATION (fallback when order_ledger unavailable)
+        # ═══════════════════════════════════════════════════════════════════════
+        if not signal_id:
+            # Generate intent_id from symbol + current minute
+            intent_id = self._generate_intent_id(symbol)
+            if self._is_duplicate_intent(intent_id):
+                self._log(
+                    f"[INTENT_BLOCK] {symbol}: Duplicate intent blocked | intent_id={intent_id}",
+                    "WARN"
+                )
+                return False, f"Duplicate intent blocked: {intent_id}"
         
         # StrategyEngine'den gelen değerleri kullan
         stop_loss = decision_result.get("stop_loss")
