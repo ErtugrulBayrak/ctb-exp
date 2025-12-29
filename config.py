@@ -361,7 +361,15 @@ class Settings:
     # Rejim Filtresi (trade sayısını düşürmek için zorunlu)
     # ─────────────────────────────────────────────────────────────────────────────
     # Minimum volatilite: ATR(14) / price * 100
+    # Genel fallback değer (sembol eşleşmezse kullanılır)
     MIN_ATR_PCT: float = 0.22
+    
+    # Sembol bazlı dinamik ATR eşikleri
+    # BTC: Düşük volatilitede daha fazla fırsat yakala
+    # ETH: Orta seviye eşik
+    # Altcoinler: Doğal volatiliteleri yüksek, daha yüksek eşik
+    MIN_ATR_PCT_BY_SYMBOL: dict = None  # dataclass frozen, __post_init__ yok - runtime'da set edilecek
+    
     # Maximum volatilite (aşırı volatilite filtresi)
     MAX_ATR_PCT: float = 3.0
     # Hacim filtresi için lookback (son N mumun ortalaması)
@@ -540,6 +548,49 @@ class Settings:
 
 # Global settings instance
 SETTINGS = Settings()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SEMBOL BAZLI DİNAMİK ATR EŞİKLERİ
+# ═══════════════════════════════════════════════════════════════════════════════
+# Sembol bazlı minimum ATR yüzdeleri
+# BTC: Düşük volatilitede daha fazla fırsat (0.15%)
+# ETH: Orta seviye (0.20%)
+# Diğer altcoinler: Doğal volatiliteleri yüksek (0.25%)
+MIN_ATR_PCT_BY_SYMBOL = {
+    "BTCUSDT": 0.15,
+    "BTC": 0.15,
+    "ETHUSDT": 0.20,
+    "ETH": 0.20,
+    # Diğer majör altcoinler için varsayılan: 0.25%
+    # Burada listelenmeyen semboller SETTINGS.MIN_ATR_PCT (0.22) kullanır
+}
+
+# Altcoin varsayılan eşiği (BTC/ETH dışındakiler için)
+MIN_ATR_PCT_ALTCOIN_DEFAULT = 0.25
+
+
+def get_min_atr_pct_for_symbol(symbol: str) -> float:
+    """
+    Sembol için uygun minimum ATR yüzdesini döndürür.
+    
+    Args:
+        symbol: Trading sembolü (örn: "BTCUSDT", "ETHUSDT", "SOLUSDT")
+    
+    Returns:
+        Minimum ATR yüzdesi (0.15, 0.20, 0.25 vb.)
+    """
+    # Önce tam eşleşme dene
+    if symbol in MIN_ATR_PCT_BY_SYMBOL:
+        return MIN_ATR_PCT_BY_SYMBOL[symbol]
+    
+    # Base sembol bul (BTCUSDT -> BTC)
+    base_symbol = symbol.replace("USDT", "").replace("BUSD", "").replace("USD", "")
+    if base_symbol in MIN_ATR_PCT_BY_SYMBOL:
+        return MIN_ATR_PCT_BY_SYMBOL[base_symbol]
+    
+    # Altcoin varsayılanı
+    return MIN_ATR_PCT_ALTCOIN_DEFAULT
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

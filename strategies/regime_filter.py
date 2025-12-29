@@ -32,7 +32,7 @@ except ImportError:
 
 # Config import
 try:
-    from config import SETTINGS
+    from config import SETTINGS, get_min_atr_pct_for_symbol
 except ImportError:
     # Fallback defaults
     class MockSettings:
@@ -42,6 +42,10 @@ except ImportError:
         MIN_VOLUME_LOOKBACK = 10
         MIN_VOLUME_MULT = 0.8
     SETTINGS = MockSettings()
+    
+    def get_min_atr_pct_for_symbol(symbol: str) -> float:
+        """Fallback: her sembol için sabit değer."""
+        return 0.22
 
 
 @dataclass
@@ -142,7 +146,7 @@ class RegimeFilter:
             reasons.append(f"ADX({adx_value:.1f}) < {self.min_adx}")
         
         # ─────────────────────────────────────────────────────────────────────────
-        # 2. ATR Volatilite Filtresi
+        # 2. ATR Volatilite Filtresi (Sembol Bazlı Dinamik Eşik)
         # ─────────────────────────────────────────────────────────────────────────
         price = snapshot.get("price", 0.0)
         if price is None or price <= 0:
@@ -153,14 +157,18 @@ class RegimeFilter:
         if atr_value is None:
             atr_value = 0.0
         
+        # Sembol bazlı dinamik ATR eşiği (BTC=0.15%, ETH=0.20%, Altcoin=0.25%)
+        symbol = snapshot.get("symbol", "UNKNOWN")
+        dynamic_min_atr_pct = get_min_atr_pct_for_symbol(symbol)
+        
         if price > 0 and atr_value > 0:
             atr_pct = (atr_value / price) * 100
             
-            if self.min_atr_pct <= atr_pct <= self.max_atr_pct:
+            if dynamic_min_atr_pct <= atr_pct <= self.max_atr_pct:
                 atr_ok = True
             else:
-                if atr_pct < self.min_atr_pct:
-                    reasons.append(f"ATR_PCT({atr_pct:.2f}%) < {self.min_atr_pct}% (düşük volatilite)")
+                if atr_pct < dynamic_min_atr_pct:
+                    reasons.append(f"ATR_PCT({atr_pct:.2f}%) < {dynamic_min_atr_pct}% (düşük volatilite)")
                 else:
                     reasons.append(f"ATR_PCT({atr_pct:.2f}%) > {self.max_atr_pct}% (aşırı volatilite)")
         else:
