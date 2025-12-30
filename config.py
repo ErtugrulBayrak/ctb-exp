@@ -89,7 +89,11 @@ def _parse_symbols_env() -> tuple:
     env_val = os.getenv("SYMBOLS", "")
     if env_val:
         return tuple(s.strip().upper() for s in env_val.split(",") if s.strip())
-    return ("BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT")
+    # A+B Strateji: 12 coin havuzu - daha fazla trade fırsatı
+    return (
+        "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT",
+        "DOGEUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT", "NEARUSDT", "APTUSDT", "SUIUSDT"
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -105,7 +109,7 @@ _PAPER_DEFAULTS = {
     "ALLOW_DANGEROUS_ACTIONS": False,
     "RISK_PER_TRADE": 0.5,  # %0.5 - düşük risk
     "MAX_OPEN_POSITIONS": 2,
-    "MAX_DAILY_LOSS_PCT": 1.0,
+    "MAX_DAILY_LOSS_PCT": 3.0,  # A+B: Günlük risk limiti artırıldı (%2-3 arası)
     "ALERTS_ENABLED": True,
     "ALERT_SEND_TELEGRAM": True,
     "SUMMARY_SEND_TELEGRAM": True,
@@ -279,10 +283,10 @@ class Settings:
     # Ardışık zarar sonrası bekleme süresi (dakika)
     COOLDOWN_MINUTES: int = 60
     
-    # ADX Eşikleri (Dengeli - güçlü trend iste)
-    MIN_ADX_ENTRY: float = 16.5  # Düşürüldü - piyasa koşullarına daha uyumlu
-    MIN_ADX_ENTRY_SOFT: float = 16.0
-    SOFTEN_ADX_WHEN_CONF_GE: int = 75
+    # ADX Eşikleri (A+B Strateji - daha fazla fırsat için gevşetildi)
+    MIN_ADX_ENTRY: float = 14.0  # A+B: 16.5 → 14.0 - daha fazla trend algıla
+    MIN_ADX_ENTRY_SOFT: float = 13.0  # A+B: 16.0 → 13.0
+    SOFTEN_ADX_WHEN_CONF_GE: int = 70  # A+B: 75 → 70
     
     # Risk Manager Ayarları (Profile-based)
     # Paper: 0.5%, Live: 2.0%
@@ -302,14 +306,10 @@ class Settings:
     
     # İzlenecek coinler (USDT bazlı çiftler)
     # Bu listeyi düzenleyerek coin ekle/çıkarabilirsiniz
+    # A+B Strateji: Genişletilmiş coin havuzu (12 coin)
     WATCHLIST: tuple = (
-        "BTCUSDT",
-        "ETHUSDT",
-        "SOLUSDT",
-        "BNBUSDT",
-        "XRPUSDT",
-        "AVAXUSDT",
-        "LINKUSDT"
+        "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
+        "DOGEUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT", "NEARUSDT", "APTUSDT", "SUIUSDT"
     )
     
     # Kâr Koruma Ayarları
@@ -362,7 +362,7 @@ class Settings:
     # ─────────────────────────────────────────────────────────────────────────────
     # Minimum volatilite: ATR(14) / price * 100
     # Genel fallback değer (sembol eşleşmezse kullanılır)
-    MIN_ATR_PCT: float = 0.22
+    MIN_ATR_PCT: float = 0.15  # A+B: 0.22 → 0.15 (fallback, daha düşük volatilite kabul)
     
     # Sembol bazlı dinamik ATR eşikleri
     # BTC: Düşük volatilitede daha fazla fırsat yakala
@@ -403,7 +403,7 @@ class Settings:
     # V1 Risk / Pozisyon Boyutlandırma
     # ─────────────────────────────────────────────────────────────────────────────
     # V1 için işlem başına risk yüzdesi (daha konservatif)
-    RISK_PER_TRADE_V1: float = 1.0  # %1 - güvenli varsayılan
+    RISK_PER_TRADE_V1: float = 0.75  # A+B: %0.75 - daha sık küçük trade'ler
     # Volatilite hedefleme: pozisyon boyutunu ATR'ye göre ayarla
     TARGET_ATR_PCT: float = 1.0
     # Volatilite ölçeği sınırları
@@ -556,17 +556,17 @@ SETTINGS = Settings()
 # BTC: Düşük volatilitede daha fazla fırsat (0.15%)
 # ETH: Orta seviye (0.20%)
 # Diğer altcoinler: Doğal volatiliteleri yüksek (0.25%)
+# A+B Strateji: ATR eşikleri ~%25 düşürüldü - daha fazla trade fırsatı
 MIN_ATR_PCT_BY_SYMBOL = {
-    "BTCUSDT": 0.15,
-    "BTC": 0.15,
-    "ETHUSDT": 0.20,
-    "ETH": 0.20,
-    # Diğer majör altcoinler için varsayılan: 0.25%
-    # Burada listelenmeyen semboller SETTINGS.MIN_ATR_PCT (0.22) kullanır
+    "BTCUSDT": 0.12,  # A+B: 0.15 → 0.12
+    "BTC": 0.12,
+    "ETHUSDT": 0.15,  # A+B: 0.20 → 0.15
+    "ETH": 0.15,
+    # Diğer altcoinler SETTINGS.MIN_ATR_PCT (0.15) veya ALTCOIN_DEFAULT (0.18) kullanır
 }
 
 # Altcoin varsayılan eşiği (BTC/ETH dışındakiler için)
-MIN_ATR_PCT_ALTCOIN_DEFAULT = 0.25
+MIN_ATR_PCT_ALTCOIN_DEFAULT = 0.18  # A+B: 0.25 → 0.18
 
 
 def get_min_atr_pct_for_symbol(symbol: str) -> float:
