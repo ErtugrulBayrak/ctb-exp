@@ -179,6 +179,13 @@ class SwingTrendV1:
                     "volume_ratio": regime_result.volume_ratio
                 }
                 return hold_signal
+            else:
+                # ✅ Rejim filtresi geçildi - DEBUG LOG
+                logger.info(
+                    f"[REGIME PASS] {symbol}: ✅ Rejim filtresi GEÇTİ | "
+                    f"ADX={regime_result.adx_value:.1f} | ATR%={regime_result.atr_pct:.2f}% | "
+                    f"VOL_RATIO={regime_result.volume_ratio:.2f}"
+                )
         
         # ─────────────────────────────────────────────────────────────────────────
         # 2. Trend Yapısı Kontrolü (1h timeframe)
@@ -192,6 +199,7 @@ class SwingTrendV1:
         
         # EMA değerleri yoksa fallback
         if not ema20 or not ema50:
+            logger.debug(f"[SIGNAL CHECK] {symbol}: ❌ EMA verileri eksik")
             hold_signal.reason = "EMA verileri eksik"
             hold_signal.metadata["missing_data"] = ["ema20", "ema50"]
             return hold_signal
@@ -199,9 +207,16 @@ class SwingTrendV1:
         # Trend yapısı: EMA20 > EMA50
         trend_ok = ema20 > ema50
         if not trend_ok:
+            logger.info(
+                f"[TREND BLOCK] {symbol}: EMA20({ema20:.2f}) <= EMA50({ema50:.2f}) | "
+                f"Fark: {ema20-ema50:.2f}"
+            )
             hold_signal.reason = f"Trend yapısı negatif: EMA20({ema20:.2f}) <= EMA50({ema50:.2f})"
             hold_signal.metadata["trend_ok"] = False
             return hold_signal
+        
+        # ✅ Trend OK - DEBUG LOG
+        logger.info(f"[TREND OK] {symbol}: ✅ EMA20({ema20:.2f}) > EMA50({ema50:.2f}) | Fark: {ema20-ema50:.2f}")
         
         # EMA50 slope kontrolü
         ema50_slope_ok = True
@@ -209,9 +224,12 @@ class SwingTrendV1:
             ema50_slope = ema50 - ema50_prev
             ema50_slope_ok = ema50_slope > 0
             if not ema50_slope_ok:
+                logger.info(f"[SLOPE BLOCK] {symbol}: EMA50 slope negatif: {ema50_slope:.4f}")
                 hold_signal.reason = f"EMA50 slope negatif: {ema50_slope:.4f}"
                 hold_signal.metadata["ema50_slope"] = ema50_slope
                 return hold_signal
+            else:
+                logger.debug(f"[SLOPE OK] {symbol}: ✅ EMA50 slope pozitif: {ema50_slope:.4f}")
         
         # ─────────────────────────────────────────────────────────────────────────
         # 3. Breakout Kontrolü (15m timeframe)
@@ -233,9 +251,20 @@ class SwingTrendV1:
             breakout_type = "highest_close"
         
         if not breakout_ok:
+            # Detaylı breakout debug
+            hh_diff = (close_15m - highest_high) if highest_high else 0
+            hh_pct = (hh_diff / highest_high * 100) if highest_high else 0
+            logger.info(
+                f"[BREAKOUT BLOCK] {symbol}: Close({close_15m:.2f}) <= HH({highest_high or 0:.2f}) | "
+                f"Fark: {hh_diff:.2f} ({hh_pct:.2f}%)"
+            )
             hold_signal.reason = f"Breakout yok: Close({close_15m:.2f}) <= HH({highest_high or 0:.2f})"
             hold_signal.metadata["breakout_ok"] = False
             return hold_signal
+        
+        # ✅ Breakout OK - DEBUG LOG
+        logger.info(f"[BREAKOUT OK] {symbol}: ✅ Close({close_15m:.2f}) > {breakout_type}({highest_high or highest_close:.2f})")
+
         
         # ─────────────────────────────────────────────────────────────────────────
         # 4. Idempotency Kontrolü (Deterministic signal_id)

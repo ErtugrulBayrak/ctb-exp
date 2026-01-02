@@ -283,10 +283,10 @@ class Settings:
     # Ardışık zarar sonrası bekleme süresi (dakika)
     COOLDOWN_MINUTES: int = 60
     
-    # ADX Eşikleri (A+B Strateji - daha fazla fırsat için gevşetildi)
-    MIN_ADX_ENTRY: float = 14.0  # A+B: 16.5 → 14.0 - daha fazla trend algıla
-    MIN_ADX_ENTRY_SOFT: float = 13.0  # A+B: 16.0 → 13.0
-    SOFTEN_ADX_WHEN_CONF_GE: int = 70  # A+B: 75 → 70
+    # ADX Eşikleri (Düşürüldü - düşük volatilite dönemlerinde daha fazla trade fırsatı)
+    MIN_ADX_ENTRY: float = 10.0  # Düşürüldü: 14.0 → 10.0 - yatay piyasalarda bile trade yap
+    MIN_ADX_ENTRY_SOFT: float = 8.0  # Düşürüldü: 13.0 → 8.0
+    SOFTEN_ADX_WHEN_CONF_GE: int = 65  # Düşürüldü: 70 → 65
     
     # Risk Manager Ayarları (Profile-based)
     # Paper: 0.5%, Live: 2.0%
@@ -362,7 +362,7 @@ class Settings:
     # ─────────────────────────────────────────────────────────────────────────────
     # Minimum volatilite: ATR(14) / price * 100
     # Genel fallback değer (sembol eşleşmezse kullanılır)
-    MIN_ATR_PCT: float = 0.15  # A+B: 0.22 → 0.15 (fallback, daha düşük volatilite kabul)
+    MIN_ATR_PCT: float = 0.10  # Düşürüldü: 0.15 → 0.10 (düşük volatilite dönemlerinde trade yap)
     
     # Sembol bazlı dinamik ATR eşikleri
     # BTC: Düşük volatilitede daha fazla fırsat yakala
@@ -558,15 +558,15 @@ SETTINGS = Settings()
 # Diğer altcoinler: Doğal volatiliteleri yüksek (0.25%)
 # A+B Strateji: ATR eşikleri ~%25 düşürüldü - daha fazla trade fırsatı
 MIN_ATR_PCT_BY_SYMBOL = {
-    "BTCUSDT": 0.12,  # A+B: 0.15 → 0.12
-    "BTC": 0.12,
-    "ETHUSDT": 0.15,  # A+B: 0.20 → 0.15
-    "ETH": 0.15,
-    # Diğer altcoinler SETTINGS.MIN_ATR_PCT (0.15) veya ALTCOIN_DEFAULT (0.18) kullanır
+    "BTCUSDT": 0.08,  # Düşürüldü: 0.12 → 0.08 (yatay piyasada BTC trade)
+    "BTC": 0.08,
+    "ETHUSDT": 0.10,  # Düşürüldü: 0.15 → 0.10
+    "ETH": 0.10,
+    # Diğer altcoinler SETTINGS.MIN_ATR_PCT (0.10) veya ALTCOIN_DEFAULT (0.12) kullanır
 }
 
 # Altcoin varsayılan eşiği (BTC/ETH dışındakiler için)
-MIN_ATR_PCT_ALTCOIN_DEFAULT = 0.18  # A+B: 0.25 → 0.18
+MIN_ATR_PCT_ALTCOIN_DEFAULT = 0.12  # Düşürüldü: 0.18 → 0.12
 
 
 def get_min_atr_pct_for_symbol(symbol: str) -> float:
