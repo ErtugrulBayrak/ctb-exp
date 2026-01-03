@@ -40,6 +40,26 @@ from typing import Any, Dict, List, Optional, Tuple
 from config import SETTINGS
 from llm_utils import safe_json_loads, validate_decision, build_retry_prompt
 
+# Hybrid V2 strategy imports
+try:
+    from strategies.regime_detector import RegimeDetector
+    from strategies.timeframe_analyzer import TimeframeAnalyzer
+    from strategies.hybrid_multi_tf_v2 import HybridMultiTFV2
+    HYBRID_V2_AVAILABLE = True
+except ImportError:
+    HYBRID_V2_AVAILABLE = False
+    RegimeDetector = None
+    TimeframeAnalyzer = None
+    HybridMultiTFV2 = None
+
+
+# NewsVeto removed - no longer used in HYBRID_V2
+
+try:
+    import config
+except ImportError:
+    config = None
+
 # Merkezi logger
 try:
     from trade_logger import logger
@@ -149,6 +169,37 @@ class StrategyEngine:
             "retry_count": 0,
             "retry_success": 0
         }
+        
+        # ─────────────────────────────────────────────────────────────────────
+        # V2 Components (Hybrid Multi-TF Strategy)
+        # ─────────────────────────────────────────────────────────────────────
+        self.regime_detector = None
+        self.timeframe_analyzer = None
+        self.hybrid_v2 = None
+        
+        # Check strategy version from config
+        strategy_version = getattr(config, 'STRATEGY_VERSION', 'V1') if config else 'V1'
+        
+        if strategy_version == "HYBRID_V2":
+            if HYBRID_V2_AVAILABLE:
+                try:
+                    self.regime_detector = RegimeDetector()
+                    self.timeframe_analyzer = TimeframeAnalyzer()
+                    self.hybrid_v2 = HybridMultiTFV2(
+                        balance=getattr(SETTINGS, 'BASLANGIC_BAKIYE', 10000.0),
+                        dry_run=not getattr(SETTINGS, 'LIVE_TRADING', False),
+                        enable_scalping=getattr(SETTINGS, 'SCALP_15M_ENABLED', True)
+                    )
+                    logger.info("[STRATEGY ENGINE] ✅ Hybrid V2 components initialized successfully")
+                except Exception as e:
+                    logger.error(f"[STRATEGY ENGINE] ❌ Failed to init Hybrid V2 components: {e}", exc_info=True)
+            else:
+                logger.error(
+                    "[STRATEGY ENGINE] ❌ HYBRID_V2 configured but imports failed! "
+                    "Check strategies/regime_detector.py, timeframe_analyzer.py, hybrid_multi_tf_v2.py"
+                )
+        else:
+            logger.info(f"[STRATEGY ENGINE] Using V1 strategy (STRATEGY_VERSION={strategy_version})")
     
     def get_llm_metrics(self) -> Dict[str, Any]:
         """Return current LLM metrics dictionary."""
@@ -158,6 +209,124 @@ class StrategyEngine:
         """Update EMA for latency tracking."""
         old = self.llm_metrics.get(key, 0.0)
         self.llm_metrics[key] = alpha * new_value + (1 - alpha) * old
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # STRATEGY VERSION ROUTER
+    # ─────────────────────────────────────────────────────────────────────────
+    def decide(self, symbol: str, snapshot: dict, action_type: str) -> dict:
+        """
+        Main decision router based on strategy version.
+        
+        Args:
+            symbol: Trading symbol
+            snapshot: Market snapshot data
+            action_type: "BUY" or "SELL"
+        
+        Returns:
+            Decision dict with action, confidence, reason, etc.
+        """
+        try:
+            strategy_version = getattr(config, 'STRATEGY_VERSION', 'V1') if config else 'V1'
+            
+            if strategy_version == "HYBRID_V2":
+                # Check if V2 components are available
+                if self.hybrid_v2 and self.regime_detector:
+                    return self._decide_hybrid_v2(symbol, snapshot, action_type)
+                else:
+                    logger.error(
+                        f"[STRATEGY] HYBRID_V2 configured but components not initialized! "
+                        f"hybrid_v2={self.hybrid_v2 is not None}, "
+                        f"regime_detector={self.regime_detector is not None}"
+                    )
+                    return {
+                        "action": "HOLD", 
+                        "reason": "HYBRID_V2 components not available",
+                        "confidence": 0
+                    }
+            elif strategy_version == "V1":
+                return self._decide_v1(symbol, snapshot, action_type)
+            else:
+                logger.error(f"Unknown strategy version: {strategy_version}")
+                return {"action": "HOLD", "reason": f"Unknown strategy: {strategy_version}", "confidence": 0}
+        
+        except Exception as e:
+            logger.error(f"Strategy decision error for {symbol}: {e}", exc_info=True)
+            return {"action": "HOLD", "reason": f"Error: {str(e)}", "confidence": 0}
+    
+    def _decide_hybrid_v2(self, symbol: str, snapshot: dict, action_type: str) -> dict:
+        """
+        Hybrid V2 strategy decision flow.
+        
+        Uses regime detection and multi-timeframe analysis.
+        """
+        # 1. Detect regime
+        regime = self.regime_detector.detect_regime(symbol, snapshot)
+        logger.info(
+            f"[HYBRID V2] {symbol}: Regime={regime['regime']} "
+            f"(conf={regime['confidence']:.2f})"
+        )
+        
+        # 2. Check regime confidence threshold
+        regime_threshold = getattr(config, 'REGIME_CONFIDENCE_THRESHOLD', 0.60) if config else 0.60
+        if regime['confidence'] < regime_threshold:
+            return {
+                "action": "HOLD",
+                "reason": f"Regime confidence too low: {regime['confidence']:.2f} < {regime_threshold}",
+                "confidence": 0,
+                "regime": regime['regime']
+            }
+        
+        # 3. Route based on action type
+        if action_type == "BUY":
+            return self._evaluate_hybrid_v2_entry(symbol, snapshot, regime)
+        elif action_type == "SELL":
+            return self._evaluate_hybrid_v2_exit(symbol, snapshot, regime)
+        else:
+            return {"action": "HOLD", "reason": f"Unknown action type: {action_type}"}
+    
+    def _evaluate_hybrid_v2_entry(self, symbol: str, snapshot: dict, regime: dict) -> dict:
+        """
+        Evaluate entry using Hybrid V2 logic.
+        """
+        # NewsVeto removed - entry proceeds directly
+        
+        # Evaluate entry with hybrid strategy
+        entry_signal = self.hybrid_v2.evaluate_entry(symbol, snapshot, regime)
+        
+        # Log detailed reasoning for BUY signals
+        if entry_signal.get("action") == "BUY":
+            logger.info(
+                f"[HYBRID V2 ENTRY] {symbol}: {entry_signal.get('entry_type')} | "
+                f"Confidence={entry_signal.get('confidence', 0):.2f} | "
+                f"R:R={entry_signal.get('risk_reward_ratio', 0):.2f} | "
+                f"Reason: {entry_signal.get('reasoning', '')}"
+            )
+        
+        return entry_signal
+    
+    def _evaluate_hybrid_v2_exit(self, symbol: str, snapshot: dict, regime: dict) -> dict:
+        """
+        Exit logic for Hybrid V2.
+        
+        Note: Detailed exit handling is done by position_manager/SwingTrendV1.
+        This is a placeholder for strategy-level exit signals.
+        """
+        # For now, exits are handled by position manager's trailing/partial TP logic
+        return {"action": "HOLD", "reason": "Exit handled by position_manager"}
+    
+    def _decide_v1(self, symbol: str, snapshot: dict, action_type: str) -> dict:
+        """
+        V1 strategy decision (backward compatible).
+        
+        Uses existing evaluate_buy_opportunity / evaluate_sell_opportunity flow.
+        """
+        # This is async-incompatible, so we return a synchronous fallback
+        # The actual V1 logic uses async evaluate_buy_opportunity
+        return {
+            "action": "HOLD",
+            "reason": "Use evaluate_buy_opportunity() for V1 async flow",
+            "use_async_v1": True
+        }
     
     # ─────────────────────────────────────────────────────────────────────────
     # MAIN ENTRY POINTS

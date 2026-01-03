@@ -8,15 +8,14 @@ from typing import List, Dict, Any, Optional
 # Import modules (assuming they are in the python path)
 try:
     from config import SETTINGS, RUN_PROFILE, PAPER_SANITY_MODE, CANARY_MODE, SAFE_MODE
+    import config
 except ImportError:
     # Fallback if config is missing (should not happen in production)
     RUN_PROFILE = "paper"
     PAPER_SANITY_MODE = False
     CANARY_MODE = False
     SAFE_MODE = False
-    # Fallback if config is missing (should not happen in production)
-    RUN_PROFILE = "paper"
-    PAPER_SANITY_MODE = False
+    config = None
     class SETTINGS:
         WATCHLIST = ['BTC', 'ETH']
         LOOP_SECONDS = 900
@@ -26,23 +25,8 @@ except ImportError:
         MAX_CONSECUTIVE_LOSSES = 4
         COOLDOWN_MINUTES = 60
         BASLANGIC_BAKIYE = 1000
-        STRATEGY_MODE = "LEGACY"
-
-# V1 Strategy Imports
-try:
-    from strategies.regime_filter import RegimeFilter
-    from strategies.swing_trend_v1 import SwingTrendV1
-    from strategies.news_veto import NewsVeto
-    V1_AVAILABLE = True
-except ImportError:
-    V1_AVAILABLE = False
-    RegimeFilter = None
-    SwingTrendV1 = None
-    NewsVeto = None
 
 # Setup Logger
-# NOTE: Handler ekleme işlemi main.py'deki merkezi TeeHandler tarafından yapılıyor
-# Bu dosyada handler eklemek duplikasyona neden olur
 logger = logging.getLogger("LoopController")
 logger.setLevel(logging.INFO)
 
@@ -91,24 +75,13 @@ class LoopController:
         self._max_candle_age_s = 0
         self._max_ticker_age_s = 0
         
-        # V1 Strategy Mode
-        self._strategy_mode = getattr(SETTINGS, "STRATEGY_MODE", "LEGACY")
-        self._v1_strategy = None
-        self._v1_regime_filter = None
-        self._v1_news_veto = None
+        # ─────────────────────────────────────────────────────────────────────
+        # HYBRID V2 Strategy - Multi-Timeframe
+        # ─────────────────────────────────────────────────────────────────────
+        self.strategy_version = "HYBRID_V2"
+        logger.info("✅ Using HYBRID_V2 strategy (multi-timeframe)")
+        # Note: V2 components are initialized in strategy_engine
         
-        if self._strategy_mode == "REGIME_SWING_TREND_V1" and V1_AVAILABLE:
-            self._v1_regime_filter = RegimeFilter()
-            self._v1_strategy = SwingTrendV1()
-            self._v1_news_veto = NewsVeto()
-            logger.info("✅ V1 Strategy components initialized")
-            
-            # PAPER_SANITY_MODE: ADX eşiğini düşür (hızlı test için)
-            if RUN_PROFILE == "paper" and PAPER_SANITY_MODE:
-                # RegimeFilter'daki ADX eşiğini override et
-                if hasattr(self._v1_regime_filter, 'min_adx'):
-                    self._v1_regime_filter.min_adx = 15.0
-                logger.warning("⚠️ [SANITY MODE] MIN_ADX_ENTRY forced to 15 for paper test")
         
         # Alarm tracking - config'den oku
         self._alarm_thresholds = {
@@ -130,15 +103,19 @@ class LoopController:
         """Log the global risk limits at startup."""
         logger.info("════════════════════════════════════════")
         logger.info("🚀 LOOP CONTROLLER STARTUP")
-        logger.info(f"Strategy Mode: {self._strategy_mode}")
+        logger.info(f"Strategy: HYBRID_V2 (Multi-Timeframe)")
         logger.info(f"Daily Loss Limit: {SETTINGS.MAX_DAILY_LOSS_PCT}%")
         logger.info(f"Max Open Positions: {SETTINGS.MAX_OPEN_POSITIONS}")
         logger.info(f"Max Loss Streak: {SETTINGS.MAX_CONSECUTIVE_LOSSES}")
         logger.info(f"Cooldown Minutes: {SETTINGS.COOLDOWN_MINUTES}")
-        if self._strategy_mode == "REGIME_SWING_TREND_V1":
-            logger.info(f"V1 Risk Per Trade: {getattr(SETTINGS, 'RISK_PER_TRADE_V1', 1.0)}%")
-            logger.info(f"V1 Partial TP: {getattr(SETTINGS, 'PARTIAL_TP_ENABLED', True)}")
-            logger.info(f"V1 Trailing: {getattr(SETTINGS, 'TRAILING_ENABLED', True)}")
+        
+        if config:
+            logger.info(f"├─ 4H Swing Allocation: {getattr(config, 'CAPITAL_ALLOCATION_4H', 0.4) * 100:.0f}%")
+            logger.info(f"├─ 1H Momentum Allocation: {getattr(config, 'CAPITAL_ALLOCATION_1H', 0.4) * 100:.0f}%")
+            logger.info(f"├─ 15M Scalp Allocation: {getattr(config, 'CAPITAL_ALLOCATION_15M', 0.2) * 100:.0f}%")
+            logger.info(f"├─ Scalping Enabled: {getattr(config, 'SCALP_15M_ENABLED', True)}")
+            logger.info(f"└─ Regime Confidence: {getattr(config, 'REGIME_CONFIDENCE_THRESHOLD', 0.6):.0%}")
+        
         logger.info("════════════════════════════════════════")
 
 
@@ -371,12 +348,13 @@ class LoopController:
         except Exception as e:
             logger.warning(f"⚠️ News analysis pipeline error: {e}")
 
-        # 5. Parallel Snapshot Collection
-        logger.info(f"📥 Collecting snapshots for {len(self.watchlist)} symbols...")
+        # 5. Parallel Snapshot Collection using Hybrid V2 snapshot method
+        # This fetches 1d, 4h, 1h, 15m candles with full indicators for Hybrid V2 strategy
+        logger.info(f"📥 Collecting Hybrid V2 snapshots for {len(self.watchlist)} symbols...")
         tasks = []
         for symbol in self.watchlist:
-            # build_snapshot involves I/O (router calls), now purely async.
-            tasks.append(self.market_data_engine.build_snapshot(symbol))
+            # Use Hybrid V2 snapshot for multi-timeframe data (1d, 4h, 1h, 15m)
+            tasks.append(self.market_data_engine.get_hybrid_v2_snapshot(symbol))
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -388,9 +366,21 @@ class LoopController:
                 continue
             
             snapshot = result
-            if not snapshot:
+            if not snapshot or snapshot.get("error"):
                 self._cycle_stats["data_stale"] += 1
+                if snapshot:
+                    logger.warning(f"[V2] {symbol}: Snapshot error - {snapshot.get('error')}")
                 continue
+            
+            # Log V2 snapshot status
+            tf_data = snapshot.get("tf", {})
+            adx_4h = tf_data.get("4h", {}).get("adx", 0)
+            adx_1h = tf_data.get("1h", {}).get("adx", 0)
+            atr_pct = tf_data.get("1h", {}).get("atr_pct", 0)
+            logger.info(
+                f"[V2] {symbol}: ADX(4h)={adx_4h:.1f} ADX(1h)={adx_1h:.1f} ATR%={atr_pct:.2f}% "
+                f"trend(1h)={tf_data.get('1h', {}).get('trend', 'N/A')}"
+            )
 
             # Inject global news summary into snapshot (deprecated, kept for compatibility)
             snapshot["news_summary"] = global_news_summary or {}
@@ -408,15 +398,8 @@ class LoopController:
                 snapshot["coin_news_str"] = "Relevant News:\n" + "\n".join(news_lines)
             else:
                 snapshot["coin_news_str"] = ""
-
-            # V1: Fetch multi-timeframe data if in V1 mode
-            if self._strategy_mode == "REGIME_SWING_TREND_V1":
-                try:
-                    tf_data = await self.market_data_engine.get_v1_timeframe_data(symbol)
-                    snapshot["tf"] = tf_data
-                except Exception as e:
-                    logger.warning(f"[V1] TF data fetch error for {symbol}: {e}")
-                    snapshot["tf"] = {"1h": {}, "15m": {}}
+            
+            # tf data is already in V2 snapshot, no need to fetch separately
 
             # ──────────────── DATA FRESHNESS GATE ────────────────
             # Block trading if data is too old to prevent stale decisions
@@ -616,193 +599,160 @@ class LoopController:
                 logger.error(f"⚠️ Error monitoring {symbol}: {e}")
 
     async def process_buy_logic(self, symbol: str, snapshot: Dict[str, Any]):
-        """Evaluate and execute BUY opportunities."""
-        # V1 Strategy Mode - deterministik kurallar
-        if self._strategy_mode == "REGIME_SWING_TREND_V1" and self._v1_strategy:
-            await self._process_buy_v1(symbol, snapshot)
-        else:
-            await self._process_buy_legacy(symbol, snapshot)
-    
-    async def _process_buy_v1(self, symbol: str, snapshot: Dict[str, Any]):
-        """V1 Buy Logic - Regime Filter + Swing Trend + News Veto."""
+        """
+        Entry logic using HYBRID V2 strategy.
+        
+        Includes position limit check before evaluating signals.
+        """
         try:
-            portfolio = self.execution_manager.portfolio
-            balance = portfolio.get("balance", 0)
+            # ─────────── POSITION LIMIT CHECK ───────────
+            # Get current open positions count
+            open_positions = self.position_manager.get_open_positions()
+            current_count = len(open_positions)
+            max_positions = getattr(SETTINGS, 'MAX_OPEN_POSITIONS', 3)
             
-            # 1. V1 Strategy Entry Evaluation
-            signal = self._v1_strategy.evaluate_entry(snapshot, balance)
-            
-            if signal.action != "BUY":
-                # Log blocking reason for debugging and increment stats
-                if signal.metadata.get("blocked_by_regime"):
-                    logger.debug(f"[V1] {symbol}: Regime block - {signal.reason}")
-                    if hasattr(self, '_cycle_stats'):
-                        self._cycle_stats["regime_blocked"] += 1
+            if current_count >= max_positions:
+                logger.debug(
+                    f"[{symbol}] Position limit reached: {current_count}/{max_positions} - skipping buy"
+                )
                 return
             
-            logger.info(f"💡 V1 Signal ({symbol}): BUY (Conf: {signal.confidence}%) | {signal.reason}")
-            
-            # 2. News/Reddit Veto Check (LLM-based)
-            veto_checked = False
-            veto_result = None
-            if self._v1_news_veto and getattr(SETTINGS, 'USE_NEWS_LLM_VETO', True):
-                # Bundle haber + reddit
-                news_summary = snapshot.get("coin_news_str", "")
-                reddit_data = snapshot.get("reddit_summary", {})
-                reddit_str = reddit_data.get("coin_specific_impacts", {}).get(
-                    symbol.replace("USDT", ""), ""
-                ) if isinstance(reddit_data, dict) else ""
-                
-                veto_result = self._v1_news_veto.check_veto(
-                    symbol, 
-                    news_summary=news_summary,
-                    reddit_summary=reddit_str
-                )
-                veto_checked = True
-                
-                if veto_result.veto:
-                    logger.warning(
-                        f"🚫 V1 News Veto ({symbol}): {veto_result.reason} "
-                        f"(Conf: {veto_result.confidence}%) | Tags: {veto_result.tags}"
-                    )
-                    # Log blocked_by_news_veto
-                    logger.info(
-                        f"[VETO_LOG] symbol={symbol} blocked_by_news_veto=True "
-                        f"veto_confidence={veto_result.confidence} "
-                        f"veto_reason={veto_result.reason} veto_tags={veto_result.tags}"
-                    )
-                    if hasattr(self, '_cycle_stats'):
-                        self._cycle_stats["news_veto"] += 1
+            # Check if we already have a position in this symbol
+            for pos in open_positions:
+                if pos.get('symbol') == symbol:
+                    logger.debug(f"[{symbol}] Already have open position - skipping buy")
                     return
-                else:
-                    logger.debug(f"[VETO] {symbol}: No veto - {veto_result.reason}")
             
-            # 3. Cooldown Check (Risk Manager)
+            await self._process_buy_hybrid_v2(symbol, snapshot)
+        except Exception as e:
+            logger.error(f"[{symbol}] Buy logic error: {e}")
+    
+    async def _process_buy_hybrid_v2(self, symbol: str, snapshot: Dict[str, Any]):
+        """
+        Hybrid V2 entry logic using multi-timeframe strategy.
+        
+        Uses strategy_engine.decide() which internally uses RegimeDetector,
+        TimeframeAnalyzer, and HybridMultiTFV2 for signal generation.
+        """
+        try:
+            # 1. Verify multi-timeframe data exists in snapshot (already fetched via get_hybrid_v2_snapshot)
+            if "tf" not in snapshot or not snapshot.get("tf", {}).get("1h"):
+                logger.warning(f"[HYBRID V2] {symbol}: Missing tf data in snapshot, fetching now...")
+                try:
+                    v2_snap = await self.market_data_engine.get_hybrid_v2_snapshot(symbol)
+                    snapshot["tf"] = v2_snap.get("tf", {})
+                except Exception as e:
+                    logger.warning(f"[V2] {symbol}: TF data fetch error: {e}")
+                    snapshot["tf"] = {"4h": {}, "1h": {}, "15m": {}}
+            
+            # 2. Call strategy engine decide method (routes to V2 internally)
+            decision = self.strategy_engine.decide(
+                symbol=symbol,
+                snapshot=snapshot,
+                action_type="BUY"
+            )
+            
+            if not decision or decision.get("action") != "BUY":
+                # Log why we're not entering
+                reason = decision.get("reason", "No signal") if decision else "No decision"
+                logger.debug(f"[V2] {symbol}: {reason}")
+                
+                # Track blocking reasons
+                if hasattr(self, '_cycle_stats'):
+                    if "regime" in reason.lower():
+                        self._cycle_stats["regime_blocked"] += 1
+                    elif "veto" in reason.lower():
+                        self._cycle_stats["news_veto"] += 1
+                return
+            
+            # 3. Log V2 signal
+            entry_type = decision.get('entry_type', 'UNKNOWN')
+            confidence = decision.get('confidence', 0)
+            rr_ratio = decision.get('risk_reward_ratio', 0)
+            
+            logger.info(
+                f"🎯 HYBRID V2 SIGNAL ({symbol}) | "
+                f"Type: {entry_type} | "
+                f"Conf: {confidence:.0f}% | "
+                f"R:R: {rr_ratio:.2f}"
+            )
+            
+            # 4. Cooldown Check
             in_cooldown, cooldown_reason = self.risk_manager.is_in_cooldown()
             if in_cooldown:
-                logger.info(f"❄️ V1 {symbol}: {cooldown_reason}")
+                logger.info(f"❄️ V2 {symbol}: {cooldown_reason}")
                 if hasattr(self, '_cycle_stats'):
                     self._cycle_stats["cooldown"] += 1
                 return
             
-            # 4. Build decision result for ExecutionManager
+            # 5. Build decision result for ExecutionManager
             current_price = snapshot.get("price", 0)
             if not current_price:
                 current_price = snapshot.get("technical", {}).get("price", 0)
             
             if not current_price:
-                logger.warning(f"🚫 V1 BUY Failed: No valid price for {symbol}")
-                if hasattr(self, '_cycle_stats'):
-                    self._cycle_stats["data_stale"] += 1
+                logger.warning(f"🚫 V2 BUY Failed: No valid price for {symbol}")
                 return
             
             decision_result = {
                 "action": "BUY",
-                "confidence": signal.confidence,
-                "reason": signal.reason,
-                "stop_loss": signal.stop_loss,
-                "take_profit": signal.take_profit,
-                "quantity": signal.quantity,
+                "confidence": confidence,
+                "reason": decision.get("reasoning", f"V2 {entry_type}"),
+                "stop_loss": decision.get("stop_loss", current_price * 0.95),
+                "take_profit": decision.get("take_profit_2", current_price * 1.10),
+                "quantity": decision.get("quantity", 0),
                 "allowed": True,
-                "metadata": signal.metadata
+                "metadata": {
+                    "entry_type": entry_type,
+                    "risk_reward_ratio": rr_ratio,
+                    "partial_tp_1": decision.get("take_profit_1"),
+                    "regime": decision.get("regime", "UNKNOWN")
+                }
             }
             
-            # 5. Execute Buy - Track attempt
+            # 6. Execute Buy
             if hasattr(self, '_cycle_stats'):
                 self._cycle_stats["trade_attempt"] += 1
             
+            portfolio = self.execution_manager.portfolio
             success, result = await self.execution_manager.execute_buy_flow(
                 symbol=symbol,
                 current_price=current_price,
                 decision_result=decision_result,
-                trade_reason="V1-SWING",
-                trigger_info=signal.reason,
+                trade_reason=f"V2-{entry_type}",
+                trigger_info=decision.get("reasoning", ""),
                 market_snapshot=snapshot
             )
             
             if success:
-                # Track success
                 if hasattr(self, '_cycle_stats'):
                     self._cycle_stats["trade_success"] += 1
                 
-                # Add V1 position fields
+                # Add V2-specific position fields
                 position = result
-                v1_fields = self._v1_strategy.calculate_position_fields(
-                    entry_price=current_price,
-                    quantity=signal.quantity,
-                    atr=snapshot.get("tf", {}).get("1h", {}).get("atr", current_price * 0.02)
-                )
-                
-                # Update position with V1 fields
                 for pos in portfolio.get("positions", []):
                     if pos.get("id") == position.get("id"):
-                        pos.update(v1_fields)
+                        pos["entry_type"] = entry_type
+                        pos["partial_tp_hit"] = False
+                        pos["highest_close_since_entry"] = current_price
+                        pos["entry_time"] = time.time()
                         break
                 
                 if self.execution_manager._save_portfolio:
                     self.execution_manager._save_portfolio(portfolio)
                 
-                logger.info(f"  ✅ V1 BUY Executed for {symbol} | SL=${signal.stop_loss:.2f} TP=${signal.take_profit:.2f}")
+                logger.info(
+                    f"  ✅ V2 BUY Executed for {symbol} | "
+                    f"Type: {entry_type} | "
+                    f"SL: ${decision.get('stop_loss', 0):.2f} | "
+                    f"TP: ${decision.get('take_profit_2', 0):.2f}"
+                )
             else:
-                logger.error(f"  ❌ V1 Buy Failed: {result}")
+                logger.error(f"  ❌ V2 Buy Failed: {result}")
         
         except Exception as e:
-            logger.error(f"⚠️ V1 Buy Logic Error ({symbol}): {e}")
+            logger.error(f"⚠️ V2 Buy Logic Error ({symbol}): {e}")
             traceback.print_exc()
-    
-    async def _process_buy_legacy(self, symbol: str, snapshot: Dict[str, Any]):
-        """Legacy Buy Logic - LLM-based strategy."""
-        try:
-            # 1. Strategy Evaluation
-            decision = await self.strategy_engine.evaluate_opportunity(snapshot)
-            
-            action = decision.get("action")
-            confidence = decision.get("confidence", 0)
-            
-            if action != "BUY":
-                return
-
-            src = decision.get("metadata", {}).get("source", "UNKNOWN")
-            logger.info(f"💡 Strategy Signal ({symbol}): BUY (Conf: {confidence}%) [src={src}]")
-
-            # 2. Risk Management
-            portfolio = self.execution_manager.portfolio
-            
-            risk_decision = self.risk_manager.evaluate_entry_risk(
-                snapshot=snapshot,
-                base_decision=decision,
-                portfolio=portfolio
-            )
-            
-            if not risk_decision.get("allowed"):
-                logger.info(f"  🛡️ Risk Manager blocked BUY: {risk_decision.get('reason')}")
-                return
-
-            # 3. Execution
-            current_price = snapshot.get("price")
-            if not current_price:
-                current_price = snapshot.get("technical", {}).get("price")
-            
-            if not current_price:
-                logger.warning(f"🚫 BUY Failed: No valid price for {symbol}")
-                return
-            
-            success, result = await self.execution_manager.execute_buy_flow(
-                symbol=symbol,
-                current_price=current_price,
-                decision_result=risk_decision,
-                market_snapshot=snapshot
-            )
-            
-            if success:
-                logger.info(f"  ✅ BUY Executed for {symbol}")
-            else:
-                logger.error(f"  ❌ Buy Failed: {result}")
-
-        except Exception as e:
-            logger.error(f"⚠️ Buy Logic Error ({symbol}): {e}")
-            traceback.print_exc()
-
 
     async def process_sell_logic(self, symbol: str, snapshot: Dict[str, Any]):
         """Evaluate AI Sell logic (Technical/Profit Protection)."""

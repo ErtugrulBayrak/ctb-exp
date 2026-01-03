@@ -84,6 +84,11 @@ def _get_env_str(key: str, default: str) -> str:
     return os.getenv(key, default)
 
 
+def _get_env_str(key: str, default: str) -> str:
+    """Ortam değişkenini string olarak al."""
+    return os.getenv(key, default)
+
+
 def _parse_symbols_env() -> tuple:
     """Parse SYMBOLS from env (comma-separated) or use default."""
     env_val = os.getenv("SYMBOLS", "")
@@ -350,7 +355,8 @@ class Settings:
     # ═══════════════════════════════════════════════════════════════════════════
     # V1 STRATEJİ AYARLARI - Rejim Filtreli Swing Trend
     # ═══════════════════════════════════════════════════════════════════════════
-    # Strateji modu: "REGIME_SWING_TREND_V1" = V1 stratejisi, "LEGACY" = eski strateji
+    # NOT: STRATEGY_VERSION config.py'de global olarak tanımlı (V1 veya HYBRID_V2)
+    # STRATEGY_MODE sadece V1 için internal kullanım, HYBRID_V2'de ignore edilir
     STRATEGY_MODE: str = "REGIME_SWING_TREND_V1"
     # Ana sinyal zaman dilimi (trend yapısı, EMA, ADX için)
     SIGNAL_TIMEFRAME: str = "1h"
@@ -625,9 +631,107 @@ OPTIONAL_ENV_VARS = [
 ]
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# HYBRID MULTI-TIMEFRAME STRATEGY V2
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Available Strategies
+STRATEGIES_AVAILABLE = ["V1", "HYBRID_V2"]
+STRATEGY_VERSION: str = _get_env_str("STRATEGY_VERSION", "HYBRID_V2")  # "V1" | "HYBRID_V2"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regime Detection Parameters
+# ─────────────────────────────────────────────────────────────────────────────
+REGIME_ADX_STRONG_THRESHOLD: float = _get_env_float("REGIME_ADX_STRONG", 30.0)
+REGIME_ADX_WEAK_THRESHOLD: float = _get_env_float("REGIME_ADX_WEAK", 20.0)
+REGIME_ATR_PCT_VOLATILE: float = _get_env_float("REGIME_ATR_VOLATILE", 3.0)
+REGIME_ATR_PCT_RANGING: float = _get_env_float("REGIME_ATR_RANGING", 0.8)
+REGIME_CACHE_TTL: int = _get_env_int("REGIME_CACHE_TTL", 3600)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Capital Allocation by Timeframe
+# NOTE: 15M scalp disabled - 15min main loop too slow for effective scalping
+# Capital redistributed: 50% 4H swing, 50% 1H momentum, 0% 15M scalp
+# ─────────────────────────────────────────────────────────────────────────────
+CAPITAL_ALLOCATION_4H: float = _get_env_float("CAPITAL_ALLOC_4H", 0.50)   # 50%
+CAPITAL_ALLOCATION_1H: float = _get_env_float("CAPITAL_ALLOC_1H", 0.50)   # 50%
+CAPITAL_ALLOCATION_15M: float = _get_env_float("CAPITAL_ALLOC_15M", 0.00) # 0% disabled
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4H Swing Trade Parameters
+# ─────────────────────────────────────────────────────────────────────────────
+SWING_4H_MIN_ADX: float = _get_env_float("SWING_4H_MIN_ADX", 25.0)
+SWING_4H_SL_ATR_MULT: float = _get_env_float("SWING_4H_SL_ATR_MULT", 2.5)
+SWING_4H_PARTIAL_TP_PCT: float = _get_env_float("SWING_4H_PARTIAL_TP", 5.0)
+SWING_4H_FINAL_TARGET_PCT: float = _get_env_float("SWING_4H_TARGET", 10.0)
+SWING_4H_RISK_PER_TRADE: float = _get_env_float("SWING_4H_RISK", 0.015)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1H Momentum Trade Parameters
+# ─────────────────────────────────────────────────────────────────────────────
+MOMENTUM_1H_MIN_ADX: float = _get_env_float("MOMENTUM_1H_MIN_ADX", 20.0)
+MOMENTUM_1H_MIN_RSI: float = _get_env_float("MOMENTUM_1H_MIN_RSI", 55.0)
+MOMENTUM_1H_MAX_RSI: float = _get_env_float("MOMENTUM_1H_MAX_RSI", 70.0)
+MOMENTUM_1H_MIN_VOLUME_MULT: float = _get_env_float("MOMENTUM_1H_VOL_MULT", 1.2)
+MOMENTUM_1H_SL_ATR_MULT: float = _get_env_float("MOMENTUM_1H_SL_ATR_MULT", 1.8)
+MOMENTUM_1H_PARTIAL_TP_PCT: float = _get_env_float("MOMENTUM_1H_PARTIAL_TP", 2.0)
+MOMENTUM_1H_FINAL_TARGET_PCT: float = _get_env_float("MOMENTUM_1H_TARGET", 4.0)
+MOMENTUM_1H_RISK_PER_TRADE: float = _get_env_float("MOMENTUM_1H_RISK", 0.01)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 15M Scalp Trade Parameters
+# ─────────────────────────────────────────────────────────────────────────────
+SCALP_15M_MIN_ADX: float = _get_env_float("SCALP_15M_MIN_ADX", 20.0)
+SCALP_15M_MIN_VOLUME_MULT: float = _get_env_float("SCALP_15M_VOL_MULT", 2.0)
+SCALP_15M_SL_ATR_MULT: float = _get_env_float("SCALP_15M_SL_ATR_MULT", 1.2)
+SCALP_15M_TARGET_PCT: float = _get_env_float("SCALP_15M_TARGET", 1.5)
+SCALP_15M_RISK_PER_TRADE: float = _get_env_float("SCALP_15M_RISK", 0.005)
+SCALP_15M_ENABLED: bool = _get_env_bool("SCALP_15M_ENABLED", False)  # Disabled - 15min loop too slow
+SCALP_15M_LIQUIDITY_HOURS_ONLY: bool = _get_env_bool("SCALP_15M_LIQUIDITY_HOURS", True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-Timeframe Alignment Requirements
+# ─────────────────────────────────────────────────────────────────────────────
+REQUIRE_4H_1H_ALIGNMENT: bool = _get_env_bool("REQUIRE_4H_1H_ALIGN", True)
+REQUIRE_WEEKLY_TREND_CONFIRM: bool = _get_env_bool("REQUIRE_WEEKLY_CONFIRM", True)
+MIN_DISTANCE_TO_RESISTANCE_PCT: float = _get_env_float("MIN_DIST_RESISTANCE", 1.0)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Regime-Based Adjustments
+# ─────────────────────────────────────────────────────────────────────────────
+REGIME_CONFIDENCE_THRESHOLD: float = _get_env_float("REGIME_CONF_THRESHOLD", 0.60)
+REDUCE_SIZE_IN_WEAK_TREND: float = _get_env_float("WEAK_TREND_SIZE_MULT", 0.75)
+DISABLE_SCALPS_IN_RANGING: bool = _get_env_bool("DISABLE_SCALPS_RANGING", True)
+
+
+def validate_hybrid_v2_config() -> list:
+    """Validate Hybrid V2 configuration parameters."""
+    errors = []
+    total_alloc = CAPITAL_ALLOCATION_4H + CAPITAL_ALLOCATION_1H + CAPITAL_ALLOCATION_15M
+    if abs(total_alloc - 1.0) > 0.01:
+        errors.append(f"Capital allocation must sum to 1.0, got {total_alloc:.2f}")
+    
+    # If scalps disabled, allocation should be 0
+    if not SCALP_15M_ENABLED:
+        if CAPITAL_ALLOCATION_15M != 0.0:
+            errors.append(f"CAPITAL_ALLOCATION_15M should be 0 when scalping disabled, got {CAPITAL_ALLOCATION_15M}")
+            
+    if REGIME_ADX_WEAK_THRESHOLD >= REGIME_ADX_STRONG_THRESHOLD:
+        errors.append(f"REGIME_ADX_WEAK must be < STRONG")
+    for name, val in [("SWING_4H", SWING_4H_RISK_PER_TRADE), ("MOMENTUM_1H", MOMENTUM_1H_RISK_PER_TRADE), ("SCALP_15M", SCALP_15M_RISK_PER_TRADE)]:
+        if val <= 0 or val > 0.05:
+            errors.append(f"{name}_RISK ({val}) must be 0-0.05")
+    if MOMENTUM_1H_MIN_RSI >= MOMENTUM_1H_MAX_RSI:
+        errors.append(f"MOMENTUM_1H_MIN_RSI must be < MAX")
+    if STRATEGY_VERSION not in STRATEGIES_AVAILABLE:
+        errors.append(f"STRATEGY_VERSION '{STRATEGY_VERSION}' invalid")
+    return errors
+
+
 def print_settings_summary():
     """Ayarların özetini yazdırır (API anahtarları maskelenir)."""
     def mask(value: str) -> str:
+
         if not value:
             return "❌ EKSİK"
         if len(value) < 8:
@@ -675,6 +779,54 @@ def print_settings_summary():
         print("✅ Tüm zorunlu API anahtarları ayarlanmış.")
     
 
+def validate_config() -> list:
+    """
+    Validate all configuration parameters.
+    
+    Returns:
+        list: List of validation errors (empty if valid)
+    """
+    errors = []
+    
+    # Validate strategy version
+    if STRATEGY_VERSION not in STRATEGIES_AVAILABLE:
+        errors.append(f"Invalid STRATEGY_VERSION: {STRATEGY_VERSION}. Must be one of {STRATEGIES_AVAILABLE}")
+    
+    # V1-specific validation
+    if STRATEGY_VERSION == "V1":
+        if SETTINGS.MIN_ADX <= 0:
+            errors.append("V1: MIN_ADX must be positive")
+        if SETTINGS.MIN_ATR_PCT <= 0:
+            errors.append("V1: MIN_ATR_PCT must be positive")
+    
+    # HYBRID_V2 validation (delegate to existing function)
+    if STRATEGY_VERSION == "HYBRID_V2":
+        v2_errors = validate_hybrid_v2_config()
+        errors.extend(v2_errors)
+    
+    # Log result
+    if errors:
+        import logging
+        logger = logging.getLogger("config")
+        for err in errors:
+            logger.error(f"[CONFIG] {err}")
+    
+    return errors
+
+
+# Run validation at import time (warnings only, don't raise)
+_config_errors = validate_config()
+if _config_errors:
+    import logging
+    logging.getLogger("config").warning(f"Config validation warnings: {_config_errors}")
+
+
 # Modül doğrudan çalıştırılırsa ayarları göster
 if __name__ == "__main__":
     print_settings_summary()
+    print("\n📋 Config Validation:")
+    if _config_errors:
+        for err in _config_errors:
+            print(f"   ❌ {err}")
+    else:
+        print(f"   ✅ All config valid for {STRATEGY_VERSION}")

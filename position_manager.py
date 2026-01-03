@@ -16,11 +16,14 @@ except ImportError:
 # Config import (retry ayarları için)
 try:
     from config import SETTINGS
+    import config
 except ImportError:
     class MockSettings:
         LIVE_ORDER_MAX_RETRIES = 3
         LIVE_ORDER_RETRY_DELAY = 2.0
     SETTINGS = MockSettings()
+    config = None
+
 
 class PositionManager:
     """
@@ -391,6 +394,313 @@ class PositionManager:
                                         self.portfolio["history"][-1]["live_sell_error"] = str(e)
                                         if self.save_portfolio_fn:
                                             self.save_portfolio_fn(self.portfolio)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # HYBRID V2: Entry-Type Aware Exit Conditions
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    def check_exit_conditions(self, position: dict, current_price: float, snapshot: dict) -> dict:
+        """
+        Check exit conditions based on entry type.
+        
+        Routes to appropriate exit method based on position's entry_type field.
+        
+        Args:
+            position: Position dictionary with entry_type field
+            current_price: Current market price
+            snapshot: Market snapshot with timeframe data
+        
+        Returns:
+            dict with action (HOLD, SELL, SELL_PARTIAL), reason, and quantity
+        """
+        entry_type = position.get("entry_type", "V1")
+        
+        try:
+            if entry_type.startswith("V1") or entry_type == "UNKNOWN":
+                return self._check_v1_exit(position, current_price, snapshot)
+            elif entry_type == "4H_SWING":
+                return self._check_4h_swing_exit(position, current_price, snapshot)
+            elif entry_type == "1H_MOMENTUM":
+                return self._check_1h_momentum_exit(position, current_price, snapshot)
+            elif entry_type == "15M_SCALP":
+                return self._check_15m_scalp_exit(position, current_price, snapshot)
+            else:
+                logger.warning(f"Unknown entry type: {entry_type}, using V1 logic")
+                return self._check_v1_exit(position, current_price, snapshot)
+        except Exception as e:
+            logger.error(f"[EXIT CHECK] Error checking exit for {position.get('symbol')}: {e}")
+            return {"action": "HOLD", "reason": f"Error: {str(e)}"}
+    
+    def _check_4h_swing_exit(self, position: dict, current_price: float, snapshot: dict) -> dict:
+        """
+        4H swing exit logic.
+        
+        Exit conditions:
+        1. Initial stop loss hit
+        2. Partial TP at 5% (sell 50%)
+        3. Trailing stop after partial TP
+        4. Final target at 10%
+        5. Time-based exit after 10 days if profitable
+        """
+        symbol = position.get("symbol", "UNKNOWN")
+        entry_price = position.get("entry_price", 0)
+        stop_loss = position.get("current_sl", position.get("stop_loss", 0))
+        quantity = position.get("quantity", 0)
+        partial_taken = position.get("partial_tp_hit", position.get("partial_taken", False))
+        entry_time = position.get("entry_time", position.get("timestamp", time.time()))
+        
+        if not entry_price or entry_price <= 0:
+            return {"action": "HOLD", "reason": "Missing entry price"}
+        
+        profit_pct = ((current_price - entry_price) / entry_price) * 100
+        
+        # 1. Initial stop loss
+        if current_price <= stop_loss:
+            logger.info(f"[4H SWING EXIT] {symbol}: Stop loss hit at ${current_price:.2f}")
+            return {"action": "SELL", "reason": f"Stop loss hit at ${stop_loss:.2f}", "quantity": quantity}
+        
+        # Get config parameters
+        partial_tp_pct = getattr(config, 'SWING_4H_PARTIAL_TP_PCT', 5.0) if config else 5.0
+        final_target_pct = getattr(config, 'SWING_4H_FINAL_TARGET_PCT', 10.0) if config else 10.0
+        sl_atr_mult = getattr(config, 'SWING_4H_SL_ATR_MULT', 2.5) if config else 2.5
+        
+        # 2. Partial TP at 5%
+        if not partial_taken and profit_pct >= partial_tp_pct:
+            partial_qty = quantity * 0.5
+            logger.info(f"[4H SWING EXIT] {symbol}: Partial TP at {profit_pct:.1f}%")
+            return {
+                "action": "SELL_PARTIAL",
+                "reason": f"Partial TP at {partial_tp_pct}% (profit: {profit_pct:.1f}%)",
+                "quantity": partial_qty
+            }
+        
+        # 3. Trailing stop after partial TP
+        if partial_taken:
+            try:
+                tf_4h = snapshot.get("tf", {}).get("4h", {})
+                atr_4h = tf_4h.get("atr", 0)
+                highest_close = position.get("highest_close_since_entry", entry_price)
+                
+                if atr_4h > 0:
+                    trail_stop = highest_close - (sl_atr_mult * atr_4h)
+                    
+                    if current_price <= trail_stop:
+                        logger.info(f"[4H SWING EXIT] {symbol}: Trailing stop hit at ${trail_stop:.2f}")
+                        return {
+                            "action": "SELL",
+                            "reason": f"Trailing stop hit at ${trail_stop:.2f}",
+                            "quantity": quantity
+                        }
+            except Exception as e:
+                logger.debug(f"[4H SWING] Trailing stop check error: {e}")
+        
+        # 4. Final target
+        if profit_pct >= final_target_pct:
+            logger.info(f"[4H SWING EXIT] {symbol}: Final target hit at {profit_pct:.1f}%")
+            return {
+                "action": "SELL",
+                "reason": f"Final target hit at {final_target_pct}% (profit: {profit_pct:.1f}%)",
+                "quantity": quantity
+            }
+        
+        # 5. Time-based exit: After 10 days, close if profit > 0
+        hours_held = (time.time() - entry_time) / 3600
+        if hours_held > 240 and profit_pct > 0:  # 10 days = 240 hours
+            logger.info(f"[4H SWING EXIT] {symbol}: Time-based exit after {hours_held:.0f}h")
+            return {
+                "action": "SELL",
+                "reason": f"Time-based exit after {hours_held:.0f}h with {profit_pct:.1f}% profit",
+                "quantity": quantity
+            }
+        
+        return {"action": "HOLD", "reason": f"Position profitable ({profit_pct:.1f}%), holding"}
+    
+    def _check_1h_momentum_exit(self, position: dict, current_price: float, snapshot: dict) -> dict:
+        """
+        1H momentum exit logic.
+        
+        Similar to 4H but with tighter stops and targets.
+        """
+        symbol = position.get("symbol", "UNKNOWN")
+        entry_price = position.get("entry_price", 0)
+        stop_loss = position.get("current_sl", position.get("stop_loss", 0))
+        quantity = position.get("quantity", 0)
+        partial_taken = position.get("partial_tp_hit", position.get("partial_taken", False))
+        entry_time = position.get("entry_time", position.get("timestamp", time.time()))
+        
+        if not entry_price or entry_price <= 0:
+            return {"action": "HOLD", "reason": "Missing entry price"}
+        
+        profit_pct = ((current_price - entry_price) / entry_price) * 100
+        
+        # 1. Initial stop loss
+        if current_price <= stop_loss:
+            logger.info(f"[1H MOM EXIT] {symbol}: Stop loss hit at ${current_price:.2f}")
+            return {"action": "SELL", "reason": f"Stop loss hit at ${stop_loss:.2f}", "quantity": quantity}
+        
+        # Get config parameters
+        partial_tp_pct = getattr(config, 'MOMENTUM_1H_PARTIAL_TP_PCT', 2.0) if config else 2.0
+        final_target_pct = getattr(config, 'MOMENTUM_1H_FINAL_TARGET_PCT', 4.0) if config else 4.0
+        sl_atr_mult = getattr(config, 'MOMENTUM_1H_SL_ATR_MULT', 1.8) if config else 1.8
+        
+        # 2. Partial TP at 2%
+        if not partial_taken and profit_pct >= partial_tp_pct:
+            partial_qty = quantity * 0.5
+            logger.info(f"[1H MOM EXIT] {symbol}: Partial TP at {profit_pct:.1f}%")
+            return {
+                "action": "SELL_PARTIAL",
+                "reason": f"Partial TP at {partial_tp_pct}% (profit: {profit_pct:.1f}%)",
+                "quantity": partial_qty
+            }
+        
+        # 3. Trailing stop after partial TP
+        if partial_taken:
+            try:
+                tf_1h = snapshot.get("tf", {}).get("1h", {})
+                atr_1h = tf_1h.get("atr", 0)
+                highest_close = position.get("highest_close_since_entry", entry_price)
+                
+                if atr_1h > 0:
+                    trail_stop = highest_close - (sl_atr_mult * atr_1h)
+                    
+                    if current_price <= trail_stop:
+                        logger.info(f"[1H MOM EXIT] {symbol}: Trailing stop hit at ${trail_stop:.2f}")
+                        return {
+                            "action": "SELL",
+                            "reason": f"Trailing stop hit at ${trail_stop:.2f}",
+                            "quantity": quantity
+                        }
+            except Exception as e:
+                logger.debug(f"[1H MOM] Trailing stop check error: {e}")
+        
+        # 4. Final target
+        if profit_pct >= final_target_pct:
+            logger.info(f"[1H MOM EXIT] {symbol}: Final target hit at {profit_pct:.1f}%")
+            return {
+                "action": "SELL",
+                "reason": f"Final target hit at {final_target_pct}% (profit: {profit_pct:.1f}%)",
+                "quantity": quantity
+            }
+        
+        # 5. Time-based exit: After 24 hours, tighter profit requirement
+        hours_held = (time.time() - entry_time) / 3600
+        if hours_held > 24 and profit_pct > 0.5:  # After 24h, close if > 0.5%
+            logger.info(f"[1H MOM EXIT] {symbol}: Time-based exit after {hours_held:.1f}h")
+            return {
+                "action": "SELL",
+                "reason": f"Time-based exit after {hours_held:.1f}h with {profit_pct:.1f}% profit",
+                "quantity": quantity
+            }
+        
+        return {"action": "HOLD", "reason": f"Momentum position active ({profit_pct:.1f}%)"}
+    
+    def _check_15m_scalp_exit(self, position: dict, current_price: float, snapshot: dict) -> dict:
+        """
+        15M scalp exit logic - all-or-nothing, no partial TP.
+        
+        Exit conditions:
+        1. Stop loss
+        2. Target hit (1.5%)
+        3. Time-based exit after 4 hours
+        """
+        symbol = position.get("symbol", "UNKNOWN")
+        entry_price = position.get("entry_price", 0)
+        stop_loss = position.get("current_sl", position.get("stop_loss", 0))
+        quantity = position.get("quantity", 0)
+        entry_time = position.get("entry_time", position.get("timestamp", time.time()))
+        
+        if not entry_price or entry_price <= 0:
+            return {"action": "HOLD", "reason": "Missing entry price"}
+        
+        profit_pct = ((current_price - entry_price) / entry_price) * 100
+        
+        # 1. Initial stop loss
+        if current_price <= stop_loss:
+            logger.info(f"[15M SCALP EXIT] {symbol}: Stop loss hit at ${current_price:.2f}")
+            return {"action": "SELL", "reason": f"Stop loss hit at ${stop_loss:.2f}", "quantity": quantity}
+        
+        # Get config parameter
+        target_pct = getattr(config, 'SCALP_15M_TARGET_PCT', 1.5) if config else 1.5
+        
+        # 2. Target hit
+        if profit_pct >= target_pct:
+            logger.info(f"[15M SCALP EXIT] {symbol}: Target hit at {profit_pct:.1f}%")
+            return {
+                "action": "SELL",
+                "reason": f"Scalp target hit at {target_pct}% (profit: {profit_pct:.1f}%)",
+                "quantity": quantity
+            }
+        
+        # 3. Time-based exit: After 4 hours, close at breakeven or better
+        hours_held = (time.time() - entry_time) / 3600
+        if hours_held > 4:
+            if profit_pct >= -0.1:  # Close if >= -0.1% (near breakeven)
+                logger.info(f"[15M SCALP EXIT] {symbol}: Time-based exit after {hours_held:.1f}h")
+                return {
+                    "action": "SELL",
+                    "reason": f"Time-based scalp exit after {hours_held:.1f}h ({profit_pct:.1f}%)",
+                    "quantity": quantity
+                }
+        
+        return {"action": "HOLD", "reason": f"Scalp in progress ({profit_pct:.1f}%)"}
+    
+    def update_trailing_stop(self, position: dict, current_price: float, snapshot: dict) -> bool:
+        """
+        Update trailing stop based on entry type.
+        
+        Only updates after partial TP hit. Returns True if stop was updated.
+        """
+        entry_type = position.get("entry_type", "V1")
+        partial_taken = position.get("partial_tp_hit", position.get("partial_taken", False))
+        
+        # Only update after partial TP
+        if not partial_taken:
+            return False
+        
+        # Get appropriate ATR multiplier and timeframe
+        if entry_type == "4H_SWING":
+            atr_mult = getattr(config, 'SWING_4H_SL_ATR_MULT', 2.5) if config else 2.5
+            tf_key = "4h"
+        elif entry_type == "1H_MOMENTUM":
+            atr_mult = getattr(config, 'MOMENTUM_1H_SL_ATR_MULT', 1.8) if config else 1.8
+            tf_key = "1h"
+        else:
+            # No trailing for scalps or unknown types
+            return False
+        
+        try:
+            tf_data = snapshot.get("tf", {}).get(tf_key, {})
+            atr = tf_data.get("atr", 0)
+            
+            if atr <= 0:
+                return False
+            
+            highest_close = position.get("highest_close_since_entry", position.get("entry_price", current_price))
+            
+            # Update highest close if current price is higher
+            if current_price > highest_close:
+                highest_close = current_price
+                position["highest_close_since_entry"] = highest_close
+            
+            # Calculate new trailing stop
+            new_trail = highest_close - (atr_mult * atr)
+            current_sl = position.get("current_sl", position.get("stop_loss", 0))
+            
+            # Only raise the stop, never lower
+            if new_trail > current_sl:
+                old_stop = current_sl
+                position["current_sl"] = new_trail
+                position["last_trailing_update_ts"] = int(time.time())
+                
+                logger.info(
+                    f"[{position.get('symbol')}] Trailing stop updated: "
+                    f"${old_stop:.2f} → ${new_trail:.2f} (ATR: ${atr:.2f})"
+                )
+                return True
+        except Exception as e:
+            logger.debug(f"Trailing stop update error: {e}")
+        
+        return False
 
     # ═══════════════════════════════════════════════════════════════════════════
     # V1: Watchdog - Partial TP ve Trailing Stop 

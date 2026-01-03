@@ -1,18 +1,26 @@
 # strategies package
 """
-V1 Strateji Modülleri
+V2 Strateji Modülleri
 =====================
 
-Rejim Filtreli Swing Trend stratejisi için modüller.
+Hybrid Multi-Timeframe V2 stratejisi için modüller.
 
 Modüller:
-- regime_filter: Rejim filtresi (ADX, ATR, Volume)
-- swing_trend_v1: Ana strateji mantığı
-- news_veto: LLM haber/olay veto sistemi
+- regime_detector: Multi-timeframe regime detector
+- timeframe_analyzer: Timeframe-specific analysis
+- hybrid_multi_tf_v2: Combined multi-TF strategy
+
+NOT: V1 stratejileri (regime_filter, swing_trend_v1) archive/ klasörüne taşındı.
+NOT: news_veto kaldırıldı (artık kullanılmıyor).
 """
 
-from .regime_filter import RegimeFilter
-from .swing_trend_v1 import SwingTrendV1
-from .news_veto import NewsVeto
+# V2 strategy components only
+from .regime_detector import RegimeDetector
+from .timeframe_analyzer import TimeframeAnalyzer
+from .hybrid_multi_tf_v2 import HybridMultiTFV2
 
-__all__ = ["RegimeFilter", "SwingTrendV1", "NewsVeto"]
+__all__ = [
+    "RegimeDetector", 
+    "TimeframeAnalyzer", 
+    "HybridMultiTFV2"
+]

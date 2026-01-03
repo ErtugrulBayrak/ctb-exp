@@ -193,10 +193,16 @@ class ExecutionManager:
         take_profit: float,
         haber_baslik: str = "",
         ai_confidence: int = 0,
-        ai_reasoning: str = ""
+        ai_reasoning: str = "",
+        entry_type: str = "UNKNOWN",
+        partial_tp_target: float = None
     ) -> Tuple[bool, Any]:
         """
         Yeni pozisyon açar ve portföye ekler.
+        
+        Args:
+            entry_type: Entry signal type (4H_SWING, 1H_MOMENTUM, 15M_SCALP, V1, UNKNOWN)
+            partial_tp_target: Price level for partial take profit (None = no partial)
         
         Returns: (success, position_or_message)
         """
@@ -214,9 +220,17 @@ class ExecutionManager:
             "take_profit": take_profit,
             "trade_cost": trade_cost,
             "entry_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": time.time(),  # Unix timestamp for hold time calculations
             "haber_baslik": haber_baslik[:150] if haber_baslik else "",
             "ai_confidence": ai_confidence,
-            "ai_reasoning": ai_reasoning[:200] if ai_reasoning else ""
+            "ai_reasoning": ai_reasoning[:200] if ai_reasoning else "",
+            # ───────── V2 Fields for Partial TP & Trailing Stop ─────────
+            "entry_type": entry_type,              # 4H_SWING, 1H_MOMENTUM, 15M_SCALP, V1
+            "partial_tp_hit": False,               # Flag: has partial TP triggered?
+            "partial_tp_target": partial_tp_target, # Price level for partial TP
+            "initial_sl": stop_loss,               # Original stop loss (never changes)
+            "current_sl": stop_loss,               # Current SL (updated by trailing)
+            "highest_close_since_entry": entry_price  # For trailing stop calculation
         }
         
         self.portfolio["balance"] -= trade_cost
@@ -435,6 +449,19 @@ class ExecutionManager:
         
         Returns: (success, position_or_message)
         """
+        # ═══════════════════════════════════════════════════════════════════════
+        # POSITION LIMIT CHECK (safety net)
+        # ═══════════════════════════════════════════════════════════════════════
+        current_positions = len(self.portfolio.get("positions", []))
+        max_positions = getattr(SETTINGS, 'MAX_OPEN_POSITIONS', 3)
+        
+        if current_positions >= max_positions:
+            trade_log.warning(
+                f"[POSITION_LIMIT] {symbol}: Position limit reached: "
+                f"{current_positions}/{max_positions} - BUY blocked"
+            )
+            return False, f"Position limit reached: {current_positions}/{max_positions}"
+        
         # Aynı coin'de açık pozisyon kontrolü
         for pos in self.portfolio.get("positions", []):
             if pos.get("symbol") == symbol:
@@ -467,10 +494,14 @@ class ExecutionManager:
         
         # StrategyEngine'den gelen değerleri kullan
         stop_loss = decision_result.get("stop_loss")
-        take_profit = decision_result.get("take_profit")
+        take_profit = decision_result.get("take_profit") or decision_result.get("take_profit_2")
         quantity = decision_result.get("quantity", 0)
         ai_confidence = decision_result.get("confidence", 0)
         ai_reasoning = decision_result.get("reason", "") or decision_result.get("reasoning", "")
+        
+        # V2 fields for partial TP
+        entry_type = decision_result.get("entry_type", "UNKNOWN")
+        partial_tp_target = decision_result.get("take_profit_1")  # Partial TP level
         
         if not stop_loss or not take_profit or quantity <= 0:
             return False, "StrategyEngine değerleri geçersiz"
@@ -492,7 +523,9 @@ class ExecutionManager:
             take_profit=take_profit,
             haber_baslik=f"[{trade_reason}] {trigger_info[:120]}",
             ai_confidence=ai_confidence,
-            ai_reasoning=ai_reasoning
+            ai_reasoning=ai_reasoning,
+            entry_type=entry_type,
+            partial_tp_target=partial_tp_target
         )
         
         # Record in order ledger after successful open

@@ -394,6 +394,426 @@ class MarketDataEngine:
             }
         }
     
+    # ─────────────────────────────────────────────────────────────────────────
+    # HYBRID V2 MULTI-TIMEFRAME SNAPSHOT
+    # ─────────────────────────────────────────────────────────────────────────
+    async def get_hybrid_v2_snapshot(self, symbol: str) -> Dict[str, Any]:
+        """
+        Get comprehensive snapshot for Hybrid V2 strategy.
+        
+        Includes 1d, 4h, 1h, 15m timeframes with all indicators needed for:
+        - Regime detection (ADX, ATR%)
+        - Multi-timeframe alignment (EMAs, trend)
+        - Entry signals (RSI, Bollinger, volume)
+        
+        Args:
+            symbol: Coin sembolü (örn: BTCUSDT veya BTC)
+        
+        Returns:
+            {
+                "symbol": str,
+                "price": float,
+                "volume_24h": float,
+                "tf": {"1d": {...}, "4h": {...}, "1h": {...}, "15m": {...}},
+                "timestamp": float
+            }
+        """
+        if self.offline_mode:
+            return self._get_v2_offline_data()
+        
+        symbol_clean = symbol.upper().replace("USDT", "")
+        symbol_full = f"{symbol_clean}USDT"
+        
+        # Cache key for V2 snapshot
+        cache_key = f"v2_{symbol_clean}"
+        with self._cache_lock:
+            if cache_key in self._technical_cache:
+                cached = self._technical_cache[cache_key].get()
+                if cached is not None:
+                    return cached
+        
+        try:
+            logger.info(f"[HYBRID V2] Fetching multi-TF data for {symbol_clean}...")
+            
+            # Check PANDAS_TA availability
+            if not PANDAS_TA_AVAILABLE:
+                logger.error("[HYBRID V2] pandas_ta_classic not available! Indicators will be 0.")
+            
+            # Fetch candles for all timeframes in parallel (including 1d)
+            df_1d, df_4h, df_1h, df_15m = await asyncio.gather(
+                self._fetch_candles(symbol_clean, interval="1d"),
+                self._fetch_candles(symbol_clean, interval="4h"),
+                self._fetch_candles(symbol_clean, interval="1h"),
+                self._fetch_candles(symbol_clean, interval="15m"),
+                return_exceptions=True
+            )
+            
+            # Handle exceptions and use sync fallback
+            if isinstance(df_1d, Exception) or df_1d is None:
+                logger.warning(f"[V2] 1d async fetch failed, trying sync: {df_1d if isinstance(df_1d, Exception) else 'None'}")
+                df_1d = self._get_klines_sync(symbol_clean, "1d", 200)
+            if isinstance(df_4h, Exception) or df_4h is None:
+                logger.warning(f"[V2] 4h async fetch failed, trying sync: {df_4h if isinstance(df_4h, Exception) else 'None'}")
+                df_4h = self._get_klines_sync(symbol_clean, "4h", 200)
+            if isinstance(df_1h, Exception) or df_1h is None:
+                logger.warning(f"[V2] 1h async fetch failed, trying sync: {df_1h if isinstance(df_1h, Exception) else 'None'}")
+                df_1h = self._get_klines_sync(symbol_clean, "1h", 200)
+            if isinstance(df_15m, Exception) or df_15m is None:
+                logger.warning(f"[V2] 15m async fetch failed, trying sync: {df_15m if isinstance(df_15m, Exception) else 'None'}")
+                df_15m = self._get_klines_sync(symbol_clean, "15m", 100)
+            
+            # Log candle fetch status
+            logger.info(
+                f"[V2] {symbol_clean} candle fetch: "
+                f"1d={len(df_1d) if df_1d is not None else 'None'}, "
+                f"4h={len(df_4h) if df_4h is not None else 'None'}, "
+                f"1h={len(df_1h) if df_1h is not None else 'None'}, "
+                f"15m={len(df_15m) if df_15m is not None else 'None'}"
+            )
+            
+            # Calculate indicators for each timeframe
+            tf_data = {}
+            
+            if df_1d is not None and len(df_1d) >= 50:
+                tf_data["1d"] = self._compute_v2_timeframe_indicators(df_1d, "1d")
+                logger.info(f"[V2] {symbol_clean} 1d: ADX={tf_data['1d'].get('adx', 0):.1f}, trend={tf_data['1d'].get('trend', 'N/A')}")
+            else:
+                logger.warning(f"[V2] {symbol_clean} 1d: skipped (insufficient data)")
+            
+            if df_4h is not None and len(df_4h) >= 50:
+                tf_data["4h"] = self._compute_v2_timeframe_indicators(df_4h, "4h")
+                logger.info(f"[V2] {symbol_clean} 4h: ADX={tf_data['4h'].get('adx', 0):.1f}, ATR%={tf_data['4h'].get('atr_pct', 0):.2f}%")
+            else:
+                logger.warning(f"[V2] {symbol_clean} 4h: skipped (insufficient data)")
+            
+            if df_1h is not None and len(df_1h) >= 50:
+                tf_data["1h"] = self._compute_v2_timeframe_indicators(df_1h, "1h")
+                logger.info(f"[V2] {symbol_clean} 1h: ADX={tf_data['1h'].get('adx', 0):.1f}, RSI={tf_data['1h'].get('rsi', 0):.1f}")
+            else:
+                logger.warning(f"[V2] {symbol_clean} 1h: skipped (insufficient data)")
+            
+            if df_15m is not None and len(df_15m) >= 30:
+                tf_data["15m"] = self._compute_v2_timeframe_indicators(df_15m, "15m")
+            
+            # Get current price (3-tier)
+            price = self.get_current_price(symbol_full)
+            if price is None and self._router:
+                try:
+                    price = await self._router.get_price_async(symbol_full, fallback_rest=True, timeout_s=3.0)
+                except Exception:
+                    pass
+            if price is None and tf_data.get("15m"):
+                price = tf_data["15m"].get("close")
+            
+            # Get 24h volume
+            vol_24h = await self.get_24h_volume_usd(symbol_full)
+            
+            result = {
+                "symbol": symbol_clean,
+                "price": price,
+                "volume_24h": vol_24h,
+                "tf": tf_data,
+                "timestamp": time.time(),
+                # Add sentiment for completeness
+                "sentiment": self.get_sentiment_snapshot(),
+                "onchain": self.get_onchain_snapshot(symbol_clean)
+            }
+            
+            # Cache result
+            with self._cache_lock:
+                if cache_key not in self._technical_cache:
+                    self._technical_cache[cache_key] = CachedData(ttl_seconds=60.0)  # 1 min TTL
+                self._technical_cache[cache_key].set(result)
+            
+            logger.info(
+                f"[HYBRID V2 SNAPSHOT] {symbol_clean}: price=${price or 0:.2f}, "
+                f"1d={'OK' if '1d' in tf_data else 'MISS'}, "
+                f"4h={'OK' if '4h' in tf_data else 'MISS'}, "
+                f"1h={'OK' if '1h' in tf_data else 'MISS'}, "
+                f"15m={'OK' if '15m' in tf_data else 'MISS'}"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"[V2] Error creating snapshot for {symbol}: {e}", exc_info=True)
+            return {
+                "symbol": symbol_clean,
+                "price": None,
+                "volume_24h": 0,
+                "tf": {},
+                "timestamp": time.time(),
+                "error": str(e)
+            }
+    
+    def _compute_v2_timeframe_indicators(self, df: pd.DataFrame, timeframe: str) -> Dict[str, Any]:
+        """
+        Calculate all indicators needed for V2 strategy for a single timeframe.
+        
+        Returns:
+            {
+                "ema20": float, "ema50": float, "ema200": float,
+                "ema50_prev": float (for slope),
+                "adx": float, "atr": float, "atr_pct": float,
+                "rsi": float,
+                "bb_upper": float, "bb_middle": float, "bb_lower": float, "bb_width_pct": float,
+                "close": float, "high": float, "low": float,
+                "highest_high": float, "highest_close": float,
+                "volume_avg": float, "volume_current": float, "volume_ratio": float,
+                "timestamp": int
+            }
+        """
+        result = {
+            "timeframe": timeframe,
+            "ema20": None, "ema50": None, "ema200": None, "ema50_prev": None,
+            "adx": 0.0, "atr": 0.0, "atr_pct": 0.0,
+            "rsi": 50.0,
+            "bb_upper": None, "bb_middle": None, "bb_lower": None, "bb_width_pct": 0.0,
+            "close": 0.0, "high": 0.0, "low": 0.0,
+            "highest_high": 0.0, "highest_close": 0.0,
+            "volume_avg": 0.0, "volume_current": 0.0, "volume_ratio": 0.0,
+            "trend": "NEUTRAL",
+            "timestamp": int(time.time() * 1000)
+        }
+        
+        if not PANDAS_TA_AVAILABLE or df is None or df.empty:
+            return result
+        
+        try:
+            close = df['close']
+            high = df['high']
+            low = df['low']
+            volume = df['volume'] if 'volume' in df.columns else None
+            
+            result["close"] = float(close.iloc[-1])
+            result["high"] = float(high.iloc[-1])
+            result["low"] = float(low.iloc[-1])
+            
+            # ─────────── EMAs ───────────
+            ema20 = df.ta.ema(length=20)
+            ema50 = df.ta.ema(length=50)
+            
+            if ema20 is not None and not ema20.empty:
+                result["ema20"] = float(ema20.iloc[-1]) if not pd.isna(ema20.iloc[-1]) else None
+            
+            if ema50 is not None and not ema50.empty:
+                result["ema50"] = float(ema50.iloc[-1]) if not pd.isna(ema50.iloc[-1]) else None
+                # EMA50 prev (5 bars ago for slope calculation)
+                if len(ema50) > 5:
+                    result["ema50_prev"] = float(ema50.iloc[-6]) if not pd.isna(ema50.iloc[-6]) else None
+            
+            # EMA200 only if enough data
+            if len(df) >= 200:
+                ema200 = df.ta.ema(length=200)
+                if ema200 is not None and not ema200.empty:
+                    result["ema200"] = float(ema200.iloc[-1]) if not pd.isna(ema200.iloc[-1]) else None
+            
+            # Trend determination
+            if result["ema50"] and result["ema20"]:
+                if result["close"] > result["ema20"] > result["ema50"]:
+                    result["trend"] = "BULLISH"
+                elif result["close"] < result["ema20"] < result["ema50"]:
+                    result["trend"] = "BEARISH"
+                else:
+                    result["trend"] = "NEUTRAL"
+            
+            # ─────────── ADX ───────────
+            adx_df = df.ta.adx(length=14)
+            if adx_df is not None and not adx_df.empty:
+                adx_val = adx_df.iloc[-1, 0]  # ADX column
+                result["adx"] = float(adx_val) if not pd.isna(adx_val) else 0.0
+            
+            # ─────────── ATR & ATR% ───────────
+            atr = df.ta.atr(length=14)
+            if atr is not None and not atr.empty:
+                atr_val = float(atr.iloc[-1]) if not pd.isna(atr.iloc[-1]) else 0.0
+                result["atr"] = atr_val
+                # ATR as percentage of price
+                if result["close"] > 0:
+                    result["atr_pct"] = (atr_val / result["close"]) * 100
+            
+            # ─────────── RSI ───────────
+            rsi = df.ta.rsi(length=14)
+            if rsi is not None and not rsi.empty:
+                result["rsi"] = float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50.0
+            
+            # ─────────── Bollinger Bands ───────────
+            bb = df.ta.bbands(length=20, std=2)
+            if bb is not None and not bb.empty:
+                # Columns: BBL_20_2.0, BBM_20_2.0, BBU_20_2.0, BBB_20_2.0, BBP_20_2.0
+                try:
+                    bb_lower = bb.iloc[-1, 0]
+                    bb_middle = bb.iloc[-1, 1]
+                    bb_upper = bb.iloc[-1, 2]
+                    
+                    result["bb_lower"] = float(bb_lower) if not pd.isna(bb_lower) else None
+                    result["bb_middle"] = float(bb_middle) if not pd.isna(bb_middle) else None
+                    result["bb_upper"] = float(bb_upper) if not pd.isna(bb_upper) else None
+                    
+                    if result["bb_middle"] and result["bb_middle"] > 0:
+                        result["bb_width_pct"] = ((result["bb_upper"] - result["bb_lower"]) / result["bb_middle"]) * 100
+                except (IndexError, KeyError):
+                    pass
+            
+            # ─────────── Highs (for breakout detection) ───────────
+            lookback = 20
+            if len(df) >= lookback:
+                result["highest_high"] = float(high.tail(lookback).max())
+                result["highest_close"] = float(close.tail(lookback).max())
+            
+            # ─────────── Volume Analysis ───────────
+            if volume is not None and not volume.empty:
+                vol_lookback = 20
+                if len(volume) >= vol_lookback:
+                    result["volume_avg"] = float(volume.tail(vol_lookback).mean())
+                    result["volume_current"] = float(volume.iloc[-1])
+                    if result["volume_avg"] > 0:
+                        result["volume_ratio"] = result["volume_current"] / result["volume_avg"]
+            
+            # ─────────── Timestamp ───────────
+            if 'timestamp' in df.columns:
+                result["timestamp"] = int(df['timestamp'].iloc[-1])
+            elif 'close_time' in df.columns:
+                result["timestamp"] = int(df['close_time'].iloc[-1])
+            
+        except Exception as e:
+            logger.warning(f"[V2 {timeframe}] Indicator calculation error: {e}")
+        
+        return result
+    
+    def _get_v2_offline_data(self) -> Dict[str, Any]:
+        """Offline mod için V2 veri yapısı."""
+        row = self.offline_row
+        price = float(row.get("close") or row.get("price") or 0.0)
+        
+        # Build minimal tf structure from offline data
+        tf_data = {
+            "4h": {
+                "adx": row.get("adx", 20.0),
+                "atr": row.get("atr", 0.0),
+                "atr_pct": row.get("atr_pct", 1.0),
+                "ema50": row.get("ema50") or row.get("ema_50"),
+                "close": price,
+                "trend": row.get("trend", "NEUTRAL")
+            },
+            "1h": {
+                "adx": row.get("adx", 20.0),
+                "atr": row.get("atr", 0.0),
+                "atr_pct": row.get("atr_pct", 1.0),
+                "rsi": row.get("rsi", 50.0),
+                "ema20": row.get("ema20"),
+                "ema50": row.get("ema50") or row.get("ema_50"),
+                "close": price,
+                "trend": row.get("trend", "NEUTRAL")
+            },
+            "15m": {
+                "close": price,
+                "highest_high": row.get("highest_high", price),
+                "highest_close": row.get("highest_close", price),
+                "atr": row.get("atr", 0.0),
+                "volume_ratio": row.get("volume_ratio", 1.0)
+            }
+        }
+        
+        return {
+            "symbol": row.get("symbol", "UNKNOWN"),
+            "price": price,
+            "volume_24h": row.get("volume", 0),
+            "tf": tf_data,
+            "timestamp": time.time()
+        }
+    
+    def _get_klines_sync(self, symbol: str, interval: str, limit: int = 200) -> Optional[pd.DataFrame]:
+        """
+        Synchronously fetch klines with direct Binance client access.
+        
+        Fallback method when async fetch fails.
+        
+        Args:
+            symbol: Symbol (e.g., BTCUSDT or BTC)
+            interval: Candle interval (1d, 4h, 1h, 15m)
+            limit: Number of candles to fetch
+        
+        Returns:
+            DataFrame with OHLCV data or None
+        """
+        try:
+            if not self._router:
+                logger.warning("[MarketDataEngine] _get_klines_sync: No router")
+                return None
+            
+            client = self._router.get_client()
+            if not client:
+                logger.warning("[MarketDataEngine] _get_klines_sync: No client")
+                return None
+            
+            # Normalize symbol
+            if not symbol.upper().endswith("USDT"):
+                symbol = f"{symbol.upper()}USDT"
+            
+            # Fetch klines directly
+            klines = client.get_klines(
+                symbol=symbol,
+                interval=interval,
+                limit=limit
+            )
+            
+            if not klines:
+                logger.warning(f"[MarketDataEngine] _get_klines_sync: No data for {symbol} {interval}")
+                return None
+            
+            # Create DataFrame
+            df = pd.DataFrame(klines, columns=[
+                'timestamp', 'open', 'high', 'low', 'close', 'volume',
+                'close_time', 'quote_volume', 'trades', 'taker_buy_base',
+                'taker_buy_quote', 'ignore'
+            ])
+            
+            # Convert to numeric
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # Drop NaN rows
+            df = df.dropna(subset=['close', 'high', 'low'])
+            
+            if len(df) < 20:
+                logger.warning(f"[MarketDataEngine] Insufficient data for {symbol} {interval}: {len(df)} rows")
+                return None
+            
+            logger.debug(f"[MarketDataEngine] _get_klines_sync: {symbol} {interval} fetched {len(df)} candles")
+            return df
+            
+        except Exception as e:
+            logger.error(f"[MarketDataEngine] _get_klines_sync error ({symbol}, {interval}): {e}")
+            return None
+    
+    def _get_24h_volume_sync(self, symbol: str) -> float:
+        """
+        Synchronously get 24h volume.
+        
+        Args:
+            symbol: Symbol (e.g., BTCUSDT)
+        
+        Returns:
+            24h quote volume in USD
+        """
+        try:
+            if not self._router:
+                return 0.0
+            
+            client = self._router.get_client()
+            if not client:
+                return 0.0
+            
+            if not symbol.upper().endswith("USDT"):
+                symbol = f"{symbol.upper()}USDT"
+            
+            ticker = client.get_ticker(symbol=symbol)
+            return float(ticker.get('quoteVolume', 0))
+        except Exception as e:
+            logger.warning(f"[MarketDataEngine] _get_24h_volume_sync error ({symbol}): {e}")
+            return 0.0
+
     def get_llm_metrics(self) -> Dict[str, Any]:
         """LLM metriklerini döndür."""
         return dict(self.llm_metrics)
