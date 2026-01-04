@@ -791,6 +791,9 @@ class HybridMultiTFV2:
             "stop_loss": round(stop_loss, 2),
             "take_profit_1": round(take_profit_1, 2) if take_profit_1 else None,
             "take_profit_2": round(take_profit_2, 2),
+            # Explicit partial TP fields for V2 strategies (position_manager uses these)
+            "partial_tp_target": round(take_profit_1, 2) if take_profit_1 else None,
+            "partial_tp_percentage": config.partial_tp_fraction if config.partial_tp_pct > 0 else 0.0,
             "quantity": quantity,
             "risk_usd": risk_usd,
             "risk_reward_ratio": round(rr_ratio, 2),

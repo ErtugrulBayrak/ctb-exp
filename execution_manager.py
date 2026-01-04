@@ -501,7 +501,23 @@ class ExecutionManager:
         
         # V2 fields for partial TP
         entry_type = decision_result.get("entry_type", "UNKNOWN")
-        partial_tp_target = decision_result.get("take_profit_1")  # Partial TP level
+        # Try direct partial_tp_target first, then fall back to take_profit_1
+        partial_tp_target = decision_result.get("partial_tp_target") or decision_result.get("take_profit_1")
+        
+        # FALLBACK: If partial_tp_target is still None, calculate from entry_type and config
+        if partial_tp_target is None and entry_type not in ["UNKNOWN", "V1", "15M_SCALP"]:
+            try:
+                import config as cfg
+                if entry_type == "1H_MOMENTUM":
+                    partial_tp_pct = getattr(cfg, 'MOMENTUM_1H_PARTIAL_TP_PCT', 2.0) / 100.0
+                    partial_tp_target = current_price * (1 + partial_tp_pct)
+                    trade_log.info(f"[PARTIAL_TP_FALLBACK] {symbol}: Calculated partial_tp_target=${partial_tp_target:.2f} (+{partial_tp_pct*100:.1f}%)")
+                elif entry_type == "4H_SWING":
+                    partial_tp_pct = getattr(cfg, 'SWING_4H_PARTIAL_TP_PCT', 5.0) / 100.0
+                    partial_tp_target = current_price * (1 + partial_tp_pct)
+                    trade_log.info(f"[PARTIAL_TP_FALLBACK] {symbol}: Calculated partial_tp_target=${partial_tp_target:.2f} (+{partial_tp_pct*100:.1f}%)")
+            except Exception as e:
+                trade_log.warning(f"[PARTIAL_TP_FALLBACK] {symbol}: Failed to calculate fallback: {e}")
         
         if not stop_loss or not take_profit or quantity <= 0:
             return False, "StrategyEngine değerleri geçersiz"
