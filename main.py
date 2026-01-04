@@ -663,6 +663,23 @@ async def ana_dongu():
     except Exception as e:
         log(f"Başlangıç bildirimi gönderilemedi: {e}", "WARN")
 
+    # ──────────────── TELEGRAM COMMAND HANDLER ────────────────
+    # Background task for handling /portfo, /status, /help commands
+    try:
+        from telegram_commands import TelegramCommandHandler
+        
+        command_handler = TelegramCommandHandler(
+            bot_token=TELEGRAM_BOT_TOKEN,
+            chat_id=TELEGRAM_CHAT_ID,
+            load_portfolio_fn=load_portfolio,
+            market_data_engine=market_data_engine
+        )
+        # Start polling as background task
+        asyncio.create_task(command_handler.start_polling())
+        log("TelegramCommandHandler başlatıldı (/portfo aktif)", "OK")
+    except Exception as e:
+        log(f"TelegramCommandHandler başlatılamadı: {e}", "WARN")
+
     # ──────────────── ANA DÖNGÜYÜ BAŞLAT ────────────────
     await loop_controller.run()
 
