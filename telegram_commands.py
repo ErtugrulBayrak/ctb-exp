@@ -193,15 +193,16 @@ class TelegramCommandHandler:
     # ═══════════════════════════════════════════════════════════════════════════
     
     async def _cmd_portfo(self):
-        """Handle /portfo command - show portfolio summary."""
+        """Handle /portfo command - send raw portfolio.json content."""
         try:
             portfolio = self.load_portfolio()
         except Exception as e:
             await self._send_message(f"❌ Portföy yüklenemedi: {e}")
             return
         
-        # Build message
-        msg = self._format_portfolio(portfolio)
+        # Send raw JSON content
+        raw_json = json.dumps(portfolio, indent=2, ensure_ascii=False)
+        msg = f"<pre>{raw_json}</pre>"
         await self._send_message(msg)
     
     async def _cmd_status(self):
