@@ -271,6 +271,12 @@ class TelegramCommandHandler:
                 qty = pos.get("quantity", 0)
                 entry_type = pos.get("entry_type", "?")
                 
+                # V2 fields
+                stop_loss = pos.get("current_sl") or pos.get("stop_loss", 0)
+                take_profit = pos.get("take_profit", 0)
+                partial_tp_target = pos.get("partial_tp_target", 0)
+                partial_tp_hit = pos.get("partial_tp_hit", False)
+                
                 # Try to get current price
                 current_price = entry
                 if self.market_data_engine:
@@ -289,10 +295,20 @@ class TelegramCommandHandler:
                     pnl_usd = 0
                     pnl_emoji = "⚪"
                 
+                # Partial TP status
+                if partial_tp_hit:
+                    partial_str = "✓ Partial alındı"
+                elif partial_tp_target:
+                    partial_str = f"${partial_tp_target:,.2f}"
+                else:
+                    partial_str = "N/A"
+                
                 lines.append(
                     f"  {pnl_emoji} <b>{symbol}</b> ({entry_type})\n"
                     f"      Giriş: ${entry:,.2f} | Şimdi: ${current_price:,.2f}\n"
-                    f"      PnL: {pnl_pct:+.2f}% (${pnl_usd:+.2f})"
+                    f"      PnL: {pnl_pct:+.2f}% (${pnl_usd:+.2f})\n"
+                    f"      SL: ${stop_loss:,.2f} | TP: ${take_profit:,.2f}\n"
+                    f"      Partial TP: {partial_str}"
                 )
         else:
             lines.append("📍 <b>Açık Pozisyon:</b> Yok")
