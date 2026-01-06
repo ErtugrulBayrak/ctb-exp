@@ -100,7 +100,9 @@ class TelegramCommandHandler:
                 logger.info("[TG_CMD] Polling cancelled")
                 break
             except Exception as e:
-                logger.error(f"[TG_CMD] Polling error: {e}")
+                import traceback
+                logger.error(f"[TG_CMD] Polling error: {type(e).__name__}: {e}")
+                logger.debug(f"[TG_CMD] Polling traceback: {traceback.format_exc()}")
             
             await asyncio.sleep(self.POLL_INTERVAL)
         

@@ -413,6 +413,11 @@ class ExecutionManager:
             trade_log["stats"]["total_buys"] = trade_log["stats"].get("total_buys", 0) + 1
         elif action == "SELL":
             trade_log["stats"]["total_sells"] = trade_log["stats"].get("total_sells", 0) + 1
+            # Update wins/losses based on PnL
+            if trade_details and trade_details.get("profit_loss", 0) > 0:
+                trade_log["stats"]["wins"] = trade_log["stats"].get("wins", 0) + 1
+            elif trade_details and trade_details.get("profit_loss", 0) < 0:
+                trade_log["stats"]["losses"] = trade_log["stats"].get("losses", 0) + 1
         
         trade_log["stats"]["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
                 

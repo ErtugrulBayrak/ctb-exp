@@ -530,6 +530,18 @@ class LoopController:
         }
         logger.info(f"[CYCLE_SUMMARY] {cycle_summary}")
         
+        # Save summary state to file
+        try:
+            import json
+            summary_state = {
+                "cycle_count": self._cycle_id,
+                "run_id": self._run_id
+            }
+            with open("summary_state.json", "w") as f:
+                json.dump(summary_state, f, indent=2)
+        except Exception as e:
+            logger.warning(f"[SUMMARY_STATE] Save error: {e}")
+        
         # Reset freshness tracking for next cycle
         self._max_candle_age_s = 0
         self._max_ticker_age_s = 0
