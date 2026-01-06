@@ -538,7 +538,11 @@ class LoopController:
 
     async def monitor_positions(self):
         """
-        Periodically checks current price of open positions against SL/TP.
+        Log status of open positions.
+        
+        Note: V2 exit logic (SL/TP/Partial TP/Trailing Stop) is handled by
+        the Watchdog task (_quick_sltp_check) which runs every 30 seconds.
+        This method now only logs position status for monitoring.
         """
         open_positions = self.position_manager.get_open_positions()
         if not open_positions:
@@ -551,49 +555,31 @@ class LoopController:
             if not symbol: continue
 
             try:
-                # Fetch current price directly from Router (Fast/Cached)
+                # Fetch current price
                 current_price = self.exchange_router.get_price(symbol)
-                
-                # If cached price is None/stale, might need to wait or skip
                 if not current_price:
-                    # Attempt fetch
                     current_price = self.exchange_router.get_price_or_fetch(symbol)
                 
                 if not current_price:
-                    logger.warning(f"  Unknown price for {symbol}, skipping monitor.")
+                    logger.warning(f"  Unknown price for {symbol}, skipping.")
                     continue
 
-                # Check SL/TP
-                sl = pos.get('stop_loss')
-                tp = pos.get('take_profit')
+                # Calculate P&L
+                entry_price = pos.get('entry_price', 0)
+                pnl_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
                 
-                # Decision logic
-                close_signal = None
-                pnl_reason = None
+                # Get V2 fields
+                entry_type = pos.get('entry_type', 'UNKNOWN')
+                partial_hit = pos.get('partial_tp_hit', False)
+                current_sl = pos.get('current_sl', pos.get('stop_loss', 0))
                 
-                if sl and current_price <= sl:
-                    close_signal = "STOP_LOSS"
-                    pnl_reason = "SL Hit"
-                elif tp and current_price >= tp:
-                    close_signal = "TAKE_PROFIT"
-                    pnl_reason = "TP Hit"
-                
-                if close_signal:
-                    logger.info(f"🚨 {close_signal} TRIGGERED for {symbol} @ {current_price}")
-                    # Execute Close
-                    success, pnl, trade = await self.execution_manager.execute_sell_flow(
-                        symbol=symbol,
-                        current_price=current_price,
-                        ai_reasoning=pnl_reason,
-                        ai_confidence=100,
-                        market_snapshot={} # Empty snapshot acceptable for SL/TP
-                    )
-                    
-                    if success:
-                        self.position_manager.register_trade_result(pnl)
-                        logger.info(f"  ✅ Position Closed. PnL: ${pnl:.2f}")
-                    else:
-                        logger.error(f"  ❌ Close Failed for {symbol}")
+                # Log position status
+                status = "🟢" if pnl_pct > 0 else "🔴"
+                partial_str = "✅PartialTP" if partial_hit else ""
+                logger.info(
+                    f"  {status} {symbol} ({entry_type}): ${current_price:.2f} | "
+                    f"PnL: {pnl_pct:+.1f}% | SL: ${current_sl:.2f} {partial_str}"
+                )
 
             except Exception as e:
                 logger.error(f"⚠️ Error monitoring {symbol}: {e}")
@@ -758,66 +744,65 @@ class LoopController:
             traceback.print_exc()
 
     async def process_sell_logic(self, symbol: str, snapshot: Dict[str, Any]):
-        """Evaluate AI Sell logic (Technical/Profit Protection)."""
+        """
+        V2 Exit Logic - Uses position_manager.check_exit_conditions().
+        
+        This is a backup to the Watchdog for exit logic.
+        Watchdog runs every 30s, this runs every cycle (15min).
+        
+        V2 exit types:
+        - 4H_SWING: Partial TP at 5%, trailing stop, final at 10%
+        - 1H_MOMENTUM: Partial TP at 2%, trailing stop, final at 4%
+        - 15M_SCALP: Target at 1.5%, time exit at 4h
+        """
         # Only relevant if we have a position
         positions = self.position_manager.get_open_positions()
-        # Find position for this symbol
-        # Assuming symbol match is direct (e.g. BTC vs BTCUSDT needs normalization if not consistent)
-        # Snapshot symbol usually is normalized. Position symbol should be normalized.
-        
         pos = next((p for p in positions if p['symbol'] == symbol), None)
         if not pos:
             return
 
         try:
-            # 1. Strategy Evaluation
-            decision = await self.strategy_engine.evaluate_sell_opportunity(
-                position=pos,
-                market_snapshot=snapshot
-            )
+            # Get current price
+            current_price = snapshot.get("price")
+            if not current_price:
+                current_price = snapshot.get("technical", {}).get("price")
             
-            if decision.get("action") == "SELL":
-                reason = decision.get("reason", "Strategy Sell")
-                confidence = decision.get("confidence", 0)
-                
-                src = decision.get("metadata", {}).get("source", "UNKNOWN")
-                logger.info(f"📉 Strategy Signal ({symbol}): SELL ({reason}) [src={src}]")
-                
-                # 2. Risk Validation (Evaluate Exit)
-                risk_decision = self.risk_manager.evaluate_exit_risk(
-                    snapshot=snapshot,
-                    position=pos,
-                    base_decision=decision
-                )
-                
-                if not risk_decision.get("allowed"):
-                     logger.info(f"  🛡️ Risk Manager blocked SELL: {risk_decision.get('reason')}")
-                     return
-
-                # 3. Execution
-                current_price = snapshot.get("price")
-                if not current_price:
-                    # Fallback to technical price if available
-                    current_price = snapshot.get("technical", {}).get("price")
-                
-                if not current_price:
-                    logger.warning(f"🚫 SELL Failed: No valid price for {symbol}")
-                    return
+            if not current_price:
+                return
+            
+            # Use V2 exit logic
+            exit_result = self.position_manager.check_exit_conditions(pos, current_price, snapshot)
+            action = exit_result.get("action", "HOLD")
+            
+            if action == "HOLD":
+                return
+            
+            entry_type = pos.get("entry_type", "UNKNOWN")
+            reason = exit_result.get("reason", "V2 Exit")
+            
+            if action == "SELL_PARTIAL":
+                # Partial TP - handled by Watchdog primarily
+                # Log but don't execute here (Watchdog will catch it)
+                logger.debug(f"[V2 SELL] {symbol}: Partial TP detected, Watchdog will handle")
+                return
+            
+            elif action == "SELL":
+                logger.info(f"📉 V2 Exit Signal ({symbol}): {reason} [type={entry_type}]")
                 
                 success, pnl, trade = await self.execution_manager.execute_sell_flow(
                     symbol=symbol,
                     current_price=current_price,
                     ai_reasoning=reason,
-                    ai_confidence=confidence,
+                    ai_confidence=100,
                     market_snapshot=snapshot
                 )
                 
                 if success:
                     self.position_manager.register_trade_result(pnl)
-                    logger.info(f"  ✅ SELL Executed. PnL: ${pnl:.2f}")
+                    logger.info(f"  ✅ V2 SELL Executed. PnL: ${pnl:.2f}")
 
         except Exception as e:
-             logger.error(f"⚠️ Sell Logic Error ({symbol}): {e}")
+             logger.error(f"⚠️ V2 Sell Logic Error ({symbol}): {e}")
 
     def check_global_safety(self):
         """

@@ -562,7 +562,8 @@ class PositionManager:
         stop_loss = position.get("current_sl", position.get("stop_loss", 0))
         quantity = position.get("quantity", 0)
         partial_taken = position.get("partial_tp_hit", position.get("partial_taken", False))
-        entry_time = position.get("entry_time", position.get("timestamp", time.time()))
+        # Use timestamp (float) for time calculations - entry_time is string for display only
+        entry_timestamp = position.get("timestamp", time.time())
         
         if not entry_price or entry_price <= 0:
             return {"action": "HOLD", "reason": "Missing entry price"}
@@ -619,7 +620,7 @@ class PositionManager:
             }
         
         # 5. Time-based exit: After 10 days, close if profit > 0
-        hours_held = (time.time() - entry_time) / 3600
+        hours_held = (time.time() - entry_timestamp) / 3600
         if hours_held > 240 and profit_pct > 0:  # 10 days = 240 hours
             logger.info(f"[4H SWING EXIT] {symbol}: Time-based exit after {hours_held:.0f}h")
             return {
@@ -641,7 +642,8 @@ class PositionManager:
         stop_loss = position.get("current_sl", position.get("stop_loss", 0))
         quantity = position.get("quantity", 0)
         partial_taken = position.get("partial_tp_hit", position.get("partial_taken", False))
-        entry_time = position.get("entry_time", position.get("timestamp", time.time()))
+        # Use timestamp (float) for time calculations - entry_time is string for display only
+        entry_timestamp = position.get("timestamp", time.time())
         
         if not entry_price or entry_price <= 0:
             return {"action": "HOLD", "reason": "Missing entry price"}
@@ -698,7 +700,7 @@ class PositionManager:
             }
         
         # 5. Time-based exit: After 24 hours, tighter profit requirement
-        hours_held = (time.time() - entry_time) / 3600
+        hours_held = (time.time() - entry_timestamp) / 3600
         if hours_held > 24 and profit_pct > 0.5:  # After 24h, close if > 0.5%
             logger.info(f"[1H MOM EXIT] {symbol}: Time-based exit after {hours_held:.1f}h")
             return {
@@ -722,7 +724,8 @@ class PositionManager:
         entry_price = position.get("entry_price", 0)
         stop_loss = position.get("current_sl", position.get("stop_loss", 0))
         quantity = position.get("quantity", 0)
-        entry_time = position.get("entry_time", position.get("timestamp", time.time()))
+        # Use timestamp (float) for time calculations - entry_time is string for display only
+        entry_timestamp = position.get("timestamp", time.time())
         
         if not entry_price or entry_price <= 0:
             return {"action": "HOLD", "reason": "Missing entry price"}
@@ -747,7 +750,7 @@ class PositionManager:
             }
         
         # 3. Time-based exit: After 4 hours, close at breakeven or better
-        hours_held = (time.time() - entry_time) / 3600
+        hours_held = (time.time() - entry_timestamp) / 3600
         if hours_held > 4:
             if profit_pct >= -0.1:  # Close if >= -0.1% (near breakeven)
                 logger.info(f"[15M SCALP EXIT] {symbol}: Time-based exit after {hours_held:.1f}h")

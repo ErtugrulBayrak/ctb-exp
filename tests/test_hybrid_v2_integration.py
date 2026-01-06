@@ -524,7 +524,7 @@ class TestPositionManagerExits:
             "current_sl": 48000.0,
             "quantity": 0.1,
             "partial_tp_hit": False,
-            "entry_time": time.time() - (11 * 24 * 3600)  # 11 days ago
+            "timestamp": time.time() - (11 * 24 * 3600)  # 11 days ago
         }
         
         # Small profit, after 10 days
