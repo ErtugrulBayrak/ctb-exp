@@ -702,10 +702,13 @@ class LoopController:
                 "take_profit": decision.get("take_profit_2", current_price * 1.10),
                 "quantity": decision.get("quantity", 0),
                 "allowed": True,
+                # V2 CRITICAL: These fields MUST be at top level for execute_buy_flow
+                "entry_type": entry_type,
+                "partial_tp_target": decision.get("partial_tp_target"),
+                "take_profit_1": decision.get("take_profit_1"),
+                "partial_tp_percentage": decision.get("partial_tp_percentage", 0.5),
                 "metadata": {
-                    "entry_type": entry_type,
                     "risk_reward_ratio": rr_ratio,
-                    "partial_tp_1": decision.get("take_profit_1"),
                     "regime": decision.get("regime", "UNKNOWN")
                 }
             }
