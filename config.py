@@ -227,7 +227,7 @@ class Settings:
     # AI satış kararı için minimum güven skoru (0-100)
     AI_SELL_CONFIDENCE_THRESHOLD: int = 75
     # False ise, bot haber analizi için LLM çağrısı yapmaz
-    USE_NEWS_LLM: bool = True
+    USE_NEWS_LLM: bool = False  # V2'de kullanılmıyor - devre dışı
     
     # Strateji LLM Kontrolleri
     # USE_STRATEGY_LLM: False = strateji kararları sadece kurallara dayalı (Gemini sinyal üretimi YOK)
@@ -430,7 +430,7 @@ class Settings:
     # V1'de strateji LLM skorlaması kapalı (deterministik kurallar kullanılır)
     USE_STRATEGY_LLM_V1: bool = False
     # Haber/olay bazlı risk veto aktif mi?
-    USE_NEWS_LLM_VETO: bool = True
+    USE_NEWS_LLM_VETO: bool = False  # V2'de kullanılmıyor - devre dışı
     # Veto için minimum güven skoru (0-100)
     NEWS_VETO_MIN_CONF: int = 70
     # Veto cache süresi (dakika) - aynı coin için tekrar LLM çağırma
