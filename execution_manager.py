@@ -504,6 +504,14 @@ class ExecutionManager:
         # Try direct partial_tp_target first, then fall back to take_profit_1
         partial_tp_target = decision_result.get("partial_tp_target") or decision_result.get("take_profit_1")
         
+        # CRITICAL DEBUG: Log what we received from decision_result
+        trade_log.info(
+            f"[PARTIAL TP DEBUG] {symbol}: "
+            f"decision_result.partial_tp_target={decision_result.get('partial_tp_target')} | "
+            f"decision_result.take_profit_1={decision_result.get('take_profit_1')} | "
+            f"after_or={partial_tp_target} | entry_type={entry_type}"
+        )
+        
         # FALLBACK: If partial_tp_target is still None, calculate from entry_type and config
         if partial_tp_target is None and entry_type not in ["UNKNOWN", "V1", "15M_SCALP"]:
             try:

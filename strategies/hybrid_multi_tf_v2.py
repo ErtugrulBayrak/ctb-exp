@@ -808,6 +808,13 @@ class HybridMultiTFV2:
             "dry_run": self.dry_run
         }
         
+        # CRITICAL DEBUG LOG: Track partial_tp_target through signal flow
+        logger.info(
+            f"[BUILD SIGNAL] {symbol} | {entry_type.value} | "
+            f"partial_tp_target={signal.get('partial_tp_target')} | "
+            f"take_profit_1={take_profit_1} | partial_tp_pct={config.partial_tp_pct}"
+        )
+        
         if self.dry_run:
             logger.info(f"[HYBRID V2 DRY RUN] {symbol}: Would BUY | {entry_type.value}")
         else:
