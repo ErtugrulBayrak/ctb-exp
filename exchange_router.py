@@ -286,9 +286,20 @@ class ExchangeRouter:
         Binance Client instance döndür.
         OrderExecutor bu client'ı kullanır.
         
+        Client None ise veya bağlantı kopmuşsa otomatik yeniden bağlanır.
+        
         Returns:
             Binance Client veya None
         """
+        # Auto-reconnect: client yoksa yeniden oluştur
+        if self._client is None:
+            logger.warning("[ExchangeRouter] Client None detected, attempting reconnect...")
+            try:
+                self._client = self._create_client()
+                logger.info("[ExchangeRouter] Client reconnected successfully!")
+            except Exception as e:
+                logger.error(f"[ExchangeRouter] Client reconnect failed: {e}")
+                return None
         return self._client
     
     def _create_client(self) -> Client:

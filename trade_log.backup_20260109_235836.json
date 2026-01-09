@@ -1,0 +1,10 @@
+{
+  "stats": {
+    "total_buys": 0,
+    "total_sells": 0,
+    "wins": 0,
+    "losses": 0
+  },
+  "decisions": [],
+  "trades": []
+}

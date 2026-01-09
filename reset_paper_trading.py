@@ -30,7 +30,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent
 
 # Starting balance for paper trading
-DEFAULT_STARTING_BALANCE = 10000.0
+DEFAULT_STARTING_BALANCE = 1000.0
 
 # Files to reset with their default content
 RESET_FILES = {

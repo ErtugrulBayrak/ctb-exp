@@ -742,9 +742,10 @@ class MarketDataEngine:
                 logger.warning("[MarketDataEngine] _get_klines_sync: No router")
                 return None
             
+            # get_client() now auto-reconnects if client is None
             client = self._router.get_client()
             if not client:
-                logger.warning("[MarketDataEngine] _get_klines_sync: No client")
+                logger.warning("[MarketDataEngine] _get_klines_sync: Client reconnect failed")
                 return None
             
             # Normalize symbol
@@ -1227,10 +1228,11 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         if not self._router:
             logger.warning("[MarketDataEngine] Router yok, candle çekilemedi")
             return None
-            
+        
+        # get_client() now auto-reconnects if client is None
         client = self._router.get_client()
         if not client:
-            logger.warning("[MarketDataEngine] Client yok, candle çekilemedi")
+            logger.warning("[MarketDataEngine] Client bağlantısı kurulamadı (reconnect başarısız)")
             return None
 
         try:
