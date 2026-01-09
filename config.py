@@ -113,7 +113,7 @@ _PAPER_DEFAULTS = {
     "LIVE_TRADING": False,
     "ALLOW_DANGEROUS_ACTIONS": False,
     "RISK_PER_TRADE": 0.5,  # %0.5 - düşük risk
-    "MAX_OPEN_POSITIONS": 2,
+    "MAX_OPEN_POSITIONS": 4,  # Artırıldı: Mevcut 4 pozisyon var, kapanana kadar uyumlu tutuldu
     "MAX_DAILY_LOSS_PCT": 3.0,  # A+B: Günlük risk limiti artırıldı (%2-3 arası)
     "ALERTS_ENABLED": True,
     "ALERT_SEND_TELEGRAM": True,

@@ -39,7 +39,7 @@ class LoopController:
     4. Execute trades.
     5. Sleep.
     
-    V1 Mode: Uses RegimeFilter, SwingTrendV1, and NewsVeto for deterministic signals.
+    Strategy: Hybrid V2 with regime detection and multi-timeframe analysis.
     """
 
     def __init__(
@@ -780,22 +780,35 @@ class LoopController:
                 current_price = snapshot.get("technical", {}).get("price")
             
             if not current_price:
+                logger.warning(f"[V2 EXIT] {symbol}: Fiyat bulunamadı, exit check atlanıyor")
                 return
+            
+            # Log position status for debugging
+            entry_price = pos.get("entry_price", 0)
+            pnl_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
+            stop_loss = pos.get("current_sl", pos.get("stop_loss", 0))
+            take_profit = pos.get("take_profit", 0)
+            entry_type = pos.get("entry_type", "UNKNOWN")
+            
+            logger.info(
+                f"[V2 EXIT] {symbol}: price=${current_price:.2f}, entry=${entry_price:.2f}, "
+                f"PnL={pnl_pct:+.2f}%, SL=${stop_loss:.2f}, TP=${take_profit:.2f}, type={entry_type}"
+            )
             
             # Use V2 exit logic
             exit_result = self.position_manager.check_exit_conditions(pos, current_price, snapshot)
             action = exit_result.get("action", "HOLD")
+            reason = exit_result.get("reason", "No reason")
+            
+            logger.debug(f"[V2 EXIT] {symbol}: action={action}, reason={reason}")
             
             if action == "HOLD":
                 return
             
-            entry_type = pos.get("entry_type", "UNKNOWN")
-            reason = exit_result.get("reason", "V2 Exit")
-            
             if action == "SELL_PARTIAL":
                 # Partial TP - handled by Watchdog primarily
                 # Log but don't execute here (Watchdog will catch it)
-                logger.debug(f"[V2 SELL] {symbol}: Partial TP detected, Watchdog will handle")
+                logger.info(f"[V2 SELL] {symbol}: Partial TP detected, Watchdog will handle")
                 return
             
             elif action == "SELL":

@@ -113,27 +113,40 @@ class TelegramCommandHandler:
         self._running = False
     
     async def _poll_updates(self):
-        """Poll Telegram API for new updates."""
+        """Poll Telegram API for new updates with graceful error handling."""
         url = f"{self.API_BASE}{self.bot_token}/getUpdates"
         params = {
             "offset": self._last_update_id + 1,
-            "timeout": 5,
+            "timeout": 30,  # Long polling - Telegram server-side timeout
             "allowed_updates": ["message"]
         }
         
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status != 200:
-                    return
-                
-                data = await resp.json()
-                
-                if not data.get("ok"):
-                    return
-                
-                for update in data.get("result", []):
-                    await self._handle_update(update)
-                    self._last_update_id = max(self._last_update_id, update.get("update_id", 0))
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Total timeout slightly higher than long polling timeout
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=35)) as resp:
+                    if resp.status != 200:
+                        logger.debug(f"[TG_CMD] Poll returned status {resp.status}")
+                        return
+                    
+                    data = await resp.json()
+                    
+                    if not data.get("ok"):
+                        return
+                    
+                    for update in data.get("result", []):
+                        await self._handle_update(update)
+                        self._last_update_id = max(self._last_update_id, update.get("update_id", 0))
+        except asyncio.TimeoutError:
+            # Normal for long polling when no updates - not an error
+            logger.debug("[TG_CMD] Poll timeout (normal for long polling)")
+        except aiohttp.ClientConnectorError as e:
+            logger.warning(f"[TG_CMD] Network connection error: {e}")
+        except aiohttp.ClientError as e:
+            logger.warning(f"[TG_CMD] HTTP client error: {e}")
+        except Exception as e:
+            # Catch-all to prevent crash
+            logger.error(f"[TG_CMD] Unexpected poll error: {type(e).__name__}: {e}")
     
     async def _handle_update(self, update: Dict[str, Any]):
         """Handle a single update from Telegram."""

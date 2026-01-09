@@ -320,166 +320,176 @@ class PositionManager:
             entry_price = position.get("entry_price", 0)
             entry_type = position.get("entry_type", "UNKNOWN")
             
-            # Get current price
-            current_price = self.market_data_engine.get_current_price(symbol)
-            
-            if current_price is None:
-                continue
-            
-            # Get snapshot for V2 exit logic (needed for trailing stop ATR)
             try:
-                snapshot = await self.market_data_engine.build_snapshot(symbol)
-            except Exception as e:
-                logger.debug(f"[WATCHDOG] {symbol}: Snapshot build failed: {e}")
-                snapshot = {}
-            
-            # Update highest close for trailing stop tracking
-            if current_price > position.get("highest_close_since_entry", entry_price):
-                position["highest_close_since_entry"] = current_price
-                if self.save_portfolio_fn:
-                    self.save_portfolio_fn(self.portfolio)
-            
-            # Use V2 exit logic
-            exit_result = self.check_exit_conditions(position, current_price, snapshot)
-            action = exit_result.get("action", "HOLD")
-            reason = exit_result.get("reason", "")
-            
-            if action == "HOLD":
-                continue
-            
-            # Determine exit parameters
-            if action == "SELL_PARTIAL":
-                # Partial TP - sell portion and keep rest
-                partial_qty = exit_result.get("quantity", position.get("quantity", 0) * 0.5)
+                # Get current price
+                current_price = self.market_data_engine.get_current_price(symbol)
                 
-                logger.info(f"🐕 Watchdog: {symbol} PARTIAL TP tetiklendi! (${current_price:.4f}) - {reason}")
+                if current_price is None:
+                    logger.warning(f"[WATCHDOG] {symbol}: Fiyat alınamadı, atlanıyor")
+                    continue
                 
-                success, pnl, closed_trade = self.execution_manager.close_position(
-                    position_id, current_price, "PARTIAL_TP", partial_qty=partial_qty
-                )
+                # Get snapshot for V2 exit logic (needed for trailing stop ATR)
+                try:
+                    snapshot = await self.market_data_engine.build_snapshot(symbol)
+                except Exception as e:
+                    logger.debug(f"[WATCHDOG] {symbol}: Snapshot build failed: {e}")
+                    # Minimal snapshot for basic SL/TP check
+                    snapshot = {"tf": {"1h": {}, "4h": {}}, "price": current_price}
                 
-                if success:
-                    # Mark partial TP as taken in the remaining position
-                    # Find the updated position in portfolio
-                    for pos in self.portfolio.get("positions", []):
-                        if pos.get("id") == position_id:
-                            pos["partial_tp_hit"] = True
-                            pos["partial_taken"] = True
-                            # Move stop to breakeven after partial
-                            if entry_price > 0:
-                                pos["current_sl"] = entry_price
-                                logger.info(f"[{symbol}] Stop moved to breakeven: ${entry_price:.2f}")
-                            break
-                    
+                # Update highest close for trailing stop tracking
+                if current_price > position.get("highest_close_since_entry", entry_price):
+                    position["highest_close_since_entry"] = current_price
                     if self.save_portfolio_fn:
                         self.save_portfolio_fn(self.portfolio)
-                    
-                    self.register_trade_result(pnl)
-                    logger.info(f"💰 PARTIAL TP: {symbol} | Sold {partial_qty:.6f} | PnL: ${pnl:.2f}")
-                    
-                    # Telegram notification
-                    if self.telegram_fn and bot_token and chat_id:
-                        profit_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
-                        mesaj = (
-                            f"💰 <b>PARTIAL TP ({entry_type})</b>\n\n"
-                            f"<b>Coin:</b> {symbol}/USDT\n"
-                            f"<b>Giriş:</b> ${entry_price:.4f}\n"
-                            f"<b>Çıkış:</b> ${current_price:.4f}\n"
-                            f"<b>Kâr:</b> +{profit_pct:.1f}%\n"
-                            f"<b>Satılan:</b> {partial_qty:.6f}\n"
-                            f"<b>PnL:</b> ${pnl:.2f}\n\n"
-                            f"<i>Stop breakeven'a taşındı</i>\n"
-                            f"<b>💰 Bakiye:</b> ${self.portfolio['balance']:.2f}"
-                        )
-                        try:
-                            await self.telegram_fn(bot_token, chat_id, mesaj)
-                        except Exception as e:
-                            logger.error(f"Telegram hatası: {e}")
-            
-            elif action == "SELL":
-                # Full position close
-                quantity = exit_result.get("quantity", position.get("quantity", 0))
                 
-                # Determine emoji and log message based on reason
-                if "stop" in reason.lower():
-                    log_emoji = "🛑"
-                    log_msg = "STOP LOSS"
-                    close_reason = "SL"
-                elif "trailing" in reason.lower():
-                    log_emoji = "🔻"
-                    log_msg = "TRAILING STOP"
-                    close_reason = "TRAIL_SL"
-                elif "target" in reason.lower():
-                    log_emoji = "💰"
-                    log_msg = "TAKE PROFIT"
-                    close_reason = "TP"
-                elif "time" in reason.lower():
-                    log_emoji = "⏰"
-                    log_msg = "TIME EXIT"
-                    close_reason = "TIME"
-                else:
-                    log_emoji = "📤"
-                    log_msg = "EXIT"
-                    close_reason = "V2_EXIT"
+                # Use V2 exit logic
+                exit_result = self.check_exit_conditions(position, current_price, snapshot)
+                action = exit_result.get("action", "HOLD")
+                reason = exit_result.get("reason", "")
                 
-                logger.info(f"🐕 Watchdog: {symbol} {log_msg} tetiklendi! (${current_price:.4f}) - {reason}")
+                # Log every check for debugging (DEBUG level)
+                logger.debug(f"[WATCHDOG] {symbol}: price={current_price:.4f}, action={action}, reason={reason[:50]}...")
                 
-                success, pnl, closed_trade = self.execution_manager.close_position(
-                    position_id, current_price, close_reason
-                )
-                
-                if success:
-                    self.register_trade_result(pnl)
-                    logger.info(f"{log_emoji} {log_msg}: {symbol} kapatıldı | PnL: ${pnl:.2f}")
+                if action == "HOLD":
+                    continue
                     
-                    # Telegram notification
-                    if self.telegram_fn and bot_token and chat_id:
-                        mesaj = (
-                            f"{log_emoji} <b>{log_msg} ({entry_type})</b>\n\n"
-                            f"<b>Coin:</b> {symbol}/USDT\n"
-                            f"<b>Giriş:</b> ${entry_price:.4f}\n"
-                            f"<b>Çıkış:</b> ${current_price:.4f}\n"
-                            f"<b>PnL:</b> ${pnl:.2f} ({closed_trade.get('profit_pct', 0):.1f}%)\n\n"
-                            f"<i>{reason}</i>\n\n"
-                            f"<b>💰 Güncel Bakiye:</b> ${self.portfolio['balance']:.2f}"
-                        )
-                        try:
-                            await self.telegram_fn(bot_token, chat_id, mesaj)
-                        except Exception as e:
-                            logger.error(f"Telegram hatası: {e}")
+                # Determine exit parameters
+                if action == "SELL_PARTIAL":
+                    # Partial TP - sell portion and keep rest
+                    partial_qty = exit_result.get("quantity", position.get("quantity", 0) * 0.5)
                     
-                    # Live trading - same retry logic
-                    if live_trading_enabled and self.executor:
-                        max_retries = getattr(SETTINGS, 'LIVE_ORDER_MAX_RETRIES', 3)
-                        retry_delay = getattr(SETTINGS, 'LIVE_ORDER_RETRY_DELAY', 2.0)
-                        
-                        for attempt in range(max_retries):
-                            try:
-                                live_order = await self.executor.create_order(
-                                    symbol=f"{symbol}USDT",
-                                    side="SELL",
-                                    quantity=quantity,
-                                    order_type="MARKET"
-                                )
-                                logger.info(f"🔴 CANLI {close_reason} SATIŞ: {symbol} OrderId={live_order.get('orderId')}")
-                                
-                                if self.portfolio.get("history"):
-                                    self.portfolio["history"][-1]["live_sell_order_id"] = live_order.get("orderId")
-                                    self.portfolio["history"][-1]["live_sell_status"] = "FILLED"
-                                    if self.save_portfolio_fn:
-                                        self.save_portfolio_fn(self.portfolio)
+                    logger.info(f"🐕 Watchdog: {symbol} PARTIAL TP tetiklendi! (${current_price:.4f}) - {reason}")
+                    
+                    success, pnl, closed_trade = self.execution_manager.close_position(
+                        position_id, current_price, "PARTIAL_TP", partial_qty=partial_qty
+                    )
+                
+                    if success:
+                        # Mark partial TP as taken in the remaining position
+                        # Find the updated position in portfolio
+                        for pos in self.portfolio.get("positions", []):
+                            if pos.get("id") == position_id:
+                                pos["partial_tp_hit"] = True
+                                pos["partial_taken"] = True
+                                # Move stop to breakeven after partial
+                                if entry_price > 0:
+                                    pos["current_sl"] = entry_price
+                                    logger.info(f"[{symbol}] Stop moved to breakeven: ${entry_price:.2f}")
                                 break
+                        
+                        if self.save_portfolio_fn:
+                            self.save_portfolio_fn(self.portfolio)
+                        
+                        self.register_trade_result(pnl)
+                        logger.info(f"💰 PARTIAL TP: {symbol} | Sold {partial_qty:.6f} | PnL: ${pnl:.2f}")
+                        
+                        # Telegram notification
+                        if self.telegram_fn and bot_token and chat_id:
+                            profit_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
+                            mesaj = (
+                                f"💰 <b>PARTIAL TP ({entry_type})</b>\n\n"
+                                f"<b>Coin:</b> {symbol}/USDT\n"
+                                f"<b>Giriş:</b> ${entry_price:.4f}\n"
+                                f"<b>Çıkış:</b> ${current_price:.4f}\n"
+                                f"<b>Kâr:</b> +{profit_pct:.1f}%\n"
+                                f"<b>Satılan:</b> {partial_qty:.6f}\n"
+                                f"<b>PnL:</b> ${pnl:.2f}\n\n"
+                                f"<i>Stop breakeven'a taşındı</i>\n"
+                                f"<b>💰 Bakiye:</b> ${self.portfolio['balance']:.2f}"
+                            )
+                            try:
+                                await self.telegram_fn(bot_token, chat_id, mesaj)
                             except Exception as e:
-                                if attempt < max_retries - 1:
-                                    logger.warning(f"⚠️ CANLI {close_reason} DENEME {attempt + 1}/{max_retries} BAŞARISIZ: {e}")
-                                    await asyncio.sleep(retry_delay)
-                                else:
-                                    logger.error(f"❌ CANLI {close_reason} TÜM DENEMELER BAŞARISIZ: {symbol} - {e}")
+                                logger.error(f"Telegram hatası: {e}")
+                
+                elif action == "SELL":
+                    # Full position close
+                    quantity = exit_result.get("quantity", position.get("quantity", 0))
+                    
+                    # Determine emoji and log message based on reason
+                    if "stop" in reason.lower():
+                        log_emoji = "🛑"
+                        log_msg = "STOP LOSS"
+                        close_reason = "SL"
+                    elif "trailing" in reason.lower():
+                        log_emoji = "🔻"
+                        log_msg = "TRAILING STOP"
+                        close_reason = "TRAIL_SL"
+                    elif "target" in reason.lower():
+                        log_emoji = "💰"
+                        log_msg = "TAKE PROFIT"
+                        close_reason = "TP"
+                    elif "time" in reason.lower():
+                        log_emoji = "⏰"
+                        log_msg = "TIME EXIT"
+                        close_reason = "TIME"
+                    else:
+                        log_emoji = "📤"
+                        log_msg = "EXIT"
+                        close_reason = "V2_EXIT"
+                    
+                    logger.info(f"🐕 Watchdog: {symbol} {log_msg} tetiklendi! (${current_price:.4f}) - {reason}")
+                    
+                    success, pnl, closed_trade = self.execution_manager.close_position(
+                        position_id, current_price, close_reason
+                    )
+                    
+                    if success:
+                        self.register_trade_result(pnl)
+                        logger.info(f"{log_emoji} {log_msg}: {symbol} kapatıldı | PnL: ${pnl:.2f}")
+                        
+                        # Telegram notification
+                        if self.telegram_fn and bot_token and chat_id:
+                            mesaj = (
+                                f"{log_emoji} <b>{log_msg} ({entry_type})</b>\n\n"
+                                f"<b>Coin:</b> {symbol}/USDT\n"
+                                f"<b>Giriş:</b> ${entry_price:.4f}\n"
+                                f"<b>Çıkış:</b> ${current_price:.4f}\n"
+                                f"<b>PnL:</b> ${pnl:.2f} ({closed_trade.get('profit_pct', 0):.1f}%)\n\n"
+                                f"<i>{reason}</i>\n\n"
+                                f"<b>💰 Güncel Bakiye:</b> ${self.portfolio['balance']:.2f}"
+                            )
+                            try:
+                                await self.telegram_fn(bot_token, chat_id, mesaj)
+                            except Exception as e:
+                                logger.error(f"Telegram hatası: {e}")
+                        
+                        # Live trading - same retry logic
+                        if live_trading_enabled and self.executor:
+                            max_retries = getattr(SETTINGS, 'LIVE_ORDER_MAX_RETRIES', 3)
+                            retry_delay = getattr(SETTINGS, 'LIVE_ORDER_RETRY_DELAY', 2.0)
+                            
+                            for attempt in range(max_retries):
+                                try:
+                                    live_order = await self.executor.create_order(
+                                        symbol=f"{symbol}USDT",
+                                        side="SELL",
+                                        quantity=quantity,
+                                        order_type="MARKET"
+                                    )
+                                    logger.info(f"🔴 CANLI {close_reason} SATIŞ: {symbol} OrderId={live_order.get('orderId')}")
+                                    
                                     if self.portfolio.get("history"):
-                                        self.portfolio["history"][-1]["live_sell_failed"] = True
-                                        self.portfolio["history"][-1]["live_sell_error"] = str(e)
+                                        self.portfolio["history"][-1]["live_sell_order_id"] = live_order.get("orderId")
+                                        self.portfolio["history"][-1]["live_sell_status"] = "FILLED"
                                         if self.save_portfolio_fn:
                                             self.save_portfolio_fn(self.portfolio)
+                                    break
+                                except Exception as e:
+                                    if attempt < max_retries - 1:
+                                        logger.warning(f"⚠️ CANLI {close_reason} DENEME {attempt + 1}/{max_retries} BAŞARISIZ: {e}")
+                                        await asyncio.sleep(retry_delay)
+                                    else:
+                                        logger.error(f"❌ CANLI {close_reason} TÜM DENEMELER BAŞARISIZ: {symbol} - {e}")
+                                        if self.portfolio.get("history"):
+                                            self.portfolio["history"][-1]["live_sell_failed"] = True
+                                            self.portfolio["history"][-1]["live_sell_error"] = str(e)
+                                            if self.save_portfolio_fn:
+                                                self.save_portfolio_fn(self.portfolio)
+
+            except Exception as e:
+                logger.error(f"[WATCHDOG] {symbol} işlem hatası: {e}")
+                continue  # Diğer pozisyonlara devam et
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HYBRID V2: Entry-Type Aware Exit Conditions
