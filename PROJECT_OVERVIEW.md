@@ -11,7 +11,7 @@ Bu doküman, projenin ne yaptığını, nasıl yaptığını ve neden yaptığı
 1. [Proje Özeti](#proje-özeti)
 2. [Sistem Mimarisi](#sistem-mimarisi)
 3. [Modül Açıklamaları](#modül-açıklamaları)
-4. [Trading Stratejisi (V1)](#trading-stratejisi-v1)
+4. [Trading Stratejisi (Hybrid V2)](#trading-stratejisi-hybrid-v2)
 5. [Veri Akışı](#veri-akışı)
 6. [Risk Yönetimi](#risk-yönetimi)
 7. [Konfigürasyon](#konfigürasyon)
@@ -25,18 +25,25 @@ Bu doküman, projenin ne yaptığını, nasıl yaptığını ve neden yaptığı
 
 Bu proje, **otomatik kripto para trading botu**dur. Binance borsasında belirlenen coinleri izler, teknik analiz yaparak alım-satım sinyalleri üretir ve bu sinyallere göre pozisyon açıp kapatır.
 
+### Aktif Strateji: Hybrid V2
+
+Bot, **Hybrid Multi-Timeframe V2** stratejisini kullanır. Bu strateji:
+- **3 farklı zaman dilimini** birlikte analiz eder (4H, 1H, 15M)
+- **Rejim tespiti** ile piyasa koşullarına adapte olur
+- **Entry type bazlı exit logic** kullanır
+
 ### Temel Özellikler
 
 | Özellik | Açıklama |
 |---------|----------|
-| **Multi-Timeframe Analiz** | 1 saatlik ve 15 dakikalık zaman dilimlerini birlikte kullanır |
-| **Rejim Filtresi** | Düşük trendli piyasalarda işlem yapmayı engeller |
-| **Risk Veto Sistemi** | LLM ile haberleri analiz ederek riskli işlemleri engeller |
-| **Otomatik Stop-Loss** | ATR bazlı dinamik stop-loss hesaplama |
-| **Partial Take-Profit** | 1R kârda pozisyonun yarısını kapatma |
-| **Trailing Stop** | Chandelier trailing stop mekanizması |
+| **Multi-Timeframe Analiz** | 4 saatlik, 1 saatlik ve 15 dakikalık verileri birlikte kullanır |
+| **Rejim Tespiti** | Piyasa rejimini tespit eder (Strong Trend, Weak Trend, Ranging, Volatile) |
+| **3 Entry Tipi** | 4H Swing, 1H Momentum, 15M Scalp (şuanda devre dışı) |
+| **V2 Exit Logic** | Entry tipine göre özelleştirilmiş çıkış stratejileri |
+| **Partial Take-Profit** | Belirlenen % kârda pozisyonun yarısını kapatma |
+| **Trailing Stop** | Dinamik trailing stop mekanizması |
 | **Paper Trading** | Gerçek para kullanmadan simülasyon modu |
-| **Telegram Bildirimleri** | Kritik olaylar için anlık uyarılar |
+| **Telegram Bildirimleri** | Kritik olaylar için anlık uyarılar ve komutlar |
 
 ### İzlenen Coinler (Varsayılan)
 
@@ -70,7 +77,7 @@ DOGEUSDT, AVAXUSDT, LINKUSDT, MATICUSDT, NEARUSDT, APTUSDT, SUIUSDT
          ▼                  ▼                 ▼                  ▼
 ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐
 │ MarketData   │   │  Strategies  │   │ RiskManager  │   │ Execution    │
-│   Engine     │   │  (V1/Legacy) │   │              │   │  Manager     │
+│   Engine     │   │  (Hybrid V2) │   │              │   │  Manager     │
 └──────────────┘   └──────────────┘   └──────────────┘   └──────────────┘
          │                                                        │
          ▼                                                        ▼
@@ -99,9 +106,9 @@ main.py ──────────┬─────────────
                   ├───▶ strategy_engine.py ◄─────────────────────────────────┤
                   │           │                                               │
                   │           └───▶ strategies/                               │
-                  │                     ├── regime_filter.py ◄───────────────┤
-                  │                     ├── swing_trend_v1.py ◄──────────────┤
-                  │                     └── news_veto.py ◄───────────────────┤
+                  │                     ├── hybrid_multi_tf_v2.py ◄──────────┤
+                  │                     ├── regime_detector.py ◄─────────────┤
+                  │                     └── timeframe_analyzer.py ◄──────────┤
                   │                                                           │
                   ├───▶ risk_manager.py ◄────────────────────────────────────┤
                   │                                                           │
@@ -140,20 +147,20 @@ main.py ──────────┬─────────────
 **Ana Döngü Akışı:**
 ```python
 while True:
-    1. Whale hareketlerini kontrol et (on-chain)
+    1. Açık pozisyonları izle (monitor_positions)
     2. Her coin için:
-       a. Piyasa verilerini topla
-       b. Açık pozisyon varsa → Satış mantığı
-       c. Açık pozisyon yoksa → Alım mantığı
+       a. Piyasa verilerini topla (paralel)
+       b. Açık pozisyon varsa → V2 çıkış mantığı (process_sell_logic)
+       c. Açık pozisyon yoksa → V2 giriş mantığı (process_buy_logic → _process_buy_hybrid_v2)
     3. Global güvenlik kontrolü
-    4. 15 dakika bekle
+    4. 15 dakika bekle (LOOP_SECONDS)
 ```
 
 **Önemli Metodlar:**
 - `run_once()` - Tek döngü çalıştırır
-- `process_buy_logic()` - BUY karar süreci
-- `process_sell_logic()` - SELL karar süreci
-- `_process_buy_v1()` - V1 stratejisi alım mantığı
+- `process_buy_logic()` - Hybrid V2 entry kararı
+- `_process_buy_hybrid_v2()` - Multi-timeframe sinyal değerlendirmesi
+- `process_sell_logic()` - V2 exit logic (backup to watchdog)
 - `check_global_safety()` - Risk limitleri kontrolü
 
 ### 3. `market_data_engine.py` - Veri Toplama Motoru
@@ -166,86 +173,73 @@ while True:
 | Kaynak | Veri | TTL |
 |--------|------|-----|
 | Binance API | Fiyat, Mum verileri, Hacim | 1-15 sn |
-| Etherscan | Whale hareketleri | 2 dk |
 | RSS Feeds | Kripto haberleri | 4 saat |
 | Alternative.me | Fear & Greed Index | 90 sn |
 
 **Temel Metodlar:**
 - `get_full_snapshot()` - Tüm verileri birleştirir
-- `get_v1_timeframe_data()` - Multi-timeframe göstergeler
+- `get_v2_snapshot()` - V2 için multi-timeframe snapshot
 - `get_technical_snapshot()` - Teknik analiz verileri
-- `_fetch_whale_movements()` - On-chain whale takibi
 
 ### 4. `strategy_engine.py` - Strateji Karar Motoru
 
 **Ne Yapar:** Toplanan verileri analiz ederek BUY/SELL kararları üretir.
 
-**Neden Var:** Karar mantığını merkezi bir yerde toplar, farklı stratejileri destekler.
+**Neden Var:** Karar mantığını merkezi bir yerde toplar, Hybrid V2 stratejisini kullanır.
 
-**Karar Formülü (Legacy):**
-```
-Final Score = (Math Score × 0.35) + (AI Score × 0.65)
-
-Math Score = (Tech × 0.70) + (OnChain × 0.15) + (F&G × 0.15)
-```
-
-**Çıktı Formatı:**
+**V2 Çıktı Formatı:**
 ```json
 {
-    "action": "BUY" | "HOLD" | "SELL",
+    "action": "BUY" | "HOLD",
     "confidence": 0-100,
+    "entry_type": "4H_SWING" | "1H_MOMENTUM" | "15M_SCALP",
     "reason": "Karar nedeni",
     "stop_loss": 49000.0,
-    "take_profit": 52000.0,
+    "take_profit_1": 51500.0,
+    "partial_tp_target": 50500.0,
     "quantity": 0.001
 }
 ```
 
 ### 5. `strategies/` - Strateji Modülleri
 
-#### 5.1 `regime_filter.py` - Rejim Filtresi
+#### 5.1 `hybrid_multi_tf_v2.py` - Ana Strateji
 
-**Ne Yapar:** Piyasa koşullarını kontrol ederek düşük kaliteli ortamlarda trade'i engeller.
+**Ne Yapar:** Multi-timeframe analiz ile 3 farklı entry tipi üretir.
 
-**Filtreler:**
-| Filtre | Koşul | Varsayılan |
-|--------|-------|------------|
-| ADX | >= MIN_ADX_ENTRY | 10.0 |
-| ATR% | >= MIN_ATR_PCT | 0.10% |
-| Volume | >= Ortalama × 0.8 | - |
+**Entry Tipleri:**
 
-**Neden Var:** "Kötü piyasada trade yapma" prensibini uygular.
+| Tip | Timeframe | Koşullar | Hedefler |
+|-----|-----------|----------|----------|
+| 4H Swing | 4H ana, 1H teyit | ADX>25, EMA hizası, Weekly teyit | %5 partial, %10 final |
+| 1H Momentum | 1H ana, 4H teyit | ADX>20, RSI 55-70, Volume>1.2x | %2 partial, %4 final |
+| 15M Scalp | 15M ana (DEVRE DIŞI) | BB squeeze, yüksek volume | %1.5 target |
 
-#### 5.2 `swing_trend_v1.py` - Ana Strateji
+> **Not:** 15M Scalp şu an devre dışı çünkü 15 dakikalık ana döngü scalping için çok yavaş.
 
-**Ne Yapar:** Long-only swing trading stratejisi uygular.
+#### 5.2 `regime_detector.py` - Rejim Tespiti
 
-**Entry Koşulları (Tümü sağlanmalı):**
-```
-1. Rejim filtresi geçilmeli            → ADX >= 10, ATR% >= 0.10%
-2. Trend yapısı pozitif olmalı         → EMA20(1h) > EMA50(1h)
-3. EMA50 yukarı eğimli olmalı          → EMA50 > EMA50_prev
-4. Breakout gerçekleşmeli              → Close(15m) > HighestHigh(20)
-```
+**Ne Yapar:** Piyasa koşullarını sınıflandırır.
 
-**Exit Mekanizmaları:**
-```
-1. Initial Stop-Loss  → Entry - (SL_ATR_MULT × ATR)
-2. Partial TP        → 1R'de pozisyonun %50'sini sat
-3. Trailing Stop     → HighestClose - (TRAIL_ATR_MULT × ATR)
-```
+**Rejim Tipleri:**
+| Rejim | Koşul | İşlem İzni |
+|-------|-------|------------|
+| STRONG_TREND | ADX >= 30 | Tüm entry tipleri |
+| WEAK_TREND | ADX 20-30 | 4H Swing, 1H Momentum |
+| RANGING | ADX < 20, ATR < 0.8% | Sadece 4H Swing (dikkatli) |
+| VOLATILE | ATR > 3% | 1H Momentum (küçük boyut) |
 
-#### 5.3 `news_veto.py` - Haber Risk Veto
+#### 5.3 `timeframe_analyzer.py` - Timeframe Analizi
 
-**Ne Yapar:** LLM (Gemini) kullanarak haberleri analiz eder, riskli durumlarda entry'yi engeller.
+**Ne Yapar:** Her timeframe için teknik göstergeleri hesaplar ve skorlar.
 
-**Veto Tetikleyicileri:**
-- Borsa delist
-- Hack/Exploit haberleri
-- SEC/Regülasyon soruşturmaları
-- Kritik teknik açıklar
-
-**Neden Var:** Beklenmedik negatif gelişmelere karşı koruma sağlar.
+**Hesaplanan Göstergeler:**
+- EMA20, EMA50, EMA200
+- ADX (trend gücü)
+- RSI (momentum)
+- MACD (crossover tespiti)
+- ATR (volatilite)
+- Bollinger Bands (squeeze tespiti)
 
 ### 6. `risk_manager.py` - Risk Yönetimi
 
@@ -253,19 +247,11 @@ Math Score = (Tech × 0.70) + (OnChain × 0.15) + (F&G × 0.15)
 
 **Risk Kontrolleri:**
 ```python
-1. Günlük kayıp limiti    → MAX_DAILY_LOSS_PCT (varsayılan: %3)
-2. Maksimum pozisyon      → MAX_OPEN_POSITIONS (varsayılan: 2)
+1. Günlük kayıp limiti    → MAX_DAILY_LOSS_PCT (varsayılan: %3 paper, %8 live)
+2. Maksimum pozisyon      → MAX_OPEN_POSITIONS (varsayılan: 4)
 3. Ardışık stop limiti    → MAX_CONSECUTIVE_STOPS (varsayılan: 3)
 4. Minimum hacim          → MIN_VOLUME_GUARDRAIL ($1M)
 5. Fear & Greed aşırı     → FNG_EXTREME_FEAR (15)
-```
-
-**Pozisyon Boyutlandırma:**
-```
-1. Risk USD = Bakiye × RISK_PER_TRADE
-2. Stop Distance = Entry - SL
-3. Quantity = Risk USD / Stop Distance
-4. Volatilite ölçekleme uygula
 ```
 
 ### 7. `execution_manager.py` - İşlem Yürütücü
@@ -273,18 +259,41 @@ Math Score = (Tech × 0.70) + (OnChain × 0.15) + (F&G × 0.15)
 **Ne Yapar:** Strateji kararlarını gerçek/simüle emirlere dönüştürür.
 
 **Sorumluluklar:**
+- V2 alanlarını koruma (`entry_type`, `partial_tp_target`, `take_profit_1`)
 - Portföy güncelleme
 - Trade loglama
 - Telegram bildirimleri
 - Duplicate intent kontrolü
-- Order ledger entegrasyonu
 
-**İşlem Akışı:**
+### 8. `position_manager.py` - Pozisyon Yönetimi
+
+**Ne Yapar:** Açık pozisyonları izler, V2 exit logic uygular.
+
+**V2 Exit Logic:**
 ```
-Decision → Validate → OrderExecutor → Portfolio Update → Log → Notify
+check_exit_conditions() → entry_type'a göre yönlendirme:
+├── 4H_SWING  → _check_4h_swing_exit()
+├── 1H_MOMENTUM → _check_1h_momentum_exit()
+├── 15M_SCALP → _check_15m_scalp_exit()
+└── V1/UNKNOWN → _check_v1_exit() (fallback)
 ```
 
-### 8. `order_executor.py` - Emir Yürütme
+**Watchdog Modu:**
+- Ana döngüden bağımsız, 30 saniyede bir kontrol
+- SL/TP/Partial TP/Trailing Stop tetiklenince anında işlem
+- `_quick_sltp_check()` metodu ile
+
+### 9. `telegram_commands.py` - Telegram Komutları
+
+**Ne Yapar:** Telegram üzerinden bot kontrolü sağlar.
+
+**Komutlar:**
+- `/start` - Bot durumu
+- `/portfo` - Açık pozisyonlar ve partial_tp durumu
+- `/summary` - Günlük özet
+- `/help` - Yardım
+
+### 10. `order_executor.py` - Emir Yürütme
 
 **Ne Yapar:** Binance API üzerinden emir oluşturur (gerçek veya simüle).
 
@@ -292,262 +301,190 @@ Decision → Validate → OrderExecutor → Portfolio Update → Log → Notify
 - `dry_run=True` → Simülasyon (varsayılan)
 - `dry_run=False` → Gerçek Binance emirleri
 
-**Özellikler:**
-- Retry mekanizması (exponential backoff)
-- Slippage ve fee simülasyonu
-- Rate limiting
-- LIMIT order timeout
-
-### 9. `exchange_router.py` - Borsa Bağlantısı
+### 11. `exchange_router.py` - Borsa Bağlantısı
 
 **Ne Yapar:** Binance bağlantısını merkezi olarak yönetir.
 
 **Özellikler:**
 - WebSocket fiyat stream'i
 - Circuit breaker (hata koruması)
+- Client reconnection mekanizması
 - Fiyat cache'i (TTL tabanlı)
-- Heartbeat izleme
-
-**Circuit Breaker Durumları:**
-```
-CLOSED    → Normal çalışma
-OPEN      → 5 dk bekleme (hatalar çok)
-HALF_OPEN → Deneme yapılıyor
-```
-
-### 10. `position_manager.py` - Pozisyon Yönetimi
-
-**Ne Yapar:** Açık pozisyonları izler, SL/TP tetiklenince kapatır.
-
-**Watchdog Modu:**
-- Ana döngüden bağımsız, 30 saniyede bir kontrol
-- SL/TP tetiklenince anında kapatma
-- V1 için partial TP ve trailing stop yönetimi
-
-### 11. `alert_manager.py` - Uyarı Sistemi
-
-**Ne Yapar:** Kritik olaylarda operatöre bildirim gönderir.
-
-**Alert Seviyeleri:**
-- `INFO` - Bilgilendirme
-- `WARN` - Uyarı
-- `CRITICAL` - Kritik
-
-**Alert Kodları:**
-```python
-DAILY_LOSS_LIMIT_HIT     → Günlük kayıp limiti aşıldı
-CONSECUTIVE_STOPS_HIT    → Ardışık stop limiti
-ORDER_REJECTED           → Emir reddedildi
-LLM_RATE_LIMITED         → LLM rate limit
-NEWS_VETO_TRUE           → Haber veto aktif
-```
-
-### 12. `backtest.py` - Geriye Dönük Test
-
-**Ne Yapar:** Geçmiş veriler üzerinde strateji testi yapar.
-
-**Özellikler:**
-- Senkron çalışma (LLM gerektirmez)
-- V1 strateji desteği (partial TP, trailing stop)
-- PnL hesaplama
-- Trade log çıktısı
 
 ---
 
-## 📈 TRADING STRATEJİSİ (V1)
+## 📈 TRADING STRATEJİSİ (HYBRID V2)
 
 ### Strateji Felsefesi
 
-**"Trend Takibi + Breakout + Risk Yönetimi"**
+**"Multi-Timeframe Alignment + Rejim Adaptasyonu + Tiered Exit"**
 
 Bu strateji şu prensiplere dayanır:
-1. **Trend ile işlem yap** - EMA yapısı pozitif olmalı
-2. **Breakout teyidi bekle** - Yanlış sinyalleri filtrele
-3. **Kârı koru** - Partial TP ile riski azalt
-4. **Kayıpları sınırla** - ATR bazlı stop-loss
+1. **Timeframe hizalaması** - Üst timeframe trendi alt timeframe'i onaylamalı
+2. **Rejim adaptasyonu** - Piyasa koşullarına göre strateji ayarla
+3. **Entry type bazlı çıkış** - Her trade tipi için özelleştirilmiş hedefler
+4. **Kademeli kâr alma** - Partial TP ile riski azalt
 
 ### Entry Kuralları
 
+#### 4H Swing Entry
 ```
-[1h Timeframe - Trend Yapısı]
-├── EMA20 > EMA50           ✓ Uptrend yapısı
-├── EMA50 > EMA50_prev      ✓ Momentum pozitif
-└── ADX >= 10               ✓ Trend güçlü
+[Rejim Kontrolü]
+└── STRONG_TREND veya WEAK_TREND    ✓
 
-[15m Timeframe - Tetikleme]
-└── Close > HighestHigh(20) ✓ Breakout teyidi
+[Weekly Teyit]
+└── EMA50 > EMA200                   ✓ Higher TF confirmation
 
-[Rejim Filtresi]
-├── ADX >= 10               ✓ Trend var
-├── ATR% >= 0.10%           ✓ Volatilite yeterli
-└── Volume >= Avg × 0.8     ✓ Hacim normal
+[4H Timeframe]
+├── EMA20 > EMA50 > EMA200           ✓ Trend yapısı
+├── ADX >= 25                        ✓ Trend güçlü
+└── Price > EMA20                    ✓ Breakout teyidi
+
+[1H Teyit]
+└── RSI > 50 veya MACD crossover     ✓ Momentum
 ```
 
-### Exit Kuralları
+#### 1H Momentum Entry
+```
+[Rejim Kontrolü]
+└── STRONG_TREND, WEAK_TREND veya VOLATILE   ✓
 
+[4H Trend Teyidi]
+└── EMA20 > EMA50                    ✓ Ana trend pozitif
+
+[1H Timeframe]
+├── RSI 55-70                        ✓ Güçlü momentum
+├── MACD histogram expanding         ✓ Artan momentum
+├── ADX >= 20                        ✓ Trend mevcut
+└── Volume >= 1.2x average           ✓ Yüksek hacim
+```
+
+### Exit Kuralları (V2)
+
+#### 4H Swing Exit
 ```
 [Initial Stop-Loss]
-SL = Entry - (1.5 × ATR)
+SL = Entry - (2.5 × ATR)
 
 [Partial Take-Profit]
-Eğer Price >= Entry + 1R:
+Eğer Price >= Entry × 1.05 (%5):
     → Pozisyonun %50'sini sat
-    
-    1R = Entry + (Entry - SL) = Entry + Stop_Distance
+    → Trailing stop aktif et
 
 [Trailing Stop]
 Partial TP'den sonra:
-    Trail_SL = HighestClose - (3.0 × ATR)
-    → Sadece yukarı güncellenir (never loosen)
+    Trail_SL = HighestClose - (2.5 × ATR)
+    → Sadece yukarı güncellenir
+
+[Final Target]
+Eğer Price >= Entry × 1.10 (%10):
+    → Kalan pozisyonu kapat
+
+[Time Exit]
+Eğer 10 gün geçti ve kârdaysa:
+    → Pozisyonu kapat
 ```
 
-### Örnek Trade
+#### 1H Momentum Exit
+```
+[Initial Stop-Loss]
+SL = Entry - (1.8 × ATR)
+
+[Partial Take-Profit]
+Price >= Entry × 1.02 (%2):
+    → %50 sat
+
+[Trailing Stop]
+Partial TP sonrası aktif
+
+[Final Target]
+Price >= Entry × 1.04 (%4):
+    → Kapat
+```
+
+### Örnek V2 Trade
 
 ```
-Entry:     $50,000
-ATR:       $800
-SL:        $50,000 - (1.5 × $800) = $48,800
-1R:        $50,000 + ($50,000 - $48,800) = $51,200
+Entry Type:  1H_MOMENTUM
+Entry:       $50,000
+ATR:         $800
+SL:          $50,000 - (1.8 × $800) = $48,560
 
-Senaryo 1: Fiyat $51,200'e ulaşır
-  → %50 satılır ($51,200'de)
-  → Kalan %50 için trailing başlar
+Senaryo:
+1. Fiyat $51,000'e ulaşır (%2)
+   → %50 partial TP ($51,000)
+   → Trailing stop aktif: $51,000 - (1.8 × $800) = $49,560
 
-Senaryo 2: Fiyat $48,800'e düşer
-  → Tüm pozisyon kapatılır (SL)
-  → Kayıp: 1.5 × ATR = $1,200 (pozisyon başına)
+2. Fiyat $52,000'e çıkar
+   → Trailing güncellenir: $52,000 - $1,440 = $50,560
+
+3. Fiyat $50,800'e düşer
+   → Trailing stop tetiklenmez (hâlâ %50,560 üstünde)
+
+4. Fiyat $52,100'e ulaşır (%4.2)
+   → Final target hit, kalan %50 kapatılır
+   
+Sonuç:
+- İlk %50: +%2 kâr
+- İkinci %50: +%4.2 kâr
+- Ortalama: +%3.1 kâr
 ```
 
 ---
 
 ## 🔄 VERİ AKIŞI
 
-### Ana Döngü Veri Akışı
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                           HER 15 DAKİKA                                 │
-└────────────────────────────────────────────────────────────────────────┘
-                                  │
-       ┌──────────────────────────┼──────────────────────────┐
-       │                          │                          │
-       ▼                          ▼                          ▼
-┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│   Binance    │         │  Etherscan   │         │  RSS Feeds   │
-│  (Fiyat,     │         │  (Whale      │         │  (Haberler)  │
-│   Mumlar)    │         │  Hareketleri)│         │              │
-└──────────────┘         └──────────────┘         └──────────────┘
-       │                          │                          │
-       └──────────────────────────┼──────────────────────────┘
-                                  │
-                                  ▼
-                    ┌────────────────────────┐
-                    │  MarketDataEngine      │
-                    │  get_full_snapshot()   │
-                    └────────────────────────┘
-                                  │
-                                  ▼
-                    ┌────────────────────────┐
-                    │      Snapshot          │
-                    │  {                     │
-                    │    symbol, price,      │
-                    │    tf: {1h, 15m},      │
-                    │    technical,          │
-                    │    onchain,            │
-                    │    volume_24h          │
-                    │  }                     │
-                    └────────────────────────┘
-                                  │
-           ┌──────────────────────┼──────────────────────┐
-           │                      │                      │
-           ▼                      ▼                      ▼
-    ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-    │ RegimeFilter│       │SwingTrendV1 │       │  NewsVeto   │
-    │    check()  │──────▶│evaluate_entry│──────▶│ check_veto()│
-    └─────────────┘       └─────────────┘       └─────────────┘
-                                  │
-                                  ▼
-                    ┌────────────────────────┐
-                    │    EntrySignal         │
-                    │  {                     │
-                    │    action: BUY/HOLD,   │
-                    │    confidence,         │
-                    │    stop_loss,          │
-                    │    take_profit,        │
-                    │    quantity            │
-                    │  }                     │
-                    └────────────────────────┘
-                                  │
-                                  ▼
-                    ┌────────────────────────┐
-                    │   RiskManager          │
-                    │ evaluate_entry_risk()  │
-                    └────────────────────────┘
-                                  │
-                                  ▼
-                    ┌────────────────────────┐
-                    │  ExecutionManager      │
-                    │  execute_buy_flow()    │
-                    └────────────────────────┘
-                                  │
-                                  ▼
-                    ┌────────────────────────┐
-                    │   OrderExecutor        │
-                    │   create_order()       │
-                    └────────────────────────┘
-```
-
-### Snapshot Veri Yapısı
+### V2 Snapshot Yapısı
 
 ```python
 snapshot = {
     "symbol": "BTCUSDT",
     "price": 90000.0,
     
-    # Multi-timeframe teknik göstergeler
+    # Multi-timeframe veriler
     "tf": {
-        "1h": {
+        "4h": {
             "ema20": 90100.0,
             "ema50": 89500.0,
-            "ema50_prev": 89400.0,
-            "atr": 800.0,
+            "ema200": 85000.0,
+            "atr": 1200.0,
+            "adx": 28.0,
+            "rsi": 58.0,
+            "macd": 150.0,
+            "macd_signal": 120.0
+        },
+        "1h": {
+            "ema20": 90050.0,
+            "ema50": 89800.0,
+            "atr": 400.0,
             "adx": 25.0,
-            "last_closed_ts": 1704240000
+            "rsi": 62.0,
+            "volume_sma": 50000000,
+            "current_volume": 65000000
         },
         "15m": {
-            "close": 90050.0,
-            "highest_high": 89900.0,
-            "highest_close": 89850.0,
-            "atr": 200.0
+            "atr": 150.0,
+            "bb_upper": 90200.0,
+            "bb_lower": 89800.0
         }
     },
     
-    # Eski format (geriye uyumluluk)
-    "technical": {
-        "rsi": 55.0,
-        "macd": 100.0,
-        "ema_50": 89500.0,
-        "ema_200": 85000.0,
-        "adx": 25.0,
-        "atr": 800.0
+    # Rejim bilgisi
+    "regime": {
+        "type": "STRONG_TREND",
+        "confidence": 0.85,
+        "adx_4h": 28.0,
+        "atr_pct": 1.3
     },
-    
-    # On-chain verileri
-    "onchain": {
-        "whale_signal": "NEUTRAL",
-        "whale_movements": 0,
-        "whale_inflow": 0.0
-    },
-    
-    # Hacim verileri
-    "volume_24h": 1000000000,
-    "volume_avg": 800000000,
     
     # Sentiment
     "fear_greed": {
-        "value": 45,
-        "classification": "Fear"
-    }
+        "value": 55,
+        "classification": "Greed"
+    },
+    
+    # Hacim
+    "volume_24h": 1000000000
 }
 ```
 
@@ -559,7 +496,7 @@ snapshot = {
 
 ```
            ┌───────────────────┐
-           │   Trade Seviyesi  │  ← Pozisyon boyutu, SL/TP
+           │   Trade Seviyesi  │  ← Entry type bazlı SL/TP
            └─────────┬─────────┘
                      │
            ┌─────────▼─────────┐
@@ -577,31 +514,21 @@ snapshot = {
 
 ### Risk Parametreleri
 
-| Parametre | Varsayılan | Açıklama |
-|-----------|------------|----------|
-| `RISK_PER_TRADE` | %0.5 (paper) / %2 (live) | İşlem başına max risk |
-| `MAX_DAILY_LOSS_PCT` | %3 | Günlük max kayıp |
-| `MAX_OPEN_POSITIONS` | 2 (paper) / 5 (live) | Eşzamanlı maks pozisyon |
-| `MAX_CONSECUTIVE_STOPS` | 3 | Ardışık stop limiti |
-| `COOLDOWN_MINUTES` | 60 | Ardışık stop sonrası bekleme |
+| Parametre | Paper | Live | Açıklama |
+|-----------|-------|------|----------|
+| `RISK_PER_TRADE` | %0.5 | %2.0 | İşlem başına max risk |
+| `MAX_DAILY_LOSS_PCT` | %3 | %8 | Günlük max kayıp |
+| `MAX_OPEN_POSITIONS` | 4 | 5 | Eşzamanlı maks pozisyon |
+| `MAX_CONSECUTIVE_STOPS` | 3 | 3 | Ardışık stop limiti |
+| `COOLDOWN_MINUTES` | 60 | 60 | Stop sonrası bekleme |
 
-### Pozisyon Boyutlandırma Formülü
+### Capital Allocation (V2)
 
-```python
-# Temel Risk Hesabı
-risk_usd = balance * RISK_PER_TRADE  # örn: $1000 * 0.5% = $5
-stop_distance = entry_price - stop_loss  # örn: $50,000 - $48,800 = $1,200
-base_qty = risk_usd / stop_distance  # örn: $5 / $1,200 = 0.00417 BTC
-
-# Volatilite Ölçekleme (V1)
-atr_pct = (atr / price) * 100  # örn: ($800 / $50,000) * 100 = 1.6%
-vol_scale = clamp(TARGET_ATR_PCT / atr_pct, 0.5, 1.5)
-final_qty = base_qty * vol_scale
-
-# Max %10 kap
-max_qty = (balance * 0.10) / price
-final_qty = min(final_qty, max_qty)
-```
+| Timeframe | Allocation | Risk Per Trade |
+|-----------|------------|----------------|
+| 4H Swing | %50 | %1.5 |
+| 1H Momentum | %50 | %1.0 |
+| 15M Scalp | %0 (devre dışı) | %0.5 |
 
 ---
 
@@ -620,10 +547,12 @@ TELEGRAM_CHAT_ID=your_chat_id
 # Çalışma Profili
 RUN_PROFILE=paper  # paper | live
 
-# Opsiyonel Ayarlar
+# Strateji (V2 varsayılan)
+STRATEGY_VERSION=HYBRID_V2
+
+# Opsiyonel
 MAX_DAILY_LOSS_PCT=3.0
-MAX_OPEN_POSITIONS=2
-SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT
+MAX_OPEN_POSITIONS=4
 ```
 
 ### Profil Bazlı Varsayılanlar
@@ -632,28 +561,38 @@ SYMBOLS=BTCUSDT,ETHUSDT,SOLUSDT
 |-----------|--------------|-------------|
 | LIVE_TRADING | False | True |
 | RISK_PER_TRADE | %0.5 | %2.0 |
-| MAX_OPEN_POSITIONS | 2 | 5 |
+| MAX_OPEN_POSITIONS | 4 | 5 |
 | MAX_DAILY_LOSS_PCT | %3 | %8 |
 | TELEGRAM_TRADE_NOTIFICATIONS | False | True |
 
-### Strateji Parametreleri (config.py)
+### V2 Strateji Parametreleri
 
 ```python
-# ADX Eşikleri
-MIN_ADX_ENTRY = 10.0             # Minimum ADX (düşürüldü: 14 → 10)
-MIN_ADX_ENTRY_SOFT = 8.0         # Soft ADX (düşürüldü: 13 → 8)
+# Rejim Tespiti
+REGIME_ADX_STRONG_THRESHOLD = 30.0
+REGIME_ADX_WEAK_THRESHOLD = 20.0
+REGIME_ATR_PCT_VOLATILE = 3.0
 
-# ATR Eşikleri (sembol bazlı)
-MIN_ATR_PCT = 0.10               # Genel fallback
-MIN_ATR_PCT_BY_SYMBOL = {
-    "BTCUSDT": 0.08,             # BTC için özel
-    "ETHUSDT": 0.10              # ETH için özel
-}
+# Capital Allocation
+CAPITAL_ALLOCATION_4H = 0.50  # %50
+CAPITAL_ALLOCATION_1H = 0.50  # %50
+CAPITAL_ALLOCATION_15M = 0.00 # %0 (devre dışı)
 
-# SL/TP Çarpanları
-SL_ATR_MULT = 1.5                # SL = Entry - (1.5 × ATR)
-PARTIAL_TP_FRACTION = 0.5        # 1R'de %50 sat
-TRAIL_ATR_MULT = 3.0             # Trailing = HighestClose - (3 × ATR)
+# 4H Swing
+SWING_4H_MIN_ADX = 25.0
+SWING_4H_SL_ATR_MULT = 2.5
+SWING_4H_PARTIAL_TP_PCT = 5.0
+SWING_4H_FINAL_TARGET_PCT = 10.0
+
+# 1H Momentum
+MOMENTUM_1H_MIN_ADX = 20.0
+MOMENTUM_1H_MIN_RSI = 55.0
+MOMENTUM_1H_MAX_RSI = 70.0
+MOMENTUM_1H_PARTIAL_TP_PCT = 2.0
+MOMENTUM_1H_FINAL_TARGET_PCT = 4.0
+
+# 15M Scalp (devre dışı)
+SCALP_15M_ENABLED = False
 ```
 
 ---
@@ -679,9 +618,7 @@ RUN_PROFILE=live ALLOW_DANGEROUS_ACTIONS=1 python main.py
 
 - Gerçek Binance emirleri
 - **DİKKAT: Gerçek para kaybedilebilir!**
-- İki güvenlik kilidi gerekli:
-  - `RUN_PROFILE=live`
-  - `ALLOW_DANGEROUS_ACTIONS=1`
+- İki güvenlik kilidi gerekli
 
 ### 3. Canary Mode
 
@@ -691,7 +628,6 @@ CANARY_MODE=1 python main.py
 
 - Tek sembol (BTCUSDT)
 - Minimum risk (%0.25)
-- Tek pozisyon
 - Yeni sürüm doğrulama için
 
 ### 4. Safe Mode
@@ -721,27 +657,31 @@ project-root/
 │
 ├── strategies/
 │   ├── __init__.py
-│   ├── regime_filter.py    # Rejim filtresi
-│   ├── swing_trend_v1.py   # V1 ana strateji
-│   └── news_veto.py        # LLM haber veto
+│   ├── hybrid_multi_tf_v2.py  # ⭐ Ana V2 strateji
+│   ├── regime_detector.py     # Rejim tespiti
+│   └── timeframe_analyzer.py  # TF analizi
 │
 ├── risk_manager.py         # Risk yönetimi
 ├── execution_manager.py    # İşlem yürütücü
 ├── order_executor.py       # Emir yürütme
-├── position_manager.py     # Pozisyon yönetimi
+├── position_manager.py     # Pozisyon yönetimi (V2 exit logic)
 ├── exchange_router.py      # Borsa bağlantısı
 │
 ├── alert_manager.py        # Uyarı sistemi
 ├── summary_reporter.py     # Periyodik raporlar
+├── telegram_commands.py    # Telegram komutları
 ├── order_ledger.py         # Emir takip defteri
+├── exit_reason.py          # Exit reason enum
 ├── metrics.py              # Telemetri metrikleri
 │
 ├── backtest.py             # Geriye dönük test
 ├── debug_suite.py          # Debug araçları
+├── reset_paper_trading.py  # Paper trading sıfırlama
 │
 ├── utils/
-│   ├── __init__.py
 │   └── io.py               # Atomik dosya işlemleri
+│
+├── archive/                # Arşivlenmiş V1 dosyaları
 │
 ├── data/
 │   ├── portfolio.json      # Portföy durumu
@@ -750,6 +690,8 @@ project-root/
 │
 ├── logs/
 │   └── trader.log          # Ana log dosyası
+│
+├── tests/                  # Test dosyaları
 │
 ├── .env                    # Ortam değişkenleri (gitignore'da)
 ├── .env.example            # Örnek .env
@@ -764,42 +706,59 @@ project-root/
 ### Log Formatı
 
 ```
-[2026-01-03 01:00:00] INFO     [module:function:line] Mesaj
+[2026-01-13 01:00:00] INFO     [module:function:line] Mesaj
 ```
 
-### Önemli Log Mesajları
+### Önemli V2 Log Mesajları
 
 | Log | Anlamı |
 |-----|--------|
-| `[REGIME PASS]` | Rejim filtresi geçildi |
-| `[REGIME BLOCK]` | Rejim filtresi engelledi |
-| `[TREND OK]` | Trend yapısı pozitif |
-| `[TREND BLOCK]` | Trend yapısı negatif |
-| `[BREAKOUT OK]` | Breakout gerçekleşti |
-| `[BREAKOUT BLOCK]` | Breakout yok |
-| `[V1 ENTRY]` | V1 alım sinyali |
-| `[NEWS VETO]` | Haber veto aktif |
+| `[REGIME: STRONG_TREND]` | Güçlü trend rejimi tespit edildi |
+| `[4H_SWING SETUP]` | 4H swing entry koşulları sağlandı |
+| `[1H_MOMENTUM SETUP]` | 1H momentum entry koşulları sağlandı |
+| `[V2 ENTRY]` | V2 stratejisi ile pozisyon açıldı |
+| `[PARTIAL TP HIT]` | Partial take profit tetiklendi |
+| `[TRAIL STOP UPDATED]` | Trailing stop güncellendi |
+| `[V2 EXIT]` | V2 exit logic ile pozisyon kapatıldı |
 
 ---
 
-## 📞 İLETİŞİM & DESTEK
+## 📞 TELEGRAM BİLDİRİMLERİ
 
-### Telegram Bildirimleri
+### Komutlar
 
-Bot şu durumlarda bildirim gönderir:
-- Trade açıldığında/kapandığında
-- Günlük kayıp limiti aşıldığında
-- Circuit breaker açıldığında
-- Kritik hatalar oluştuğunda
+| Komut | Açıklama |
+|-------|----------|
+| `/start` | Bot durumunu göster |
+| `/portfo` | Açık pozisyonlar + partial_tp durumu |
+| `/summary` | Günlük performans özeti |
+| `/help` | Komut listesi |
 
-### Log Dosyaları
+### Bildirim Türleri
 
-```
-logs/trader.log      # Ana log (son 10MB)
-logs/terminal.log    # Terminal çıktısı
-data/trade_log.json  # Trade geçmişi
-```
+- Trade açılışı/kapanışı (live modda)
+- Günlük kayıp limiti uyarısı
+- Partial TP tetiklenmesi
+- Circuit breaker durumu
+- Kritik hatalar
 
 ---
 
-*Bu doküman otomatik olarak oluşturulmuştur. Son güncelleme: 2026-01-03*
+## 🔄 SÜRÜM GEÇMİŞİ
+
+### V2 (Aktif - Hybrid Multi-TF)
+- Multi-timeframe analiz (4H, 1H, 15M)
+- Rejim tespiti ve adaptasyon
+- Entry type bazlı exit logic
+- Partial TP ve trailing stop
+- 15M scalp devre dışı
+
+### V1 (Arşivlendi)
+- Tek timeframe (1H + 15M trigger)
+- Basit breakout stratejisi
+- Sabit SL/TP oranları
+- `/archive` klasöründe
+
+---
+
+*Son güncelleme: 13 Ocak 2026*
