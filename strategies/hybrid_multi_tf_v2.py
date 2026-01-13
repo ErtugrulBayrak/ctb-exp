@@ -722,9 +722,6 @@ class HybridMultiTFV2:
         valid_regimes = self.VALID_REGIMES.get(entry_type, [])
         return regime_type in valid_regimes
     
-        # NewsVeto removed - always return False
-        return False
-    
     def _calculate_setup_confidence(self, *factors) -> float:
         """Calculate combined confidence from factors."""
         if not factors:

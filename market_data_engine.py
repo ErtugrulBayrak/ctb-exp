@@ -1193,7 +1193,15 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         if not symbol.upper().endswith("USDT"):
             symbol = f"{symbol.upper()}USDT"
         
-        return self._router.get_price(symbol)
+        # Use get_price_or_fetch to fallback to REST API on cache miss
+        # Critical for watchdog SL/TP monitoring reliability
+        price = self._router.get_price_or_fetch(symbol)
+        
+        if price is not None:
+            logger.debug(f"[MarketDataEngine] Price from REST API for {symbol}: ${price:.2f}")
+        
+        return price
+
     
     def get_price_or_fetch(self, symbol: str) -> Optional[float]:
         """Cache miss durumunda API'den çek."""

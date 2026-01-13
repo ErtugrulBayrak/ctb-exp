@@ -548,22 +548,22 @@ class TestCapitalAllocation:
         assert abs(total - 1.0) < 0.01, f"Total allocation {total} != 1.0"
     
     def test_4h_swing_allocation(self):
-        """Test 4H swing has 40% allocation."""
+        """Test 4H swing has 50% allocation (updated: scalping disabled)."""
         swing_cfg = ENTRY_CONFIGS[EntryType.SWING_4H]
-        assert swing_cfg.capital_allocation == 0.40
+        assert swing_cfg.capital_allocation == 0.50  # Was 0.40, now 0.50 with scalping disabled
         assert swing_cfg.risk_per_trade == 0.015  # 1.5%
     
     def test_1h_momentum_allocation(self):
-        """Test 1H momentum has 40% allocation."""
+        """Test 1H momentum has 50% allocation (updated: scalping disabled)."""
         momentum_cfg = ENTRY_CONFIGS[EntryType.MOMENTUM_1H]
-        assert momentum_cfg.capital_allocation == 0.40
+        assert momentum_cfg.capital_allocation == 0.50  # Was 0.40, now 0.50 with scalping disabled
         assert momentum_cfg.risk_per_trade == 0.01  # 1%
     
     def test_15m_scalp_allocation(self):
-        """Test 15M scalp has 20% allocation."""
+        """Test 15M scalp has 0% allocation (disabled - 15min loop too slow)."""
         scalp_cfg = ENTRY_CONFIGS[EntryType.SCALP_15M]
-        assert scalp_cfg.capital_allocation == 0.20
-        assert scalp_cfg.risk_per_trade == 0.005  # 0.5%
+        assert scalp_cfg.capital_allocation == 0.00  # Disabled - was 0.20
+        assert scalp_cfg.risk_per_trade == 0.005  # 0.5% (still defined but not used)
     
     def test_position_sizing_scales_with_confidence(self, hybrid_v2):
         """Test that position size scales with regime confidence."""
