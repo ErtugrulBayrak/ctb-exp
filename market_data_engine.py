@@ -58,6 +58,265 @@ except ImportError:
     PANDAS_TA_AVAILABLE = False
     ta = None
 
+# CCXT import for robust OHLCV data fetching
+try:
+    import ccxt
+    import ccxt.async_support as ccxt_async
+    CCXT_AVAILABLE = True
+except ImportError:
+    ccxt = None
+    ccxt_async = None
+    CCXT_AVAILABLE = False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CCXT DATA PROVIDER
+# ═══════════════════════════════════════════════════════════════════════════════
+class CCXTDataProvider:
+    """
+    CCXT-based OHLCV data provider with retry mechanism and rate limiting.
+    
+    Features:
+    - Exponential backoff retry for network errors
+    - Built-in rate limiting (CCXT enableRateLimit)
+    - Standardized DataFrame output
+    - Async and sync support
+    """
+    
+    MAX_RETRIES = 3
+    RETRY_DELAYS = [1, 2, 4]  # Exponential backoff delays in seconds
+    
+    # CCXT timeframe mapping (Binance intervals)
+    TIMEFRAME_MAP = {
+        "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m",
+        "1h": "1h", "4h": "4h", "1d": "1d", "1w": "1w"
+    }
+    
+    def __init__(self, exchange_id: str = "binance", api_key: str = None, api_secret: str = None):
+        """
+        Initialize CCXT data provider.
+        
+        Args:
+            exchange_id: Exchange identifier (default: binance)
+            api_key: Optional API key (not needed for public data)
+            api_secret: Optional API secret
+        """
+        self.exchange_id = exchange_id
+        self._api_key = api_key
+        self._api_secret = api_secret
+        self._sync_exchange = None
+        self._async_exchange = None
+        
+        # Initialize sync exchange for fallback
+        self._init_sync_exchange()
+    
+    def _init_sync_exchange(self):
+        """Initialize synchronous CCXT exchange."""
+        if not CCXT_AVAILABLE:
+            return
+        
+        try:
+            exchange_class = getattr(ccxt, self.exchange_id)
+            config = {
+                'enableRateLimit': True,
+                'rateLimit': 100,  # ms between requests
+                'options': {
+                    'defaultType': 'spot'
+                }
+            }
+            if self._api_key:
+                config['apiKey'] = self._api_key
+            if self._api_secret:
+                config['secret'] = self._api_secret
+            
+            self._sync_exchange = exchange_class(config)
+            logger.debug(f"[CCXTDataProvider] Sync exchange initialized: {self.exchange_id}")
+        except Exception as e:
+            logger.warning(f"[CCXTDataProvider] Failed to init sync exchange: {e}")
+            self._sync_exchange = None
+    
+    async def _get_async_exchange(self):
+        """Get or create async exchange instance."""
+        if not CCXT_AVAILABLE:
+            return None
+        
+        if self._async_exchange is None:
+            try:
+                exchange_class = getattr(ccxt_async, self.exchange_id)
+                config = {
+                    'enableRateLimit': True,
+                    'rateLimit': 100,
+                    'options': {
+                        'defaultType': 'spot'
+                    }
+                }
+                if self._api_key:
+                    config['apiKey'] = self._api_key
+                if self._api_secret:
+                    config['secret'] = self._api_secret
+                
+                self._async_exchange = exchange_class(config)
+                logger.debug(f"[CCXTDataProvider] Async exchange initialized: {self.exchange_id}")
+            except Exception as e:
+                logger.warning(f"[CCXTDataProvider] Failed to init async exchange: {e}")
+                return None
+        
+        return self._async_exchange
+    
+    async def close_async(self):
+        """Close async exchange connection."""
+        if self._async_exchange:
+            try:
+                await self._async_exchange.close()
+            except Exception:
+                pass
+            self._async_exchange = None
+    
+    def _normalize_symbol(self, symbol: str) -> str:
+        """Normalize symbol to CCXT format (BTC/USDT)."""
+        symbol = symbol.upper()
+        if symbol.endswith("USDT"):
+            base = symbol[:-4]
+            return f"{base}/USDT"
+        elif "/" in symbol:
+            return symbol
+        else:
+            return f"{symbol}/USDT"
+    
+    def _ohlcv_to_dataframe(self, ohlcv: list, symbol: str) -> Optional[pd.DataFrame]:
+        """
+        Convert CCXT OHLCV data to standardized DataFrame.
+        
+        Returns:
+            DataFrame with columns: timestamp, open, high, low, close, volume
+        """
+        if not ohlcv:
+            return None
+        
+        try:
+            df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            
+            # Ensure numeric types
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # Drop rows with NaN in critical columns
+            df = df.dropna(subset=['close', 'high', 'low'])
+            
+            return df
+        except Exception as e:
+            logger.warning(f"[CCXTDataProvider] DataFrame conversion error: {e}")
+            return None
+    
+    async def fetch_ohlcv(self, symbol: str, timeframe: str = "1h", limit: int = 200) -> Optional[pd.DataFrame]:
+        """
+        Fetch OHLCV data asynchronously with retry mechanism.
+        
+        Args:
+            symbol: Trading symbol (e.g., BTCUSDT, BTC/USDT, BTC)
+            timeframe: Candle timeframe (1m, 5m, 15m, 1h, 4h, 1d)
+            limit: Number of candles to fetch
+        
+        Returns:
+            DataFrame with OHLCV data or None on failure
+        """
+        if not CCXT_AVAILABLE:
+            logger.warning("[CCXTDataProvider] CCXT not available, falling back")
+            return None
+        
+        exchange = await self._get_async_exchange()
+        if not exchange:
+            return None
+        
+        ccxt_symbol = self._normalize_symbol(symbol)
+        ccxt_timeframe = self.TIMEFRAME_MAP.get(timeframe, timeframe)
+        
+        last_error = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                ohlcv = await exchange.fetch_ohlcv(ccxt_symbol, ccxt_timeframe, limit=limit)
+                
+                if ohlcv:
+                    df = self._ohlcv_to_dataframe(ohlcv, symbol)
+                    if df is not None and len(df) >= 20:
+                        logger.debug(f"[CCXTDataProvider] Fetched {len(df)} candles for {symbol} {timeframe}")
+                        return df
+                    
+            except (ccxt.NetworkError, ccxt.RequestTimeout) as e:
+                last_error = e
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = self.RETRY_DELAYS[attempt]
+                    logger.warning(f"[CCXTDataProvider] Network error, retry {attempt + 1}/{self.MAX_RETRIES} in {delay}s: {e}")
+                    await asyncio.sleep(delay)
+                    
+            except ccxt.RateLimitExceeded as e:
+                last_error = e
+                # Wait longer for rate limit
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = self.RETRY_DELAYS[attempt] * 2
+                    logger.warning(f"[CCXTDataProvider] Rate limit, waiting {delay}s")
+                    await asyncio.sleep(delay)
+                    
+            except ccxt.ExchangeError as e:
+                logger.error(f"[CCXTDataProvider] Exchange error for {symbol}: {e}")
+                return None
+                
+            except Exception as e:
+                logger.error(f"[CCXTDataProvider] Unexpected error: {e}")
+                return None
+        
+        logger.error(f"[CCXTDataProvider] All retries failed for {symbol} {timeframe}: {last_error}")
+        return None
+    
+    def fetch_ohlcv_sync(self, symbol: str, timeframe: str = "1h", limit: int = 200) -> Optional[pd.DataFrame]:
+        """
+        Fetch OHLCV data synchronously with retry mechanism.
+        
+        Args:
+            symbol: Trading symbol
+            timeframe: Candle timeframe
+            limit: Number of candles
+        
+        Returns:
+            DataFrame with OHLCV data or None on failure
+        """
+        if not CCXT_AVAILABLE or not self._sync_exchange:
+            return None
+        
+        ccxt_symbol = self._normalize_symbol(symbol)
+        ccxt_timeframe = self.TIMEFRAME_MAP.get(timeframe, timeframe)
+        
+        last_error = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                ohlcv = self._sync_exchange.fetch_ohlcv(ccxt_symbol, ccxt_timeframe, limit=limit)
+                
+                if ohlcv:
+                    df = self._ohlcv_to_dataframe(ohlcv, symbol)
+                    if df is not None and len(df) >= 20:
+                        logger.debug(f"[CCXTDataProvider] Sync fetched {len(df)} candles for {symbol}")
+                        return df
+                    
+            except (ccxt.NetworkError, ccxt.RequestTimeout) as e:
+                last_error = e
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = self.RETRY_DELAYS[attempt]
+                    logger.warning(f"[CCXTDataProvider] Sync network error, retry in {delay}s: {e}")
+                    time.sleep(delay)
+                    
+            except ccxt.RateLimitExceeded as e:
+                last_error = e
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = self.RETRY_DELAYS[attempt] * 2
+                    time.sleep(delay)
+                    
+            except Exception as e:
+                logger.error(f"[CCXTDataProvider] Sync error: {e}")
+                return None
+        
+        logger.error(f"[CCXTDataProvider] Sync retries failed: {last_error}")
+        return None
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CACHE WRAPPER
@@ -210,6 +469,16 @@ class MarketDataEngine:
         # V1 Multi-Timeframe Cache (symbol -> {1h: data, 15m: data})
         self._v1_tf_cache: Dict[str, CachedData] = {}
         self._v1_tf_ttl = 300  # 5 minutes
+        
+        # CCXT Data Provider for robust OHLCV fetching
+        self._ccxt_provider: Optional[CCXTDataProvider] = None
+        if CCXT_AVAILABLE and not offline_mode:
+            try:
+                self._ccxt_provider = CCXTDataProvider(exchange_id="binance")
+                logger.info("[MarketDataEngine] CCXT provider initialized for OHLCV fetching")
+            except Exception as e:
+                logger.warning(f"[MarketDataEngine] CCXT init failed, using fallback: {e}")
+                self._ccxt_provider = None
     
     # ═══════════════════════════════════════════════════════════════════════════
     # V1 MULTI-TIMEFRAME INDICATORS
@@ -725,9 +994,10 @@ class MarketDataEngine:
     
     def _get_klines_sync(self, symbol: str, interval: str, limit: int = 200) -> Optional[pd.DataFrame]:
         """
-        Synchronously fetch klines with direct Binance client access.
+        Synchronously fetch klines with CCXT or Binance client.
         
-        Fallback method when async fetch fails.
+        Uses CCXT sync provider as primary method with exponential backoff retry.
+        Falls back to python-binance if CCXT fails.
         
         Args:
             symbol: Symbol (e.g., BTCUSDT or BTC)
@@ -737,20 +1007,30 @@ class MarketDataEngine:
         Returns:
             DataFrame with OHLCV data or None
         """
+        # Normalize symbol
+        if not symbol.upper().endswith("USDT"):
+            symbol = f"{symbol.upper()}USDT"
+        
+        # ─────────── Try CCXT sync first ───────────
+        if self._ccxt_provider:
+            try:
+                df = self._ccxt_provider.fetch_ohlcv_sync(symbol, interval, limit=limit)
+                if df is not None and len(df) >= 20:
+                    logger.debug(f"[MarketDataEngine] CCXT sync fetch success: {symbol} {interval} ({len(df)} candles)")
+                    return df
+            except Exception as e:
+                logger.warning(f"[MarketDataEngine] CCXT sync failed, trying fallback: {e}")
+        
+        # ─────────── Fallback to python-binance ───────────
         try:
             if not self._router:
                 logger.warning("[MarketDataEngine] _get_klines_sync: No router")
                 return None
             
-            # get_client() now auto-reconnects if client is None
             client = self._router.get_client()
             if not client:
                 logger.warning("[MarketDataEngine] _get_klines_sync: Client reconnect failed")
                 return None
-            
-            # Normalize symbol
-            if not symbol.upper().endswith("USDT"):
-                symbol = f"{symbol.upper()}USDT"
             
             # Fetch klines directly
             klines = client.get_klines(
@@ -1215,14 +1495,17 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
 
     async def _fetch_candles(self, symbol: str, interval: str = None) -> Optional[pd.DataFrame]:
         """
-        Binance'den mum verisi çek (Async).
+        Fetch OHLCV candle data (Async).
+        
+        Uses CCXT provider with exponential backoff retry as primary method.
+        Falls back to python-binance if CCXT fails.
         
         Args:
-            symbol: Coin sembolü (örn: BTCUSDT, BTC)
-            interval: Mum periyodu (1m, 5m, 15m, 1h, 4h, 1d). Default: DEFAULT_INTERVAL
+            symbol: Coin symbol (e.g., BTCUSDT, BTC)
+            interval: Candle period (1m, 5m, 15m, 1h, 4h, 1d). Default: DEFAULT_INTERVAL
         
         Returns:
-            OHLCV DataFrame veya None
+            OHLCV DataFrame or None
         """
         # Default interval
         if interval is None:
@@ -1230,23 +1513,34 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         
         # Validate interval
         if interval not in self.VALID_INTERVALS:
-            logger.warning(f"[MarketDataEngine] Geçersiz interval: {interval}. Varsayılan kullanılıyor: {self.DEFAULT_INTERVAL}")
+            logger.warning(f"[MarketDataEngine] Invalid interval: {interval}. Using default: {self.DEFAULT_INTERVAL}")
             interval = self.DEFAULT_INTERVAL
         
+        # Normalize symbol
+        if not symbol.upper().endswith("USDT"):
+            symbol = f"{symbol.upper()}USDT"
+        
+        # ─────────── Try CCXT first (robust with retry) ───────────
+        if self._ccxt_provider:
+            try:
+                df = await self._ccxt_provider.fetch_ohlcv(symbol, interval, limit=200)
+                if df is not None and len(df) >= 20:
+                    logger.debug(f"[MarketDataEngine] CCXT fetch success: {symbol} {interval} ({len(df)} candles)")
+                    return df
+            except Exception as e:
+                logger.warning(f"[MarketDataEngine] CCXT fetch failed, trying fallback: {e}")
+        
+        # ─────────── Fallback to python-binance ───────────
         if not self._router:
-            logger.warning("[MarketDataEngine] Router yok, candle çekilemedi")
+            logger.warning("[MarketDataEngine] No router, cannot fetch candles")
             return None
         
-        # get_client() now auto-reconnects if client is None
         client = self._router.get_client()
         if not client:
-            logger.warning("[MarketDataEngine] Client bağlantısı kurulamadı (reconnect başarısız)")
+            logger.warning("[MarketDataEngine] Client connection failed (reconnect unsuccessful)")
             return None
 
         try:
-            if not symbol.upper().endswith("USDT"):
-                symbol = f"{symbol.upper()}USDT"
-            
             # Run blocking call in executor
             loop = asyncio.get_running_loop()
             klines = await loop.run_in_executor(
@@ -1261,7 +1555,7 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
             if not klines:
                 return None
                 
-            # DataFrame oluştur
+            # Create DataFrame
             df = pd.DataFrame(klines, columns=[
                 'timestamp', 'open', 'high', 'low', 'close', 'volume',
                 'close_time', 'quote_asset_volume', 'number_of_trades',

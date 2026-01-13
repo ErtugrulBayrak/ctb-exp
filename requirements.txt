@@ -19,6 +19,7 @@ google-generativeai>=0.3.0
 numpy>=1.24.0
 pandas>=2.0.0
 pandas-ta-classic @ git+https://github.com/xgboosted/pandas-ta-classic.git
+ccxt>=4.0.0
 
 # Web Scraping & News
 feedparser>=6.0.0
