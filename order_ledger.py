@@ -108,7 +108,7 @@ class OrderLedger:
         """Save ledger to file atomically."""
         try:
             from utils.io import write_atomic_json
-            return write_atomic_json(self.filepath, self._cache)
+            return write_atomic_json(self.filepath, self._cache, backup=True, max_backups=3)
         except ImportError:
             # Fallback
             import json

@@ -93,11 +93,10 @@ class EntryConfig:
 
 
 # Entry type configurations
-# NOTE: 15M scalp disabled by default (15min loop too slow for scalping)
-# Capital redistributed: 50% 4H swing, 50% 1H momentum, 0% 15M scalp
+# Capital allocation: 40% 4H swing, 40% 1H momentum, 20% 15M scalp
 ENTRY_CONFIGS = {
     EntryType.SWING_4H: EntryConfig(
-        capital_allocation=0.50,   # 50% (was 40%)
+        capital_allocation=0.40,   # 40%
         risk_per_trade=0.015,      # 1.5%
         atr_mult_stop=2.5,
         target_gain_min=8.0,
@@ -108,7 +107,7 @@ ENTRY_CONFIGS = {
         hold_hours_max=240         # 10 days
     ),
     EntryType.MOMENTUM_1H: EntryConfig(
-        capital_allocation=0.50,   # 50% (was 40%)
+        capital_allocation=0.40,   # 40%
         risk_per_trade=0.01,       # 1%
         atr_mult_stop=1.8,
         target_gain_min=3.0,
@@ -119,7 +118,7 @@ ENTRY_CONFIGS = {
         hold_hours_max=24
     ),
     EntryType.SCALP_15M: EntryConfig(
-        capital_allocation=0.00,   # 0% disabled (was 20%)
+        capital_allocation=0.20,   # 20%
         risk_per_trade=0.005,      # 0.5%
         atr_mult_stop=1.2,
         target_gain_min=1.0,

@@ -537,7 +537,7 @@ class LoopController:
                 "cycle_count": self._cycle_id,
                 "run_id": self._run_id
             }
-            with open("summary_state.json", "w") as f:
+            with open("data/summary_state.json", "w") as f:
                 json.dump(summary_state, f, indent=2)
         except Exception as e:
             logger.warning(f"[SUMMARY_STATE] Save error: {e}")
@@ -817,8 +817,8 @@ class LoopController:
                 success, pnl, trade = await self.execution_manager.execute_sell_flow(
                     symbol=symbol,
                     current_price=current_price,
-                    ai_reasoning=reason,
-                    ai_confidence=100,
+                    reasoning=reason,
+                    confidence=100,
                     market_snapshot=snapshot
                 )
                 

@@ -18,7 +18,6 @@ Usage:
 
 import os
 import json
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -71,23 +70,7 @@ LOG_PATTERNS = [
 # HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def create_backup(file_path: Path) -> bool:
-    """Create a timestamped backup of a file."""
-    if not file_path.exists():
-        return False
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = file_path.with_suffix(f".backup_{timestamp}.json")
-    
-    try:
-        shutil.copy2(file_path, backup_path)
-        print(f"  📦 Backup: {backup_path.name}")
-        return True
-    except Exception as e:
-        print(f"  ⚠️ Backup failed: {e}")
-        return False
-
-def reset_file(relative_path: str, default_content: dict, backup: bool = True) -> bool:
+def reset_file(relative_path: str, default_content: dict) -> bool:
     """Reset a file to its default content."""
     file_path = BASE_DIR / relative_path
     
@@ -95,10 +78,6 @@ def reset_file(relative_path: str, default_content: dict, backup: bool = True) -
     file_path.parent.mkdir(parents=True, exist_ok=True)
     
     try:
-        # Backup existing file
-        if backup and file_path.exists():
-            create_backup(file_path)
-        
         # Write default content
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(default_content, f, indent=2, ensure_ascii=False)
@@ -202,7 +181,7 @@ def main():
     print("🔄 Resetting files...")
     print("-" * 60)
     
-    # Reset all data files
+    # Reset all data files (no backup)
     success_count = 0
     for file_path, default_content in RESET_FILES.items():
         if reset_file(file_path, default_content):

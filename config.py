@@ -263,7 +263,7 @@ class Settings:
     RSS_MAX_AGE_HOURS: int = 4  # Haberlerin max yaşı (saat)
     
     # Ana döngü süresi (saniye) - her döngü arasında bekleme
-    LOOP_SECONDS: int = 900  # 15 dakika
+    LOOP_SECONDS: int = 600  # 10 dakika
     
     # Cache TTL ayarları (saniye)
     CACHE_TTL_PRICE: float = 1.0  # Fiyat cache
@@ -650,12 +650,11 @@ REGIME_CACHE_TTL: int = _get_env_int("REGIME_CACHE_TTL", 3600)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Capital Allocation by Timeframe
-# NOTE: 15M scalp disabled - 15min main loop too slow for effective scalping
-# Capital redistributed: 50% 4H swing, 50% 1H momentum, 0% 15M scalp
+# Original allocation: 40% 4H swing, 40% 1H momentum, 20% 15M scalp
 # ─────────────────────────────────────────────────────────────────────────────
-CAPITAL_ALLOCATION_4H: float = _get_env_float("CAPITAL_ALLOC_4H", 0.50)   # 50%
-CAPITAL_ALLOCATION_1H: float = _get_env_float("CAPITAL_ALLOC_1H", 0.50)   # 50%
-CAPITAL_ALLOCATION_15M: float = _get_env_float("CAPITAL_ALLOC_15M", 0.00) # 0% disabled
+CAPITAL_ALLOCATION_4H: float = _get_env_float("CAPITAL_ALLOC_4H", 0.40)   # 40%
+CAPITAL_ALLOCATION_1H: float = _get_env_float("CAPITAL_ALLOC_1H", 0.40)   # 40%
+CAPITAL_ALLOCATION_15M: float = _get_env_float("CAPITAL_ALLOC_15M", 0.20) # 20%
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4H Swing Trade Parameters
@@ -686,7 +685,7 @@ SCALP_15M_MIN_VOLUME_MULT: float = _get_env_float("SCALP_15M_VOL_MULT", 2.0)
 SCALP_15M_SL_ATR_MULT: float = _get_env_float("SCALP_15M_SL_ATR_MULT", 1.2)
 SCALP_15M_TARGET_PCT: float = _get_env_float("SCALP_15M_TARGET", 1.5)
 SCALP_15M_RISK_PER_TRADE: float = _get_env_float("SCALP_15M_RISK", 0.005)
-SCALP_15M_ENABLED: bool = _get_env_bool("SCALP_15M_ENABLED", False)  # Disabled - 15min loop too slow
+SCALP_15M_ENABLED: bool = _get_env_bool("SCALP_15M_ENABLED", True)  # Enabled
 SCALP_15M_LIQUIDITY_HOURS_ONLY: bool = _get_env_bool("SCALP_15M_LIQUIDITY_HOURS", True)
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -702,7 +702,7 @@ class MarketDataEngine:
                     return cached
         
         try:
-            logger.info(f"[HYBRID V2] Fetching multi-TF data for {symbol_clean}...")
+            logger.debug(f"[HYBRID V2] Fetching multi-TF data for {symbol_clean}...")
             
             # Check PANDAS_TA availability
             if not PANDAS_TA_AVAILABLE:
@@ -731,8 +731,8 @@ class MarketDataEngine:
                 logger.warning(f"[V2] 15m async fetch failed, trying sync: {df_15m if isinstance(df_15m, Exception) else 'None'}")
                 df_15m = self._get_klines_sync(symbol_clean, "15m", 100)
             
-            # Log candle fetch status
-            logger.info(
+            # Log candle fetch status (DEBUG - reduces log spam)
+            logger.debug(
                 f"[V2] {symbol_clean} candle fetch: "
                 f"1d={len(df_1d) if df_1d is not None else 'None'}, "
                 f"4h={len(df_4h) if df_4h is not None else 'None'}, "
@@ -745,19 +745,19 @@ class MarketDataEngine:
             
             if df_1d is not None and len(df_1d) >= 50:
                 tf_data["1d"] = self._compute_v2_timeframe_indicators(df_1d, "1d")
-                logger.info(f"[V2] {symbol_clean} 1d: ADX={tf_data['1d'].get('adx', 0):.1f}, trend={tf_data['1d'].get('trend', 'N/A')}")
+                logger.debug(f"[V2] {symbol_clean} 1d: ADX={tf_data['1d'].get('adx', 0):.1f}, trend={tf_data['1d'].get('trend', 'N/A')}")
             else:
                 logger.warning(f"[V2] {symbol_clean} 1d: skipped (insufficient data)")
             
             if df_4h is not None and len(df_4h) >= 50:
                 tf_data["4h"] = self._compute_v2_timeframe_indicators(df_4h, "4h")
-                logger.info(f"[V2] {symbol_clean} 4h: ADX={tf_data['4h'].get('adx', 0):.1f}, ATR%={tf_data['4h'].get('atr_pct', 0):.2f}%")
+                logger.debug(f"[V2] {symbol_clean} 4h: ADX={tf_data['4h'].get('adx', 0):.1f}, ATR%={tf_data['4h'].get('atr_pct', 0):.2f}%")
             else:
                 logger.warning(f"[V2] {symbol_clean} 4h: skipped (insufficient data)")
             
             if df_1h is not None and len(df_1h) >= 50:
                 tf_data["1h"] = self._compute_v2_timeframe_indicators(df_1h, "1h")
-                logger.info(f"[V2] {symbol_clean} 1h: ADX={tf_data['1h'].get('adx', 0):.1f}, RSI={tf_data['1h'].get('rsi', 0):.1f}")
+                logger.debug(f"[V2] {symbol_clean} 1h: ADX={tf_data['1h'].get('adx', 0):.1f}, RSI={tf_data['1h'].get('rsi', 0):.1f}")
             else:
                 logger.warning(f"[V2] {symbol_clean} 1h: skipped (insufficient data)")
             
@@ -1493,6 +1493,7 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
         
         return self._router.get_price_or_fetch(symbol)
 
+
     async def _fetch_candles(self, symbol: str, interval: str = None) -> Optional[pd.DataFrame]:
         """
         Fetch OHLCV candle data (Async).
@@ -1654,7 +1655,6 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
                         return cached
         
         if df is None:
-             logger.info(f"[MarketDataEngine] Fetching candles for {symbol} ({interval})...")
              df = await self._fetch_candles(symbol, interval=interval)
              
              if df is None or df.empty:
@@ -2353,7 +2353,8 @@ Rules:
                         data = response.json()
                         
                         if data.get("status") == "1" and data.get("result"):
-                            logger.info(f"[OnChain] Raw API response ({exchange_name}/{token_name}): {len(data.get('result', []))} txs")
+                            # Only log at DEBUG level to reduce spam
+                            logger.debug(f"[OnChain] Raw API response ({exchange_name}/{token_name}): {len(data.get('result', []))} txs")
                             for tx in data["result"][:50]:
                                 timestamp = int(tx.get("timeStamp", 0))
                                 if timestamp < cutoff:
@@ -2399,7 +2400,9 @@ Rules:
             result["reason"] = str(e)
             logger.warning(f"[OnChain] API error → fallback to zero: {e}")
         
-        logger.info(f"[OnChain] Parsed: inflow=${result['total_inflow_usd']:.2f}, movements={len(result['movements'])}, signal={result['signal']}")
+        # Only log OnChain result when signal is not NEUTRAL (meaningful events)
+        if result['signal'] != "NEUTRAL":
+            logger.info(f"[OnChain] Parsed: inflow=${result['total_inflow_usd']:.2f}, movements={len(result['movements'])}, signal={result['signal']}")
         return result
     
     # ─────────────────────────────────────────────────────────────────────────

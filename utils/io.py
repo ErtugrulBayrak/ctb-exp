@@ -20,27 +20,82 @@ import tempfile
 from typing import Any, Optional
 
 
-def write_atomic_json(path: str, data: Any, indent: int = 2) -> bool:
+def rotate_backups(filepath: str, max_backups: int = 3) -> None:
+    """
+    Rotate backup files before overwriting.
+    
+    Creates rolling backups: .backup_1 (newest) -> .backup_2 -> .backup_3 (oldest)
+    
+    Flow:
+    1. Delete .backup_{max_backups} if exists
+    2. Rename .backup_{n-1} -> .backup_{n}
+    3. Copy current file -> .backup_1
+    
+    Args:
+        filepath: Path to the file being backed up
+        max_backups: Maximum number of backups to keep (default: 3)
+    """
+    import shutil
+    
+    if not os.path.exists(filepath):
+        return
+    
+    try:
+        # Delete oldest backup if exists
+        oldest_backup = f"{filepath}.backup_{max_backups}"
+        if os.path.exists(oldest_backup):
+            os.remove(oldest_backup)
+        
+        # Rotate existing backups (n-1 -> n)
+        for i in range(max_backups - 1, 0, -1):
+            src = f"{filepath}.backup_{i}"
+            dst = f"{filepath}.backup_{i + 1}"
+            if os.path.exists(src):
+                os.replace(src, dst)
+        
+        # Copy current file to .backup_1
+        shutil.copy2(filepath, f"{filepath}.backup_1")
+        
+    except PermissionError as e:
+        print(f"[BACKUP_ROTATION_ERROR] Permission denied for {filepath}: {e}")
+    except Exception as e:
+        print(f"[BACKUP_ROTATION_ERROR] {filepath}: {e}")
+
+
+def write_atomic_json(path: str, data: Any, indent: int = 2, backup: bool = False, max_backups: int = 3) -> bool:
     """
     Atomik JSON yazımı - crash durumunda dosya bozulmaz.
     
     Flow:
-    1. Geçici dosyaya yaz (.tmp suffix)
-    2. fsync ile diske zorla
-    3. Atomik rename ile asıl dosyaya taşı
+    1. (Opsiyonel) Backup rotation yap
+    2. Geçici dosyaya yaz (.tmp suffix)
+    3. fsync ile diske zorla
+    4. Atomik rename ile asıl dosyaya taşı
     
     Args:
         path: Hedef dosya yolu
         data: JSON serializable veri
         indent: JSON indent (default: 2)
+        backup: Enable backup rotation before overwrite
+        max_backups: Number of backup files to keep (default: 3)
     
     Returns:
         bool: Başarılı ise True
     """
     dir_name = os.path.dirname(path) or "."
     
+    # Ensure directory exists
     try:
-        # 1. Geçici dosyaya yaz
+        os.makedirs(dir_name, exist_ok=True)
+    except Exception:
+        pass
+    
+    try:
+        # 1. Backup rotation (optional)
+        if backup and os.path.exists(path):
+            rotate_backups(path, max_backups)
+        
+        # 2. Geçici dosyaya yaz
         with tempfile.NamedTemporaryFile(
             mode='w',
             suffix='.tmp',
@@ -50,19 +105,18 @@ def write_atomic_json(path: str, data: Any, indent: int = 2) -> bool:
         ) as tmp_file:
             json.dump(data, tmp_file, indent=indent, ensure_ascii=False)
             tmp_file.flush()
-            # 2. fsync ile diske zorla
+            # 3. fsync ile diske zorla
             os.fsync(tmp_file.fileno())
             tmp_path = tmp_file.name
         
-        # 3. Atomik rename
-        # Windows'ta önce hedef dosyayı silmek gerekebilir
-        if os.path.exists(path):
-            os.replace(tmp_path, path)
-        else:
-            os.rename(tmp_path, path)
+        # 4. Atomik rename
+        os.replace(tmp_path, path)
         
         return True
         
+    except PermissionError as e:
+        print(f"[ATOMIC_WRITE_ERROR] Permission denied for {path}: {e}")
+        return False
     except Exception as e:
         # Cleanup temp file if exists
         try:
@@ -71,7 +125,6 @@ def write_atomic_json(path: str, data: Any, indent: int = 2) -> bool:
         except:
             pass
         
-        # Log error (but don't import logger to avoid circular imports)
         print(f"[ATOMIC_WRITE_ERROR] {path}: {e}")
         return False
 

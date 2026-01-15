@@ -52,6 +52,8 @@ class PositionManager:
         self.telegram_fn = telegram_fn
         self.telegram_config = telegram_config or {}
         self._consecutive_losses = self._calculate_initial_consecutive_losses()
+        # Smart logging: track last logged state per position to reduce log spam
+        self._watchdog_last_log = {}  # {position_id: {"price": float, "action": str}}
 
     def _calculate_initial_consecutive_losses(self):
         """Count trailing consecutive losses from history on init."""
@@ -89,6 +91,42 @@ class PositionManager:
             self._consecutive_losses += 1
         else:
             self._consecutive_losses = 0
+
+    def _calculate_total_portfolio_value(self) -> float:
+        """
+        Calculate total portfolio value (USDT + all positions at current price).
+        
+        Returns:
+            Total value in USD
+        """
+        total = self.portfolio.get("balance", 0.0)
+        
+        for pos in self.portfolio.get("positions", []):
+            if pos.get("status") != "OPEN":
+                continue
+            
+            symbol = pos.get("symbol", "")
+            quantity = pos.get("quantity", 0)
+            
+            if quantity <= 0:
+                continue
+            
+            # Try to get current price from market_data_engine
+            current_price = None
+            if self.market_data_engine:
+                try:
+                    current_price = self.market_data_engine.get_current_price(symbol)
+                except Exception:
+                    pass
+            
+            # Fallback to entry price if market data unavailable
+            if not current_price:
+                current_price = pos.get("entry_price", 0)
+            
+            if current_price and current_price > 0:
+                total += quantity * current_price
+        
+        return total
 
     def get_portfolio_summary(self):
         """
@@ -190,13 +228,14 @@ class PositionManager:
                          logger.info(msg)
                     
                     if self.telegram_fn and bot_token and chat_id:
+                        total_value = self._calculate_total_portfolio_value()
                         mesaj = (
                             f"{log_emoji} <b>{log_msg} ({close_reason})</b>\n\n"
                             f"<b>Coin:</b> {symbol}/USDT\n"
                             f"<b>Giriş:</b> ${entry_price:.4f}\n"
                             f"<b>Çıkış:</b> ${current_price:.4f}\n"
                             f"<b>PnL:</b> ${pnl:.2f} ({closed_trade['profit_pct']:.1f}%)\n\n"
-                            f"<b>💰 Güncel Bakiye:</b> ${self.portfolio['balance']:.2f}\n\n"
+                            f"<b>💰 Toplam Portföy:</b> ${total_value:,.2f}\n\n"
                             f"<i>{closed_trade.get('haber_baslik', '')}</i>"
                         )
                         await self.telegram_fn(bot_token, chat_id, mesaj)
@@ -347,8 +386,17 @@ class PositionManager:
                 action = exit_result.get("action", "HOLD")
                 reason = exit_result.get("reason", "")
                 
-                # Log every check for debugging (DEBUG level)
-                logger.debug(f"[WATCHDOG] {symbol}: price={current_price:.4f}, action={action}, reason={reason[:50]}...")
+                # Smart logging: only log if price changed >1% or action changed
+                last_log = self._watchdog_last_log.get(position_id, {})
+                last_price = last_log.get("price", 0)
+                last_action = last_log.get("action", "")
+                
+                price_change_pct = abs(current_price - last_price) / last_price * 100 if last_price > 0 else 100
+                should_log = (price_change_pct >= 1.0 or action != last_action or action != "HOLD")
+                
+                if should_log:
+                    logger.debug(f"[WATCHDOG] {symbol}: price={current_price:.4f}, action={action}, reason={reason[:50]}...")
+                    self._watchdog_last_log[position_id] = {"price": current_price, "action": action}
                 
                 if action == "HOLD":
                     continue
@@ -386,6 +434,7 @@ class PositionManager:
                         # Telegram notification
                         if self.telegram_fn and bot_token and chat_id:
                             profit_pct = ((current_price - entry_price) / entry_price * 100) if entry_price else 0
+                            total_value = self._calculate_total_portfolio_value()
                             mesaj = (
                                 f"💰 <b>PARTIAL TP ({entry_type})</b>\n\n"
                                 f"<b>Coin:</b> {symbol}/USDT\n"
@@ -395,7 +444,7 @@ class PositionManager:
                                 f"<b>Satılan:</b> {partial_qty:.6f}\n"
                                 f"<b>PnL:</b> ${pnl:.2f}\n\n"
                                 f"<i>Stop breakeven'a taşındı</i>\n"
-                                f"<b>💰 Bakiye:</b> ${self.portfolio['balance']:.2f}"
+                                f"<b>💰 Toplam Portföy:</b> ${total_value:,.2f}"
                             )
                             try:
                                 await self.telegram_fn(bot_token, chat_id, mesaj)
@@ -440,6 +489,7 @@ class PositionManager:
                         
                         # Telegram notification
                         if self.telegram_fn and bot_token and chat_id:
+                            total_value = self._calculate_total_portfolio_value()
                             mesaj = (
                                 f"{log_emoji} <b>{log_msg} ({entry_type})</b>\n\n"
                                 f"<b>Coin:</b> {symbol}/USDT\n"
@@ -447,7 +497,7 @@ class PositionManager:
                                 f"<b>Çıkış:</b> ${current_price:.4f}\n"
                                 f"<b>PnL:</b> ${pnl:.2f} ({closed_trade.get('profit_pct', 0):.1f}%)\n\n"
                                 f"<i>{reason}</i>\n\n"
-                                f"<b>💰 Güncel Bakiye:</b> ${self.portfolio['balance']:.2f}"
+                                f"<b>💰 Toplam Portföy:</b> ${total_value:,.2f}"
                             )
                             try:
                                 await self.telegram_fn(bot_token, chat_id, mesaj)
@@ -1013,13 +1063,14 @@ class PositionManager:
         profit_pct = ((exit_price / entry_price) - 1) * 100 if entry_price else 0
         emoji = "💰" if pnl > 0 else "🛑"
         
+        total_value = self._calculate_total_portfolio_value()
         mesaj = (
             f"{emoji} <b>{reason}</b>\n\n"
             f"<b>Coin:</b> {symbol}\n"
             f"<b>Giriş:</b> ${entry_price:.4f}\n"
             f"<b>Çıkış:</b> ${exit_price:.4f}\n"
             f"<b>PnL:</b> ${pnl:.2f} ({profit_pct:.1f}%)\n\n"
-            f"💰 Bakiye: ${self.portfolio['balance']:.2f}"
+            f"💰 Toplam Portföy: ${total_value:,.2f}"
         )
         
         try:

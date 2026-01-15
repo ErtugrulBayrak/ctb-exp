@@ -139,6 +139,43 @@ class ExecutionManager:
         """Update portfolio reference (for loop refresh)."""
         self.portfolio = portfolio
     
+    def _calculate_total_portfolio_value(self) -> float:
+        """
+        Calculate total portfolio value (USDT + all positions at current price).
+        
+        Returns:
+            Total value in USD
+        """
+        total = self.portfolio.get("balance", 0.0)
+        
+        open_positions = self.portfolio.get("positions", [])
+        for pos in open_positions:
+            if pos.get("status") != "OPEN":
+                continue
+            
+            symbol = pos.get("symbol", "")
+            quantity = pos.get("quantity", 0)
+            
+            if quantity <= 0:
+                continue
+            
+            # Try to get current price from market_data_engine
+            current_price = None
+            if self.market_data_engine:
+                try:
+                    current_price = self.market_data_engine.get_current_price(symbol)
+                except Exception:
+                    pass
+            
+            # Fallback to entry price if market data unavailable
+            if not current_price:
+                current_price = pos.get("entry_price", 0)
+            
+            if current_price and current_price > 0:
+                total += quantity * current_price
+        
+        return total
+
     def _generate_intent_id(self, symbol: str, signal_ts: str = None) -> str:
         """
         Generate a unique intent ID for deduplication.
@@ -192,8 +229,8 @@ class ExecutionManager:
         stop_loss: float,
         take_profit: float,
         haber_baslik: str = "",
-        ai_confidence: int = 0,
-        ai_reasoning: str = "",
+        confidence: int = 0,
+        reasoning: str = "",
         entry_type: str = "UNKNOWN",
         partial_tp_target: float = None
     ) -> Tuple[bool, Any]:
@@ -222,8 +259,8 @@ class ExecutionManager:
             "entry_time": time.strftime("%Y-%m-%d %H:%M:%S"),
             "timestamp": time.time(),  # Unix timestamp for hold time calculations
             "haber_baslik": haber_baslik[:150] if haber_baslik else "",
-            "ai_confidence": ai_confidence,
-            "ai_reasoning": ai_reasoning[:200] if ai_reasoning else "",
+            "confidence": confidence,
+            "reasoning": reasoning[:200] if reasoning else "",
             # ───────── V2 Fields for Partial TP & Trailing Stop ─────────
             "entry_type": entry_type,              # 4H_SWING, 1H_MOMENTUM, 15M_SCALP, V1
             "partial_tp_hit": False,               # Flag: has partial TP triggered?
@@ -254,7 +291,7 @@ class ExecutionManager:
         Args:
             position_id: Pozisyon ID
             exit_price: Çıkış fiyatı
-            reason: "SL", "TP", "AI-SELL", "PARTIAL_TP", "TRAIL_SL", "Manuel"
+            reason: "SL", "TP", "STRATEGY_SELL", "PARTIAL_TP", "TRAIL_SL", "Manuel"
             partial_qty: Kısmi satış miktarı (None = tamamını kapat)
         
         Returns: (success, profit_loss, closed_position)
@@ -501,8 +538,8 @@ class ExecutionManager:
         stop_loss = decision_result.get("stop_loss")
         take_profit = decision_result.get("take_profit") or decision_result.get("take_profit_2")
         quantity = decision_result.get("quantity", 0)
-        ai_confidence = decision_result.get("confidence", 0)
-        ai_reasoning = decision_result.get("reason", "") or decision_result.get("reasoning", "")
+        confidence = decision_result.get("confidence", 0)
+        reasoning = decision_result.get("reason", "") or decision_result.get("reasoning", "")
         
         # V2 fields for partial TP
         entry_type = decision_result.get("entry_type", "UNKNOWN")
@@ -551,8 +588,8 @@ class ExecutionManager:
             stop_loss=stop_loss,
             take_profit=take_profit,
             haber_baslik=f"[{trade_reason}] {trigger_info[:120]}",
-            ai_confidence=ai_confidence,
-            ai_reasoning=ai_reasoning,
+            confidence=confidence,
+            reasoning=reasoning,
             entry_type=entry_type,
             partial_tp_target=partial_tp_target
         )
@@ -583,7 +620,7 @@ class ExecutionManager:
                 action="BUY",
                 symbol=symbol,
                 price=current_price,
-                ai_decision={"decision": "BUY", "confidence": ai_confidence, "reasoning": ai_reasoning},
+                ai_decision={"decision": "BUY", "confidence": confidence, "reasoning": reasoning},
                 market_snapshot=market_snapshot or {},
                 position_id=position.get("id"),
                 trade_details={"stop_loss": stop_loss, "take_profit": take_profit, "quantity": quantity, "trade_cost": trade_cost}
@@ -591,14 +628,15 @@ class ExecutionManager:
             
             # Telegram bildirimi
             if self.notify_trades and self._telegram_fn:
+                total_value = self._calculate_total_portfolio_value()
                 mesaj = (
                     f"🆕 <b>SANAL ALIM - {reason_text}</b> {reason_emoji}\n\n"
                     f"<b>Coin:</b> {symbol}/USDT\n"
                     f"<b>Fiyat:</b> ${current_price:.4f}\n"
                     f"<b>Miktar:</b> {quantity:.6f} (${trade_cost:.2f})\n"
                     f"<b>SL:</b> ${stop_loss:.4f} | <b>TP:</b> ${take_profit:.4f}\n\n"
-                    f"<b>🧠 AI:</b> {ai_reasoning[:100]}\n"
-                    f"<b>💰 Bakiye:</b> ${self.portfolio['balance']:.2f}"
+                    f"<b>📊 Strateji:</b> {reasoning[:100]}\n"
+                    f"<b>💰 Toplam Portföy:</b> ${total_value:,.2f}"
                 )
                 await self._telegram_fn(self.bot_token, self.chat_id, mesaj)
             
@@ -650,18 +688,18 @@ class ExecutionManager:
         self,
         symbol: str,
         current_price: float,
-        ai_reasoning: str,
-        ai_confidence: int = 0,
+        reasoning: str,
+        confidence: int = 0,
         market_snapshot: Dict = None
     ) -> Tuple[bool, float, Any]:
         """
-        AI SELL kararını uygular - açık pozisyonu kapatır.
+        V2 Strateji SELL kararını uygular - açık pozisyonu kapatır.
         
         Args:
             symbol: Coin sembolü
             current_price: Güncel fiyat
-            ai_reasoning: AI'ın satış gerekçesi
-            ai_confidence: AI güven skoru (0-100)
+            reasoning: Stratejinin satış gerekçesi
+            confidence: Güven skoru (0-100)
             market_snapshot: Piyasa durumu dict
         
         Returns: (success, profit_loss, message_or_closed)
@@ -688,30 +726,30 @@ class ExecutionManager:
             current_profit_pct = ((current_price - entry_price) / entry_price) * 100
             
             if current_profit_pct >= self.MIN_PROFIT_TO_PROTECT:
-                if ai_confidence < self.AI_SELL_OVERRIDE_CONFIDENCE:
+                if confidence < self.AI_SELL_OVERRIDE_CONFIDENCE:
                     self._log(
                         f"🛡️ {symbol}: Kâr koruma aktif! +{current_profit_pct:.2f}% kârda, "
-                        f"TP bekliyor (AI güven: {ai_confidence}% < {self.AI_SELL_OVERRIDE_CONFIDENCE}%)",
+                        f"TP bekliyor (güven: {confidence}% < {self.AI_SELL_OVERRIDE_CONFIDENCE}%)",
                         "WARN"
                     )
                     return False, 0, f"{symbol}: Kârdaki pozisyon korunuyor (TP'ye ulaşmasını bekle)"
                 else:
-                    self._log(f"⚠️ {symbol}: Yüksek güvenli AI SELL ({ai_confidence}%) kâr korumasını geçiyor", "WARN")
+                    self._log(f"⚠️ {symbol}: Yüksek güvenli SELL ({confidence}%) kâr korumasını geçiyor", "WARN")
         
         # Pozisyonu kapat
-        success, pnl, closed = self.close_position(position_id, current_price, "AI-SELL")
+        success, pnl, closed = self.close_position(position_id, current_price, "STRATEGY_SELL")
         
         if success:
             profit_pct = closed.get('profit_pct', 0)
             pnl_emoji = "💰" if pnl > 0 else "🔻"
             
-            self._log(f"{pnl_emoji} AI SELL: {symbol} kapatıldı | PnL: ${pnl:.2f} ({profit_pct:.1f}%)", "OK")
+            self._log(f"{pnl_emoji} STRATEGY SELL: {symbol} kapatıldı | PnL: ${pnl:.2f} ({profit_pct:.1f}%)", "OK")
             
             # Trade log kaydı
-            ai_decision_data = {
+            strategy_decision_data = {
                 "decision": "SELL",
-                "confidence": ai_confidence,
-                "reasoning": ai_reasoning
+                "confidence": confidence,
+                "reasoning": reasoning
             }
             
             trade_details = {
@@ -731,7 +769,7 @@ class ExecutionManager:
                 action="SELL",
                 symbol=symbol,
                 price=current_price,
-                ai_decision=ai_decision_data,
+                ai_decision=strategy_decision_data,
                 market_snapshot=market_snapshot or {},
                 position_id=position_id,
                 trade_details=trade_details
@@ -739,14 +777,15 @@ class ExecutionManager:
             
             # Telegram bildirimi
             if self.notify_trades and self._telegram_fn:
+                total_value = self._calculate_total_portfolio_value()
                 mesaj = (
-                    f"🤖 <b>AI SATIŞ KARARI</b> {pnl_emoji}\n\n"
+                    f"🤖 <b>STRATEJİ SATIŞ</b> {pnl_emoji}\n\n"
                     f"<b>Coin:</b> {symbol}/USDT\n"
                     f"<b>Giriş:</b> ${entry_price:.4f}\n"
                     f"<b>Çıkış:</b> ${current_price:.4f}\n"
                     f"<b>{'Kâr' if pnl > 0 else 'Zarar'}:</b> ${abs(pnl):.2f} ({profit_pct:+.1f}%)\n\n"
-                    f"<b>🧠 AI Gerekçe:</b>\n<i>{ai_reasoning}</i>\n\n"
-                    f"<b>💰 Güncel Bakiye:</b> ${self.portfolio['balance']:.2f}"
+                    f"<b>📊 Strateji Gerekçe:</b>\n<i>{reasoning}</i>\n\n"
+                    f"<b>💰 Toplam Portföy:</b> ${total_value:,.2f}"
                 )
                 await self._telegram_fn(self.bot_token, self.chat_id, mesaj)
             

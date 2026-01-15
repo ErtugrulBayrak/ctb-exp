@@ -30,9 +30,9 @@ class ExitReason(str, Enum):
     PARTIAL_TP = "PARTIAL_TP"      # Kısmi kar alma (1R)
     TAKE_PROFIT = "TAKE_PROFIT"    # Tam TP
     
-    # Manual/AI exits
-    MANUAL = "MANUAL"              # Manuel kapanış
-    AI_SELL = "AI_SELL"            # AI satış kararı
+    # Manual/Strategy exits
+    MANUAL = "MANUAL"                      # Manuel kapanış
+    STRATEGY_SELL = "STRATEGY_SELL"        # Strateji satış kararı (V2)
     
     # Error/Safety exits
     EXCHANGE_REJECT = "EXCHANGE_REJECT"      # Borsa emri reddetti
@@ -62,7 +62,7 @@ class ExitReason(str, Enum):
             "SL": cls.STOP_LOSS,
             "TP": cls.TAKE_PROFIT,
             "TRAIL_SL": cls.TRAIL_STOP,
-            "AI-SELL": cls.AI_SELL,
+            "AI-SELL": cls.STRATEGY_SELL,
         }
         
         if value in legacy_map:
