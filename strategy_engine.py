@@ -38,7 +38,46 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from config import SETTINGS
-from llm_utils import safe_json_loads, validate_decision, build_retry_prompt
+# llm_utils removed - inline implementations below
+
+def _safe_json_parse(text: str) -> Tuple[Optional[Any], Optional[str]]:
+    """Simple JSON parser (llm_utils replacement)."""
+    if not text:
+        return None, "empty_input"
+    text = text.strip()
+    # Remove markdown code fences
+    text = re.sub(r'^```(?:json)?\s*\n?', '', text)
+    text = re.sub(r'\n?```\s*$', '', text)
+    try:
+        return json.loads(text.strip()), None
+    except json.JSONDecodeError as e:
+        return None, f"json_error: {str(e)[:50]}"
+
+def _validate_decision_inline(obj: Any) -> Optional[Dict[str, Any]]:
+    """Validate trading decision structure (llm_utils replacement)."""
+    if not isinstance(obj, dict):
+        return None
+    decision = obj.get("decision") or obj.get("action") or obj.get("signal")
+    if not decision:
+        return None
+    decision = str(decision).upper().strip()
+    if decision not in ("BUY", "SELL", "HOLD"):
+        return None
+    confidence = obj.get("confidence") or obj.get("conf") or obj.get("score") or 0
+    try:
+        confidence = max(0, min(100, int(confidence)))
+    except (TypeError, ValueError):
+        confidence = 0
+    reason = str(obj.get("reason", ""))[:60].strip()
+    return {"decision": decision, "confidence": confidence, "reason": reason}
+
+def _build_retry_prompt_inline(original: str) -> str:
+    """Build retry prompt (llm_utils replacement)."""
+    return f"""IMPORTANT: Your previous response was not valid JSON.
+Please respond with ONLY a valid JSON object.
+Original request:
+{original[:500]}
+Output ONLY the JSON:"""
 
 # Hybrid V2 strategy imports
 try:
@@ -1090,8 +1129,8 @@ Reply ONLY JSON (NO markdown, NO text before/after):
             raw = response.text.strip()
             logger.debug(f"[LLM RAW] {raw[:300]}")
             
-            # Parse JSON - try safe_json_loads first
-            result, parse_error = safe_json_loads(raw)
+            # Parse JSON using inline parser
+            result, parse_error = _safe_json_parse(raw)
             
             # Fallback: use extract_json_block directly
             if result is None:
@@ -1127,8 +1166,8 @@ Reply ONLY JSON (NO markdown, NO text before/after):
                 logger.warning(f"[LLM PARSE FAIL] {parse_error} - raw[:100]={raw[:100]}")
                 return None
             
-            # Validate required fields
-            validated = validate_decision(result)
+            # Validate required fields using inline validator
+            validated = _validate_decision_inline(result)
             if validated is None:
                 self.llm_metrics["schema_fail"] += 1
                 logger.warning(f"[LLM SCHEMA FAIL] Missing required fields")
@@ -1460,7 +1499,7 @@ Evaluation:
         max_attempts = 2
         
         for attempt in range(max_attempts):
-            current_prompt = prompt if attempt == 0 else build_retry_prompt(prompt)
+            current_prompt = prompt if attempt == 0 else _build_retry_prompt_inline(prompt)
             
             if attempt > 0:
                 self.llm_metrics["retry_count"] += 1
@@ -1488,16 +1527,16 @@ Evaluation:
                 raw = response.text.strip()
                 logger.debug(f"[LLM RAW] {raw[:200]}...")
                 
-                # Parse using llm_utils
-                parsed, parse_error = safe_json_loads(raw)
+                # Parse using inline parser
+                parsed, parse_error = _safe_json_parse(raw)
                 
                 if parsed is None:
                     self.llm_metrics["parse_fail"] += 1
                     logger.warning(f"[LLM PARSE FAIL] {parse_error}")
                     continue
                 
-                # Validate using llm_utils
-                validated = validate_decision(parsed)
+                # Validate using inline validator
+                validated = _validate_decision_inline(parsed)
                 
                 if validated is None:
                     self.llm_metrics["schema_fail"] += 1

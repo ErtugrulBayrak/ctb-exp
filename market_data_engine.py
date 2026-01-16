@@ -39,7 +39,7 @@ from threading import Lock
 
 import pandas as pd
 from config import SETTINGS
-from llm_utils import safe_json_loads
+# llm_utils removed - using internal _safe_json_loads method
 
 # Merkezi logger'ı import et
 try:
@@ -1197,7 +1197,7 @@ Output ONLY valid JSON with this structure:
                 return None
             
             # Parse response using llm_utils
-            result, parse_error = safe_json_loads(response.text.strip())
+            result = self._safe_json_loads(response.text.strip())
             
             if result:
                 # Validate required keys
@@ -1209,8 +1209,8 @@ Output ONLY valid JSON with this structure:
                     return result
             
             # Parse failed
-            if parse_error:
-                logger.warning(f"[NEWS LLM PARSE FAIL] {parse_error}")
+            if not result:
+                logger.warning("[NEWS LLM PARSE FAIL] JSON parsing failed")
             self.llm_metrics["news_failures"] += 1
             self.llm_metrics["news_fallbacks"] += 1
             return None
@@ -1324,8 +1324,8 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
                 self.llm_metrics["reddit_failures"] += 1
                 return None
             
-            # Parse response using llm_utils
-            result, parse_error = safe_json_loads(response.text.strip())
+            # Parse response using internal method
+            result = self._safe_json_loads(response.text.strip())
             
             if result:
                 # Validate required keys
@@ -1336,8 +1336,8 @@ IMPORTANT: For coins NOT mentioned in any post, return "No specific discussion f
                     return result
             
             # Parse failed
-            if parse_error:
-                logger.warning(f"[REDDIT LLM PARSE FAIL] {parse_error}")
+            if not result:
+                logger.warning("[REDDIT LLM PARSE FAIL] JSON parsing failed")
             self.llm_metrics["reddit_failures"] += 1
             return None
             
@@ -2140,7 +2140,7 @@ Rules:
                 self.llm_metrics["article_failures"] += 1
                 return None
             
-            result, parse_error = safe_json_loads(response.text.strip())
+            result = self._safe_json_loads(response.text.strip())
             
             if result:
                 required = ["related_coins", "sentiment", "impact_score", "summary"]
@@ -2156,8 +2156,8 @@ Rules:
                     self._analyzed_news_cache_ts[url] = now
                     return result
             
-            if parse_error:
-                logger.warning(f"[ARTICLE PARSE FAIL] {parse_error}")
+            if not result:
+                logger.warning("[ARTICLE PARSE FAIL] JSON parsing failed")
             self.llm_metrics["article_failures"] += 1
             return None
             

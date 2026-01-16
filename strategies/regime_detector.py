@@ -312,13 +312,23 @@ class RegimeDetector:
     
     def _extract_indicators(self, snapshot: Dict[str, Any], symbol: str) -> Dict[str, Any]:
         """Extract relevant indicators from snapshot."""
+        import math
         indicators = {"symbol": symbol}
         
+        def safe_float(val):
+            if val is None:
+                return 0.0
+            try:
+                f_val = float(val)
+                return 0.0 if math.isnan(f_val) else f_val
+            except (ValueError, TypeError):
+                return 0.0
+
         # Get price
         price = snapshot.get("price", 0.0)
         if price is None or price <= 0:
             price = snapshot.get("technical", {}).get("price", 0.0) or 0.0
-        indicators["price"] = price
+        indicators["price"] = safe_float(price)
         
         # Get 4h timeframe data
         tf_4h = snapshot.get("tf", {}).get("4h", {})
@@ -328,26 +338,29 @@ class RegimeDetector:
         if adx_4h is None:
             # Fallback to technical data
             adx_4h = snapshot.get("technical", {}).get("adx", 0.0)
-        indicators["adx_4h"] = adx_4h or 0.0
+        indicators["adx_4h"] = safe_float(adx_4h)
         
         # ATR from 4h and calculate ATR%
         atr_4h = tf_4h.get("atr")
         if atr_4h is None:
             atr_4h = snapshot.get("technical", {}).get("atr", 0.0)
         
-        if price > 0 and atr_4h:
-            indicators["atr_pct_4h"] = (atr_4h / price) * 100
+        atr_4h = safe_float(atr_4h)
+        price_safe = indicators["price"]
+        
+        if price_safe > 0 and atr_4h > 0:
+            indicators["atr_pct_4h"] = (atr_4h / price_safe) * 100
         else:
             indicators["atr_pct_4h"] = 0.0
         
         # Bollinger Band width from 4h
-        indicators["bb_width_4h"] = self._calculate_bb_width(snapshot, "4h")
+        indicators["bb_width_4h"] = safe_float(self._calculate_bb_width(snapshot, "4h"))
         
         # 24h price swing
-        high_24h = snapshot.get("high_24h", 0.0)
-        low_24h = snapshot.get("low_24h", 0.0)
+        high_24h = safe_float(snapshot.get("high_24h", 0.0))
+        low_24h = safe_float(snapshot.get("low_24h", 0.0))
         
-        if high_24h and low_24h and low_24h > 0:
+        if high_24h > 0 and low_24h > 0:
             indicators["price_swing_24h"] = ((high_24h - low_24h) / low_24h) * 100
         else:
             indicators["price_swing_24h"] = 0.0
